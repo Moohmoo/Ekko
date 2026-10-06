@@ -6,8 +6,11 @@ conformément aux principes de la méthodologie 12-Factor App.
 
 from functools import lru_cache
 from pathlib import Path
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+BASE_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
@@ -34,19 +37,26 @@ class Settings(BaseSettings):
         description="Identifiant du modèle local",
     )
 
-    # Chemins du système de fichiers
+    # Chemins de stockage locaux (relatifs au dossier Ekko ou absolus)
     watch_dir_path: Path = Field(
-        default=Path.home() / "watch",
+        default=BASE_DIR / "data" / "briefings",
         description="Dossier de destination des briefings journaliers",
     )
     history_file_path: Path = Field(
-        default=Path.home() / ".history.json",
+        default=BASE_DIR / "data" / "history.json",
         description="Fichier de persistance des URLs traitées",
     )
     history_retention_days: int = Field(
         default=60,
         description="Nombre de jours de conservation des URLs en historique",
     )
+
+    @field_validator("watch_dir_path", "history_file_path", mode="after")
+    @classmethod
+    def resolve_path(cls, value: Path) -> Path:
+        """Résout automatiquement les chemins relatifs par rapport à la racine du projet."""
+        expanded = value.expanduser()
+        return (BASE_DIR / expanded).resolve() if not expanded.is_absolute() else expanded.resolve()
 
     # Paramètres des collecteurs
     hn_top_limit: int = Field(default=15, description="Nombre max d'articles HN")

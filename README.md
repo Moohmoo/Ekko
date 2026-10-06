@@ -26,7 +26,7 @@ Ekko est un système autonome de veille scientifique et technologique basé sur 
                     │
                     ├──────────────────────────┐
                     ▼                          ▼
-      [ ~/watch/YYYY-MM-DD.md ]       [ notify-send OS ]
+      [ data/briefings/YYYY-MM-DD.md ]  [ notify-send OS ]
 ```
 
 ### 1. Collecte asynchrone
@@ -34,15 +34,15 @@ Ekko est un système autonome de veille scientifique et technologique basé sur 
 - **Hugging Face Daily Papers :** Articles de recherche les plus populaires du jour.
 
 ### 2. Mémoire et Idempotence
-- **Historique local (`~/.history.json`) :** Indexation des URLs normalisées (nettoyage UTM, ancres) avec date et purge glissante à 60 jours.
-- **Idempotence journalière (`~/watch/YYYY-MM-DD.md`) :** Ne recalcule pas si le briefing a déjà été généré, sauf en cas d'utilisation du flag `--force`.
+- **Historique local (`data/history.json`) :** Indexation des URLs normalisées (nettoyage UTM, ancres) avec date et purge glissante à 60 jours.
+- **Idempotence journalière (`data/briefings/YYYY-MM-DD.md`) :** Ne recalcule pas si le briefing a déjà été généré, sauf en cas d'utilisation du flag `--force`.
 
 ### 3. Architecture 2 Agents Découplés
 - **Agent 1 (Trieur) :** Pare-feu anti-bruit ciblant l'informatique et la bioinformatique. Retient 3 à 5 articles majeurs et garantit la structure via `SelectionResult`. Validation anti-hallucination d'URL intégrée.
 - **Agent 2 (Rédacteur) :** Rédige les sections directes (`C'est quoi`, `Pourquoi on en parle`, lien source) sans salutations superflues.
 
 ### 4. Support Multi-Providers (Strategy Pattern)
-- **Google GenAI :** Utilise le SDK officiel `google-genai` (modèle `gemini-2.5-flash` par défaut).
+- **Google GenAI :** Utilise le SDK officiel `google-genai` (modèle `gemini-flash-lite-latest` par défaut).
 - **Modèle Local :** Compatible Ollama / vLLM / LM Studio via API compatible OpenAI (`http://localhost:11434/v1`).
 
 ---
