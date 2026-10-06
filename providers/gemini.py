@@ -35,6 +35,7 @@ class GeminiProvider(LLMProvider):
             response_mime_type="application/json",
             response_schema=schema,
             system_instruction=system_instruction or None,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             temperature=0.2,
         )
         response = await self.client.aio.models.generate_content(
@@ -54,6 +55,7 @@ class GeminiProvider(LLMProvider):
         """Produit une réponse textuelle brute (ex: Markdown)."""
         config = types.GenerateContentConfig(
             system_instruction=system_instruction or None,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             temperature=0.3,
         )
         response = await self.client.aio.models.generate_content(
