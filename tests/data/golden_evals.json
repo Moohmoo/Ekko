@@ -1,0 +1,155 @@
+[
+  {
+    "id": "balanced_day",
+    "description": "Journée type équilibrée avec pépites majeures et bruits variés",
+    "min_selected": 3,
+    "max_selected": 5,
+    "expected_must_keep": [
+      "https://ai.example.com/mistral-large-4",
+      "https://data.example.com/polars-2-release",
+      "https://hf.example.com/papers/de-novo-proteins"
+    ],
+    "expected_must_drop": [
+      "https://crypto.example.com/doge-pump",
+      "https://github.example.com/minor-css-fix",
+      "https://clickbait.example.com/ai-doom-clickbait",
+      "https://promo.example.com/best-hosting-deals",
+      "https://nft.example.com/solana-cats"
+    ],
+    "articles": [
+      {
+        "title": "Mistral Large 4: Open-Weights SOTA Foundation Model",
+        "url": "https://ai.example.com/mistral-large-4",
+        "summary": "Mistral AI releases their flagship model outperforming SOTA benchmarks.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Polars 2.0: Major Rust Engine Rewrite and Distributed Execution",
+        "url": "https://data.example.com/polars-2-release",
+        "summary": "Polars 2.0 introduces distributed execution and 3x faster memory-efficient operations.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "De Novo Protein Generation with Transformer Latents for Oncology Targets",
+        "url": "https://hf.example.com/papers/de-novo-proteins",
+        "summary": "Novel generative transformer designs target-binding proteins validated in-vitro.",
+        "source_name": "Hugging Face Daily Papers"
+      },
+      {
+        "title": "Zero-Knowledge Proofs for Verifiable ML Inference in Real-Time",
+        "url": "https://backend.example.com/zkml-realtime",
+        "summary": "Algorithmic breakthrough achieves sub-millisecond ZK proofs for transformer inference.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Dogecoin surges 35% after meme contest on Twitter",
+        "url": "https://crypto.example.com/doge-pump",
+        "summary": "Speculative trading pumps meme token amidst crypto hype.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Release v0.4.1: Fixed typo in button margin",
+        "url": "https://github.example.com/minor-css-fix",
+        "summary": "Small bugfix updating CSS margin-top from 4px to 6px.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "10 Unbelievable reasons why AI will fire all software developers by next week!",
+        "url": "https://clickbait.example.com/ai-doom-clickbait",
+        "summary": "Sensationalist speculation with no technical substance.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Best 5 Cloud Hosting Providers to buy in 2026 (Sponsored)",
+        "url": "https://promo.example.com/best-hosting-deals",
+        "summary": "Affiliate marketing list promoting shared web hosts.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "New NFT drop on Solana features pixel cats",
+        "url": "https://nft.example.com/solana-cats",
+        "summary": "Digital collectibles auction on blockchain.",
+        "source_name": "Hacker News"
+      }
+    ]
+  },
+  {
+    "id": "semantic_subtleties",
+    "description": "Test de discernement sémantique fin (cryptographie mathématique vs crypto-monnaie, science vs pseudoscience)",
+    "min_selected": 3,
+    "max_selected": 4,
+    "expected_must_keep": [
+      "https://security.example.com/post-quantum-openssl",
+      "https://bio.example.com/alphafold-3-dna-complexes",
+      "https://ai.example.com/vllm-paged-attention-3"
+    ],
+    "expected_must_drop": [
+      "https://crypto.example.com/airdrop-claim-now",
+      "https://pseudo.example.com/miracle-anti-aging-berries",
+      "https://github.example.com/update-readme-copyright-year"
+    ],
+    "articles": [
+      {
+        "title": "Post-Quantum Cryptography Algorithms Implemented in OpenSSL 4.0",
+        "url": "https://security.example.com/post-quantum-openssl",
+        "summary": "Standardization of Kyber and Dilithium lattice cryptography for TLS backend infrastructure.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "AlphaFold 3 Accurately Predicts Protein-DNA-Ligand Atomic Interactions",
+        "url": "https://bio.example.com/alphafold-3-dna-complexes",
+        "summary": "Breakthrough structural biology model predicts biomolecular complexes with sub-angstrom resolution.",
+        "source_name": "Hugging Face Daily Papers"
+      },
+      {
+        "title": "vLLM 0.9: PagedAttention 3 Brings 4x Concurrency for Mixture-of-Experts",
+        "url": "https://ai.example.com/vllm-paged-attention-3",
+        "summary": "High-throughput serving architecture optimizing memory fragmentation on cluster GPUs.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Claim your $500 free crypto token airdrop in 3 clicks!",
+        "url": "https://crypto.example.com/airdrop-claim-now",
+        "summary": "Connect your Web3 wallet to receive free tokens.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Miracle holistic berry extract reverses aging by 20 years say influencers",
+        "url": "https://pseudo.example.com/miracle-anti-aging-berries",
+        "summary": "Marketing promotion for unregulated wellness supplement.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "chore: updated copyright year to 2026 in README.md",
+        "url": "https://github.example.com/update-readme-copyright-year",
+        "summary": "One line text change updating year in documentation.",
+        "source_name": "Hacker News"
+      }
+    ]
+  },
+  {
+    "id": "low_news_day",
+    "description": "Journée calme avec seulement 2 articles majeurs (vérifie l'absence d'hallucination pour forcer un quota)",
+    "min_selected": 2,
+    "max_selected": 2,
+    "expected_must_keep": [
+      "https://ai.example.com/jax-distributed-fsdp",
+      "https://bio.example.com/telomere-to-telomere-plant-assembly"
+    ],
+    "expected_must_drop": [],
+    "articles": [
+      {
+        "title": "Distributed FSDP Training Framework in Jax for 100B Parameter Architectures",
+        "url": "https://ai.example.com/jax-distributed-fsdp",
+        "summary": "New pipeline and tensor parallel primitives for massive model training.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Telomere-to-Telomere Complete Genome Assembly of Polyploid Crop Species",
+        "url": "https://bio.example.com/telomere-to-telomere-plant-assembly",
+        "summary": "Bioinformatics pipeline assembling gapless repetitive chromosome regions using ultra-long reads.",
+        "source_name": "Hugging Face Daily Papers"
+      }
+    ]
+  }
+]

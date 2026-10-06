@@ -1,112 +1,60 @@
-"""Test d'évaluation End-to-End (Evals) du filtrage de l'Agent Trieur.
+"""Tests d'évaluation End-to-End (Evals) paramétrés sur le Golden Dataset.
 
-Évalue la qualité du filtrage sur un Golden Dataset de référence :
-- Vérifie qu'aucun bruit (crypto, marketing, micro patch notes, clickbait) ne fuite.
-- Vérifie qu'il n'y a pas de sur-filtrage (les pépites tech et bio sont bien conservées).
-- Vérifie la conformité du volume (3 à 5 articles retenus).
+Charge des scénarios de référence depuis tests/data/golden_evals.json pour vérifier :
+- La discrimination fine (rejet du spam, crypto, clickbait et pseudoscience).
+- La sensibilité aux pépites (tech SOTA, backend, bioinformatique, vraie cryptographie).
+- Le comportement robuste lors de journées à faible volume d'actualités.
 """
 
+import json
+from pathlib import Path
+from typing import Any
 import pytest
+
 from agents import classify_articles
 from config import get_settings
 from models import Article
 from providers import create_llm_provider
 
-# Jeu de test calibré (4 pépites signal fort + 5 bruits)
-GOLDEN_DATASET: list[Article] = [
-    # --- PÉPITES (Signal fort à conserver) ---
-    Article(
-        title="Mistral Large 4: Open-Weights SOTA Foundation Model",
-        url="https://ai.example.com/mistral-large-4",
-        summary="Mistral AI releases their flagship model outperforming SOTA benchmarks.",
-        source_name="Hacker News",
-    ),
-    Article(
-        title="Polars 2.0: Major Rust Engine Rewrite and Distributed Execution",
-        url="https://data.example.com/polars-2-release",
-        summary="Polars 2.0 introduces distributed execution and 3x faster memory-efficient operations.",
-        source_name="Hacker News",
-    ),
-    Article(
-        title="De Novo Protein Generation with Transformer Latents for Oncology Targets",
-        url="https://hf.example.com/papers/de-novo-proteins",
-        summary="Novel generative transformer designs target-binding proteins validated in-vitro.",
-        source_name="Hugging Face Daily Papers",
-    ),
-    Article(
-        title="Zero-Knowledge Proofs for Verifiable ML Inference in Real-Time",
-        url="https://backend.example.com/zkml-realtime",
-        summary="Algorithmic breakthrough achieves sub-millisecond ZK proofs for transformer inference.",
-        source_name="Hacker News",
-    ),
-    # --- BRUITS (À rejeter catégoriquement) ---
-    Article(
-        title="Dogecoin surges 35% after meme contest on Twitter",
-        url="https://crypto.example.com/doge-pump",
-        summary="Speculative trading pumps meme token amidst crypto hype.",
-        source_name="Hacker News",
-    ),
-    Article(
-        title="Release v0.4.1: Fixed typo in button margin",
-        url="https://github.example.com/minor-css-fix",
-        summary="Small bugfix updating CSS margin-top from 4px to 6px.",
-        source_name="Hacker News",
-    ),
-    Article(
-        title="10 Unbelievable reasons why AI will fire all software developers by next week!",
-        url="https://clickbait.example.com/ai-doom-clickbait",
-        summary="Sensationalist speculation with no technical substance.",
-        source_name="Hacker News",
-    ),
-    Article(
-        title="Best 5 Cloud Hosting Providers to buy in 2026 (Sponsored)",
-        url="https://promo.example.com/best-hosting-deals",
-        summary="Affiliate marketing list promoting shared web hosts.",
-        source_name="Hacker News",
-    ),
-    Article(
-        title="New NFT drop on Solana features pixel cats",
-        url="https://nft.example.com/solana-cats",
-        summary="Digital collectibles auction on blockchain.",
-        source_name="Hacker News",
-    ),
-]
+DATASET_FILE = Path(__file__).parent / "data" / "golden_evals.json"
 
-NOISE_URLS = {
-    "https://crypto.example.com/doge-pump",
-    "https://github.example.com/minor-css-fix",
-    "https://clickbait.example.com/ai-doom-clickbait",
-    "https://promo.example.com/best-hosting-deals",
-    "https://nft.example.com/solana-cats",
-}
 
-SIGNAL_URLS = {
-    "https://ai.example.com/mistral-large-4",
-    "https://data.example.com/polars-2-release",
-    "https://hf.example.com/papers/de-novo-proteins",
-    "https://backend.example.com/zkml-realtime",
-}
+def load_scenarios() -> list[dict[str, Any]]:
+    """Charge la liste des scénarios d'évaluation depuis le fichier JSON."""
+    if not DATASET_FILE.is_file():
+        return []
+    return json.loads(DATASET_FILE.read_text(encoding="utf-8"))
+
+
+SCENARIOS = load_scenarios()
 
 
 @pytest.mark.asyncio
-async def test_classifier_filtering_quality_and_balance() -> None:
-    """Valide que le classifieur rejette tout le bruit sans sur-filtrer les pépites."""
+@pytest.mark.parametrize("scenario", SCENARIOS, ids=[s["id"] for s in SCENARIOS])
+async def test_classifier_golden_scenarios(scenario: dict[str, Any]) -> None:
+    """Exécute l'évaluation de filtrage pour un scénario donné du Golden Dataset."""
     settings = get_settings()
     if not settings.gemini_api_key and settings.llm_provider == "gemini":
-        pytest.skip("Test E2E ignoré en l'absence de clé API configurée.")
+        pytest.skip("Test E2E ignoré : aucune clé API Gemini configurée.")
 
     provider = create_llm_provider(settings)
-    result = await classify_articles(GOLDEN_DATASET, provider)
+    articles = [Article.model_validate(raw) for raw in scenario["articles"]]
+    result = await classify_articles(articles, provider)
 
-    selected_urls = {a.url for a in result.articles}
+    selected_urls = {art.url for art in result.articles}
+    must_drop = set(scenario.get("expected_must_drop", []))
+    must_keep = set(scenario.get("expected_must_keep", []))
 
-    # 1. Vérification Anti-Fuite : Zéro bruit ne doit passer
-    leaked_noise = selected_urls & NOISE_URLS
-    assert not leaked_noise, f"Bruit détecté dans la sélection : {leaked_noise}"
+    # 1. Vérification Anti-Fuite : Aucun bruit ne doit être sélectionné
+    leaked = selected_urls & must_drop
+    assert not leaked, f"[{scenario['id']}] Bruit non filtré détecté : {leaked}"
 
-    # 2. Vérification Anti-Sur-Filtrage : Les signaux forts sont bien retenus
-    retained_signal = selected_urls & SIGNAL_URLS
-    assert len(retained_signal) >= 3, f"Sur-filtrage détecté ! Trop peu de pépites retenues : {len(retained_signal)}"
+    # 2. Vérification Anti-Sur-Filtrage : Les pépites obligatoires sont bien gardées
+    missing_gems = must_keep - selected_urls
+    assert not missing_gems, f"[{scenario['id']}] Pépites injustement rejetées : {missing_gems}"
 
-    # 3. Volume cible : Entre 3 et 5 articles
-    assert 3 <= len(result.articles) <= 5, f"Volume hors limites : {len(result.articles)}"
+    # 3. Volume cible attendu
+    min_exp, max_exp = scenario["min_selected"], scenario["max_selected"]
+    assert min_exp <= len(result.articles) <= max_exp, (
+        f"[{scenario['id']}] Volume {len(result.articles)} hors bornes [{min_exp}, {max_exp}]"
+    )
