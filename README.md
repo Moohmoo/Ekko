@@ -70,13 +70,20 @@ GEMINI_API_KEY=votre_cle_gemini_ici
 
 *(Si vous souhaitez utiliser un modèle local comme Ollama : réglez `LLM_PROVIDER=local`)*
 
-### 3. Exécution
+### 3. Exécution (avec uv ou python)
+
+Avec **uv** (recommandé, rapide et sans configuration) :
 ```bash
 # Exécution normale du matin
-./.venv/bin/python main.py
+uv run main.py
 
 # Forcer la regénération même si le fichier du jour existe déjà
-./.venv/bin/python main.py --force
+uv run main.py --force
+```
+
+Ou avec le virtualenv standard :
+```bash
+./.venv/bin/python main.py
 ```
 
 Le briefing sera disponible dans `~/watch/YYYY-MM-DD.md` et une notification de bureau s'affichera.
@@ -85,10 +92,10 @@ Le briefing sera disponible dans `~/watch/YYYY-MM-DD.md` et une notification de 
 
 ## 🧪 Tests Unitaires
 
-Le projet inclut une suite de tests unitaires couvrant l'ensemble des modules (stockage, parsers, agents, modèles, notifications) :
+Le projet inclut une suite de tests unitaires couvrant l'ensemble des modules :
 
 ```bash
-./.venv/bin/pytest -v
+uv run pytest -v
 ```
 
 ---
