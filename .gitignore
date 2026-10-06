@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+
+# Testing & Tools
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local configuration & storage
+.env
+.history.json
+watch/
+
+# System
+.DS_Store
