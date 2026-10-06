@@ -151,5 +151,221 @@
         "source_name": "Hugging Face Daily Papers"
       }
     ]
+  },
+  {
+    "id": "bioinfo_deep_dive",
+    "description": "Focalisation Bioinformatique & Génomique vs News Santé grand public ou business",
+    "min_selected": 3,
+    "max_selected": 4,
+    "expected_must_keep": [
+      "https://bio.example.com/crispr-cas12a-deep-cnn",
+      "https://bio.example.com/gpu-fm-index-single-cell",
+      "https://hf.example.com/papers/esm-3-multimodal-biology"
+    ],
+    "expected_must_drop": [
+      "https://lifestyle.example.com/drink-8-glasses-water",
+      "https://biz.example.com/biotech-startup-seed-round",
+      "https://gadget.example.com/best-fitness-trackers-2026"
+    ],
+    "articles": [
+      {
+        "title": "CRISPR-Cas12a Off-Target Specificity Prediction via Deep Convolutional Transformers",
+        "url": "https://bio.example.com/crispr-cas12a-deep-cnn",
+        "summary": "New neural architecture reduces off-target cleavage risk by 85% in genome editing trials.",
+        "source_name": "Hugging Face Daily Papers"
+      },
+      {
+        "title": "Accelerating Single-Cell RNA Sequencing Alignment with GPU-Accelerated FM-Index",
+        "url": "https://bio.example.com/gpu-fm-index-single-cell",
+        "summary": "Novel parallel alignment algorithm achieves 20x speedup over STAR and CellRanger pipelines.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "ESM-3: Simulating 500 Million Years of Evolution with Multimodal Biological LLMs",
+        "url": "https://hf.example.com/papers/esm-3-multimodal-biology",
+        "summary": "Generative frontier biology model generates functional green fluorescent proteins with low homology.",
+        "source_name": "Hugging Face Daily Papers"
+      },
+      {
+        "title": "Drink 8 glasses of water every day to boost your memory, lifestyle study claims",
+        "url": "https://lifestyle.example.com/drink-8-glasses-water",
+        "summary": "Popular science article sharing general wellness habits without peer-reviewed data.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Biotech startup raises $2M seed round from European venture capital fund",
+        "url": "https://biz.example.com/biotech-startup-seed-round",
+        "summary": "Financial announcement regarding corporate funding round with no technical disclosures.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Top 10 smart rings and fitness trackers to wear in 2026",
+        "url": "https://gadget.example.com/best-fitness-trackers-2026",
+        "summary": "Consumer electronics buyer guide reviewing commercial step counters.",
+        "source_name": "Hacker News"
+      }
+    ]
+  },
+  {
+    "id": "data_backend_distributed",
+    "description": "Focalisation Data Engineering, Moteurs de BD et Systèmes Distribués",
+    "min_selected": 3,
+    "max_selected": 4,
+    "expected_must_keep": [
+      "https://data.example.com/apache-arrow-18",
+      "https://sys.example.com/raft-async-fsync-1m-ops",
+      "https://db.example.com/pg-native-columnar-engine"
+    ],
+    "expected_must_drop": [
+      "https://crypto.example.com/bitcoin-etf-record-inflows",
+      "https://freelance.example.com/how-i-made-10k-python-scripting",
+      "https://github.example.com/fix-readme-spelling"
+    ],
+    "articles": [
+      {
+        "title": "Apache Arrow 18.0: Zero-Copy IPC Performance Across Heterogeneous GPU Clusters",
+        "url": "https://data.example.com/apache-arrow-18",
+        "summary": "Major release introducing direct C++ and Rust GPU data sharing without host memory serialization.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Raft Consensus with Asynchronous Disk Fsync Batching Achieves 1 Million Ops/sec",
+        "url": "https://sys.example.com/raft-async-fsync-1m-ops",
+        "summary": "Novel write-ahead log design eliminates lock contention in distributed transactional consensus.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "PostgreSQL 18 Introduces Native Columnar Storage Engine Extension",
+        "url": "https://db.example.com/pg-native-columnar-engine",
+        "summary": "Built-in columnar storage engine enabling vectorized query execution for analytical workloads.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Bitcoin ETF inflows reach record high on Wall Street as institutional buyers enter",
+        "url": "https://crypto.example.com/bitcoin-etf-record-inflows",
+        "summary": "Financial news report covering cryptocurrency fund trading volume.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "How I made $10,000 on Upwork doing basic Python scraping in 30 days",
+        "url": "https://freelance.example.com/how-i-made-10k-python-scripting",
+        "summary": "Personal finance blog post sharing freelance tips and affiliate links.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "docs: corrected spelling mistake in README installation guide",
+        "url": "https://github.example.com/fix-readme-spelling",
+        "summary": "Small pull request fixing typo from recieve to receive.",
+        "source_name": "Hacker News"
+      }
+    ]
+  },
+  {
+    "id": "ai_frameworks_vs_hype",
+    "description": "IA et Machine Learning réels (compilation GPU, architectures) vs Hype superficielle",
+    "min_selected": 3,
+    "max_selected": 4,
+    "expected_must_keep": [
+      "https://ai.example.com/triton-3-linear-attention",
+      "https://ai.example.com/llama-4-mixture-of-depths",
+      "https://ai.example.com/bitnet-b158-native-cpu-inference"
+    ],
+    "expected_must_drop": [
+      "https://hype.example.com/will-ai-have-consciousness",
+      "https://spam.example.com/10-chatgpt-prompts-productivity",
+      "https://crypto.example.com/ai-memecoin-agent-crashes"
+    ],
+    "articles": [
+      {
+        "title": "Triton 3.0: Custom GPU Kernel Generation for Sub-Quadratic Linear Attention",
+        "url": "https://ai.example.com/triton-3-linear-attention",
+        "summary": "Compiler compiler updates supporting fused FlashAttention kernels on diverse hardware targets.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Llama 4: Deep Dive into Mixture-of-Depths Routing and 128k Activation Cache",
+        "url": "https://ai.example.com/llama-4-mixture-of-depths",
+        "summary": "Comprehensive architectural analysis of Meta's next-gen sparse foundation model.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "BitNet b1.58: 1-Bit LLM Architecture Native CPU Inference Benchmark",
+        "url": "https://ai.example.com/bitnet-b158-native-cpu-inference",
+        "summary": "Quantization breakthrough matching 16-bit perplexity with 82% less energy consumption.",
+        "source_name": "Hugging Face Daily Papers"
+      },
+      {
+        "title": "Will AI achieve human consciousness before 2030? Philosophers debate on podcast",
+        "url": "https://hype.example.com/will-ai-have-consciousness",
+        "summary": "Opinion debate on existential risk with no technical methodology.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Top 10 ChatGPT prompts to 10x your copywriting speed while asleep!",
+        "url": "https://spam.example.com/10-chatgpt-prompts-productivity",
+        "summary": "Marketing listicle advertising digital marketing templates.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Memecoin AI Agent token drops 95% after creator liquidates liquidity pool",
+        "url": "https://crypto.example.com/ai-memecoin-agent-crashes",
+        "summary": "Crypto token pump and dump on decentralized exchange.",
+        "source_name": "Hacker News"
+      }
+    ]
+  },
+  {
+    "id": "crypto_and_spam_siege",
+    "description": "Assaut massif de spam et crypto avec 1 seule pépite système réelle",
+    "min_selected": 1,
+    "max_selected": 1,
+    "expected_must_keep": [
+      "https://kernel.example.com/linux-cxl-memory-tiering"
+    ],
+    "expected_must_drop": [
+      "https://crypto.example.com/shiba-inu-to-the-moon",
+      "https://spam.example.com/best-cheap-vpn-coupons",
+      "https://clickbait.example.com/ai-robot-says-something-creepy",
+      "https://crypto.example.com/new-airdrop-telegram-bot",
+      "https://course.example.com/learn-web3-in-10-minutes"
+    ],
+    "articles": [
+      {
+        "title": "Linux Kernel 6.18 Introduces Hardware-Accelerated CXL Memory Tiering",
+        "url": "https://kernel.example.com/linux-cxl-memory-tiering",
+        "summary": "Major memory subsystem improvement enabling dynamic NUMA migration across pooled CXL buses.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Shiba Inu coin to the moon: 500% surge predicted by technical chart analyst",
+        "url": "https://crypto.example.com/shiba-inu-to-the-moon",
+        "summary": "Speculative token trading article with affiliate trading links.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Exclusive: Best cheap VPN coupons and lifetime discount deals",
+        "url": "https://spam.example.com/best-cheap-vpn-coupons",
+        "summary": "Commercial landing page advertising annual affiliate subscription plans.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Humanoid AI robot gives terrifying answer during live TV interview!",
+        "url": "https://clickbait.example.com/ai-robot-says-something-creepy",
+        "summary": "Viral sensation video clip with dramatic narration and no engineering details.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "New Telegram tap-to-earn crypto bot distributes millions of tokens",
+        "url": "https://crypto.example.com/new-airdrop-telegram-bot",
+        "summary": "Viral social game distributing speculative crypto coins.",
+        "source_name": "Hacker News"
+      },
+      {
+        "title": "Become a Web3 smart contract developer in 10 minutes with our certificate",
+        "url": "https://course.example.com/learn-web3-in-10-minutes",
+        "summary": "Paid online course advertisement targeting beginners.",
+        "source_name": "Hacker News"
+      }
+    ]
   }
 ]
