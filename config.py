@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # Fournisseur LLM ('gemini' ou 'local')
     llm_provider: str = Field(default="gemini", description="Provider LLM actif")
     gemini_api_key: str = Field(default="", description="Clé d'API Google Gemini")
-    gemini_model: str = Field(default="gemini-2.5-flash", description="Nom du modèle Gemini")
+    gemini_model: str = Field(default="gemini-flash-lite-latest", description="Nom du modèle Gemini")
 
     # Configuration modèle local (Ollama / vLLM)
     local_llm_url: str = Field(

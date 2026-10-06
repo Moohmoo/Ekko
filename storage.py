@@ -37,10 +37,11 @@ def normalize_url(url: str) -> str:
 
 def load_history(path: Path) -> dict[str, str]:
     """Charge l'historique des URLs traitées depuis un fichier JSON."""
-    if not path.is_file():
+    clean_path = path.expanduser()
+    if not clean_path.is_file():
         return {}
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(clean_path.read_text(encoding="utf-8"))
         if isinstance(data, list):
             # Rétrocompatibilité si l'historique était une simple liste
             return {normalize_url(item): date.today().isoformat() for item in data}
@@ -67,10 +68,11 @@ def purge_old_history(history: dict[str, str], retention_days: int) -> dict[str,
 
 def save_history(path: Path, history: dict[str, str]) -> None:
     """Sauvegarde l'historique des URLs au format JSON sur le disque."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = path.with_suffix(".tmp")
+    clean_path = path.expanduser()
+    clean_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = clean_path.with_suffix(".tmp")
     temp_path.write_text(json.dumps(history, indent=2, ensure_ascii=False), encoding="utf-8")
-    temp_path.replace(path)
+    temp_path.replace(clean_path)
 
 
 def get_today_briefing_path(watch_dir: Path, custom_date: str | None = None) -> Path:
