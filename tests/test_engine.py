@@ -75,7 +75,8 @@ async def test_engine_direct_answer(tmp_path: Path) -> None:
 
     res = await engine.run("Question simple", session_id="test_sess", callbacks=callbacks)
 
-    assert res == "Voici l'information"
+    assert res.content == "Voici l'information"
+    assert res.tools_used == []
     assert events == ["thought:Réponse directe"]
     history = memory.get_recent_messages("test_sess")
     assert len(history) == 2
@@ -105,7 +106,8 @@ async def test_engine_tool_call_flow(tmp_path: Path) -> None:
 
     res = await engine.run("Trouve antigravity", callbacks=callbacks)
 
-    assert "antigravity" in res
+    assert "antigravity" in res.content
+    assert res.tools_used == ["mock_search"]
     assert calls == ["call:mock_search", "res:Trouvé: antigravity"]
     tasks = memory.get_recent_tasks()
     assert len(tasks) == 1
@@ -124,7 +126,7 @@ async def test_engine_max_steps_safeguard(tmp_path: Path) -> None:
     engine, _ = setup_engine(tmp_path, actions)
 
     res = await engine.run("Boucle sans fin")
-    assert "Limite maximale d'étapes" in res
+    assert "Limite maximale d'étapes" in res.content
 
 
 @pytest.mark.asyncio

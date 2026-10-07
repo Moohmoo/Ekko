@@ -13,6 +13,8 @@ from rich.panel import Panel
 from rich.status import Status
 from rich.text import Text
 
+from core.models import AgentResponse
+
 console = Console()
 
 
@@ -71,10 +73,11 @@ def render_tool_result_panel(tool_name: str, result: str) -> None:
     )
 
 
-def render_final_answer(answer: str) -> None:
+def render_final_answer(answer: AgentResponse | str) -> None:
     """Affiche la réponse finale formatée en Markdown."""
+    text_content = answer.content if isinstance(answer, AgentResponse) else answer
     console.print()
-    console.print(Markdown(answer.strip()))
+    console.print(Markdown(text_content.strip()))
     console.print()
 
 

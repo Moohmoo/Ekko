@@ -10,11 +10,18 @@ from config import Settings
 from providers import LLMProvider
 from tools.registry import ToolRegistry
 from .memory import SQLiteMemory
+from .models import AgentRequest, AgentResponse
+from .prompts import build_system_prompt, format_history_block, format_step_prompt
 from .router import AgentAction, decide_action
 
 logger = logging.getLogger("ekko.core.engine")
 
-from .prompts import build_system_prompt, format_history_block, format_step_prompt
+
+def normalize_request(request: AgentRequest | str, session_id: str = "default") -> AgentRequest:
+    """Normalise l'entrée en un contrat AgentRequest immuable."""
+    if isinstance(request, AgentRequest):
+        return request
+    return AgentRequest(query=request.strip(), session_id=session_id)
 
 
 class EkkoEngine:
@@ -58,39 +65,52 @@ class EkkoEngine:
 
     async def run(
         self,
-        user_query: str,
+        request: AgentRequest | str,
         session_id: str = "default",
         callbacks: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> AgentResponse:
         """Exécute la boucle ReAct jusqu'à résolution ou limite d'itérations."""
-        logger.debug("Nouvelle requête (session=%s): '%s'", session_id, user_query)
+        req = normalize_request(request, session_id)
+        logger.debug("Nouvelle requête (session=%s): '%s'", req.session_id, req.query)
         cb = callbacks or {}
         system_prompt = build_system_prompt(self.user_profile, self.registry.get_prompt_catalog())
-        history = self.memory.get_recent_messages(session_id, limit=6)
+        history = self.memory.get_recent_messages(req.session_id, limit=6)
         history_block = format_history_block(history)
         observations: list[str] = []
+        tools_used: list[str] = []
+        last_thought: str = ""
 
         for step in range(self.max_steps):
             if cb.get("on_thinking_start"):
                 cb["on_thinking_start"]()
 
-            prompt = format_step_prompt(user_query, observations, history_block)
+            prompt = format_step_prompt(req.query, observations, history_block)
             action = await decide_action(self.provider, prompt, system_prompt)
+            last_thought = action.thought
             logger.debug(
                 "Étape %d/%d: thought='%s', tool='%s'",
-                step + 1, self.max_steps, action.thought, action.tool_name
+                step + 1, self.max_steps, action.thought, action.tool_name,
             )
 
             if cb.get("on_thought") and action.thought:
                 cb["on_thought"](action.thought)
 
             if action.final_answer and not action.tool_name:
-                self.memory.record_message(session_id, "user", user_query)
-                self.memory.record_message(session_id, "assistant", action.final_answer)
-                return action.final_answer
+                self.memory.record_message(req.session_id, "user", req.query)
+                self.memory.record_message(req.session_id, "assistant", action.final_answer)
+                return AgentResponse(
+                    content=action.final_answer,
+                    tools_used=tools_used,
+                    thought=action.thought,
+                )
 
             if action.tool_name:
+                tools_used.append(action.tool_name)
                 obs = await self._handle_tool_step(action, cb)
                 observations.append(obs)
 
-        return "Limite maximale d'étapes de raisonnement atteinte sans conclusion."
+        return AgentResponse(
+            content="Limite maximale d'étapes de raisonnement atteinte sans conclusion.",
+            tools_used=tools_used,
+            thought=last_thought,
+        )

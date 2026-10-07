@@ -12,6 +12,7 @@ from .errors import (
 )
 from .logger import Logger, setup_logging
 from .memory import SQLiteMemory, load_user_profile
+from .models import AgentRequest, AgentResponse
 from .prompts import build_system_prompt, format_history_block, format_step_prompt
 from .router import AgentAction, decide_action
 
@@ -33,4 +34,6 @@ __all__ = [
     "build_system_prompt",
     "format_history_block",
     "format_step_prompt",
+    "AgentRequest",
+    "AgentResponse",
 ]

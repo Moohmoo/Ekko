@@ -6,7 +6,7 @@ Lance directement la session interactive avec option de débogage (-d / --debug)
 import argparse
 import asyncio
 from config import Settings, get_settings
-from core import EkkoEngine, SQLiteMemory, load_user_profile, setup_logging
+from core import AgentRequest, EkkoEngine, SQLiteMemory, load_user_profile, setup_logging
 from core.errors import format_error_for_display
 from providers import create_llm_provider
 from tools import default_registry
@@ -56,8 +56,9 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
             if query.lower() in {"exit", "quit", "q"}:
                 console.print("[dim]Au revoir ![/dim]")
                 break
-            answer = await engine.run(query, callbacks=ui.get_callbacks())
-            render_final_answer(answer)
+            request = AgentRequest(query=query)
+            response = await engine.run(request, callbacks=ui.get_callbacks())
+            render_final_answer(response)
         except (KeyboardInterrupt, EOFError):
             console.print("\n[dim]Session interrompue. Au revoir ![/dim]")
             break

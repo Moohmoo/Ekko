@@ -33,3 +33,18 @@ def test_invalid_article_raises() -> None:
     """Vérifie qu'un article sans URL ou sans titre lève une ValidationError."""
     with pytest.raises(ValidationError):
         Article.model_validate({"title": "Sans URL"})
+
+
+def test_agent_request_and_response() -> None:
+    """Vérifie les contrats AgentRequest et AgentResponse."""
+    from core.models import AgentRequest, AgentResponse
+
+    req = AgentRequest(query="Yoh !")
+    assert req.query == "Yoh !"
+    assert req.session_id == "default"
+
+    resp = AgentResponse(content="Salut !", tools_used=["run_daily_watch"])
+    assert resp.content == "Salut !"
+    assert resp.tools_used == ["run_daily_watch"]
+    assert resp.thought == ""
+
