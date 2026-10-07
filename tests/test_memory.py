@@ -1,7 +1,7 @@
 """Tests unitaires pour la gestion de mémoire et du profil utilisateur (Brique 4)."""
 
 from pathlib import Path
-from core.memory import SQLiteMemory, load_user_profile
+from agent.memory import SQLiteMemory, load_user_profile
 
 
 def test_load_user_profile_creates_default(tmp_path: Path) -> None:

@@ -1,6 +1,6 @@
 """Tests unitaires pour le module des prompts core/prompts.py."""
 
-from core.prompts import build_system_prompt, format_history_block, format_step_prompt
+from agent.prompts import build_system_prompt, format_history_block, format_step_prompt
 
 
 def test_build_system_prompt_interpolation() -> None:

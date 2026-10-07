@@ -42,10 +42,6 @@ class Settings(BaseSettings):
         default=BASE_DIR / "data" / "watch" / "briefings",
         description="Dossier de destination des briefings journaliers",
     )
-    history_file_path: Path = Field(
-        default=BASE_DIR / "data" / "watch" / "history.json",
-        description="Fichier de persistance des URLs traitées",
-    )
     history_retention_days: int = Field(
         default=60,
         description="Nombre de jours de conservation des URLs en historique",
@@ -67,7 +63,6 @@ class Settings(BaseSettings):
 
     @field_validator(
         "watch_dir_path",
-        "history_file_path",
         "memory_dir_path",
         "db_path",
         "log_dir_path",

@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.status import Status
 from rich.text import Text
 
-from core.models import AgentResponse
+from agent.schemas import AgentResponse
 
 console = Console()
 

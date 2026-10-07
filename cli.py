@@ -5,9 +5,9 @@ Lance directement la session interactive avec option de débogage (-d / --debug)
 
 import argparse
 import asyncio
+from agent import AgentRequest, EkkoEngine, SQLiteMemory, load_user_profile
 from config import Settings, get_settings
-from core import AgentRequest, EkkoEngine, SQLiteMemory, load_user_profile, setup_logging
-from core.errors import format_error_for_display
+from core import format_error_for_display, setup_logging
 from providers import create_llm_provider
 from tools import default_registry
 from ui import AgentUI, console, print_banner, render_error, render_final_answer

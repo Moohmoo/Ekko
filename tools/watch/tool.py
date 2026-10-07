@@ -8,9 +8,9 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from config import get_settings
-from watch.pipeline import execute_daily_watch
-from watch.storage import get_today_briefing_path, is_already_generated
-from .base import BaseTool
+from tools.base import BaseTool
+from .pipeline import execute_daily_watch
+from .storage import get_today_briefing_path, is_already_generated
 
 
 class WatchToolParams(BaseModel):

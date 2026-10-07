@@ -1,7 +1,7 @@
 """Tests unitaires pour le routeur LLM et le schéma AgentAction (Brique 1)."""
 
 import pytest
-from core.router import AgentAction
+from agent.schemas import AgentAction
 
 
 def test_agent_action_valid_arguments() -> None:

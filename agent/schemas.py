@@ -1,12 +1,19 @@
-"""Routeur LLM agnostique pour l'agent Ekko (Brique 1).
+"""Schémas Pydantic et contrats d'échange pour l'agent Ekko.
 
-Définit le schéma d'action ReAct et coordonne les décisions du modèle
-quel que soit le fournisseur (Gemini ou modèle local Ollama).
+Centralise les structures de données d'entrée (AgentRequest),
+de sortie (AgentResponse) et de décision ReAct (AgentAction).
 """
 
 from typing import Any
 from pydantic import BaseModel, Field, field_validator
-from providers import LLMProvider
+from providers.base import LLMProvider
+
+
+class AgentRequest(BaseModel):
+    """Contrat d'entrée représentant la requête utilisateur normalisée."""
+
+    query: str = Field(description="Demande textuelle de l'utilisateur.")
+    session_id: str = Field(default="default", description="Identifiant unique de la session.")
 
 
 class AgentAction(BaseModel):
@@ -47,6 +54,14 @@ class AgentAction(BaseModel):
             return data if isinstance(data, dict) else {}
         except Exception:
             return {}
+
+
+class AgentResponse(BaseModel):
+    """Contrat de sortie représentant le résultat d'exécution de l'agent."""
+
+    content: str = Field(description="Contenu textuel final formulé par l'agent ou ses outils.")
+    tools_used: list[str] = Field(default_factory=list, description="Liste des noms des outils exécutés.")
+    thought: str = Field(default="", description="Dernière réflexion ayant conduit à la conclusion.")
 
 
 async def decide_action(

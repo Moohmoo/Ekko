@@ -1,9 +1,6 @@
-"""Script d'entrée rétrocompatible pour la veille journalière.
+"""Point d'entrée alternatif exécutant l'assistant interactif Ekko."""
 
-Redirige vers le pipeline du package watch.
-"""
-
-from watch.pipeline import main
+from cli import main
 
 if __name__ == "__main__":
     main()

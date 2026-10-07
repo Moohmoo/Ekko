@@ -1,7 +1,7 @@
-"""Point d'entrée principal pour le système de veille automatisé Ekko.
+"""Pipeline principal pour le système de veille automatisé Ekko.
 
-Coordonne les collecteurs, la persistance locale anti-doublon,
-les agents IA (Trieur et Rédacteur) et la notification système Ubuntu.
+Coordonne les collecteurs, la persistance locale anti-doublon
+et les agents IA spécialisés (Trieur et Rédacteur).
 """
 
 import argparse
@@ -13,23 +13,20 @@ import sys
 
 from config import Settings, get_settings
 from providers import create_llm_provider
-from watch.agents import classify_articles, generate_briefing
-from watch.collectors import fetch_hacker_news_articles, fetch_hugging_face_papers
-from watch.models import Article
-from watch.notifier import send_system_notification
-from watch.storage import (
+from .agents import classify_articles, generate_briefing
+from .collectors import fetch_hacker_news_articles, fetch_hugging_face_papers
+from .schemas import Article
+from .storage import (
     get_today_briefing_path,
     is_already_generated,
     load_seen_urls,
-    migrate_json_history_if_exists,
     normalize_url,
     purge_old_urls,
     save_seen_urls,
     write_briefing,
 )
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("ekko")
+logger = logging.getLogger("ekko.tools.watch")
 
 
 def parse_cli_args() -> argparse.Namespace:
@@ -69,7 +66,7 @@ async def collect_all_candidates(settings: Settings) -> list[Article]:
 
 def filter_unseen_articles(
     articles: list[Article],
-    seen_urls: set[str] | dict[str, str],
+    seen_urls: set[str],
 ) -> list[Article]:
     """Élimine les articles déjà répertoriés dans la base de données."""
     unseen: list[Article] = []
@@ -87,7 +84,6 @@ async def execute_daily_watch(settings: Settings, force: bool = False, custom_da
         logger.info("Le briefing du jour existe déjà : %s (utiliser --force)", briefing_file)
         return 0
 
-    migrate_json_history_if_exists(settings.history_file_path, settings.db_path)
     purge_old_urls(settings.db_path, settings.history_retention_days)
     seen_urls = load_seen_urls(settings.db_path)
 
@@ -103,7 +99,6 @@ async def execute_daily_watch(settings: Settings, force: bool = False, custom_da
         provider = create_llm_provider(settings)
     except ValueError as exc:
         logger.error("Configuration LLM invalide : %s", exc)
-        logger.error("Veuillez renseigner votre GEMINI_API_KEY dans le fichier .env (voir .env.example)")
         return 1
 
     logger.info("Agent 1 (Trieur) : filtrage et sélection en cours...")
@@ -117,8 +112,6 @@ async def execute_daily_watch(settings: Settings, force: bool = False, custom_da
     logger.info("Briefing écrit avec succès : %s", briefing_file)
 
     save_seen_urls(settings.db_path, [art.url for art in fresh_articles])
-
-    send_system_notification()
     return 0
 
 

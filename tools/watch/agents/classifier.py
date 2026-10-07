@@ -5,8 +5,8 @@ clickbait) et retient les 3 à 5 sujets majeurs pour un ingénieur informatique 
 """
 
 import json
-from watch.models import Article, SelectedArticle, SelectionResult
 from providers import LLMProvider
+from ..schemas import Article, SelectedArticle, SelectionResult
 
 CLASSIFIER_SYSTEM_PROMPT = """Tu es un filtre expert et exigeant pour un ingénieur informatique et bioinformaticien.
 Ton rôle est d'agir comme pare-feu anti-bruit :

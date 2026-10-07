@@ -1,18 +1,14 @@
-"""Tests unitaires pour les fonctions de stockage et normalisation."""
+"""Tests unitaires pour les fonctions de stockage et normalisation de l'outil watch."""
 
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 import sqlite3
-from watch.storage import (
+from tools.watch.storage import (
     get_today_briefing_path,
     is_already_generated,
-    load_history,
     load_seen_urls,
-    migrate_json_history_if_exists,
     normalize_url,
-    purge_old_history,
     purge_old_urls,
-    save_history,
     save_seen_urls,
     write_briefing,
 )
@@ -26,42 +22,6 @@ def test_normalize_url() -> None:
 
     url_with_backslash = "https://example.com/article/\\"
     assert normalize_url(url_with_backslash) == url2
-
-
-def test_history_roundtrip(tmp_path: Path) -> None:
-    """Vérifie l'écriture et la relecture du fichier d'historique JSON."""
-    history_file = tmp_path / ".history.json"
-    initial_data = {
-        "https://example.com/a": "2026-10-06",
-        "https://example.com/b": "2026-10-05",
-    }
-    save_history(history_file, initial_data)
-    loaded = load_history(history_file)
-    assert loaded == initial_data
-
-
-def test_history_legacy_list_support(tmp_path: Path) -> None:
-    """Vérifie la compatibilité si l'historique précédent était une liste simple."""
-    history_file = tmp_path / "legacy.json"
-    history_file.write_text('["https://example.com/1", "https://example.com/2/"]', encoding="utf-8")
-    loaded = load_history(history_file)
-    assert "https://example.com/1" in loaded
-    assert "https://example.com/2" in loaded
-
-
-def test_purge_old_history() -> None:
-    """Vérifie que les URLs plus anciennes que le seuil de rétention sont éliminées."""
-    today = date.today()
-    old_date = (today - timedelta(days=90)).isoformat()
-    recent_date = (today - timedelta(days=10)).isoformat()
-
-    history = {
-        "https://old.com": old_date,
-        "https://recent.com": recent_date,
-    }
-    purged = purge_old_history(history, retention_days=60)
-    assert "https://recent.com" in purged
-    assert "https://old.com" not in purged
 
 
 def test_briefing_write_and_check(tmp_path: Path) -> None:
@@ -97,15 +57,3 @@ def test_sqlite_purge_old_urls(tmp_path: Path) -> None:
     urls = load_seen_urls(db_file)
     assert "https://example.com/recent" in urls
     assert "https://example.com/old" not in urls
-
-
-def test_migrate_json_history(tmp_path: Path) -> None:
-    """Vérifie la migration d'un fichier JSON existant vers SQLite."""
-    json_file = tmp_path / "history.json"
-    json_file.write_text('{"https://example.com/migrated": "2026-10-06"}', encoding="utf-8")
-    db_file = tmp_path / "migrated.db"
-    migrate_json_history_if_exists(json_file, db_file)
-    assert not json_file.exists()
-    urls = load_seen_urls(db_file)
-    assert "https://example.com/migrated" in urls
-

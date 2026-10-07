@@ -1,6 +1,5 @@
-"""Package du cœur de l'agent Ekko."""
+"""Package central définissant le socle technique transverse d'Ekko."""
 
-from .engine import EkkoEngine
 from .errors import (
     AgentLoopError,
     EkkoError,
@@ -11,19 +10,10 @@ from .errors import (
     format_error_for_display,
 )
 from .logger import Logger, setup_logging
-from .memory import SQLiteMemory, load_user_profile
-from .models import AgentRequest, AgentResponse
-from .prompts import build_system_prompt, format_history_block, format_step_prompt
-from .router import AgentAction, decide_action
 
 __all__ = [
-    "EkkoEngine",
-    "SQLiteMemory",
-    "load_user_profile",
-    "AgentAction",
-    "decide_action",
-    "setup_logging",
     "Logger",
+    "setup_logging",
     "EkkoError",
     "ProviderUnavailableError",
     "ProviderTimeoutError",
@@ -31,9 +21,4 @@ __all__ = [
     "ToolExecutionError",
     "AgentLoopError",
     "format_error_for_display",
-    "build_system_prompt",
-    "format_history_block",
-    "format_step_prompt",
-    "AgentRequest",
-    "AgentResponse",
 ]

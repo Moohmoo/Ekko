@@ -4,8 +4,8 @@ Prend la sélection de l'Agent 1 et produit une synthèse journalistique concise
 directe et percutante au format Markdown strict sans bavardage.
 """
 
-from watch.models import Article, SelectionResult
 from providers import LLMProvider
+from ..schemas import Article, SelectionResult
 
 WRITER_SYSTEM_PROMPT = """Tu es un journaliste technique chevronné et synthétique.
 Ton rôle est de rédiger un 'Morning Briefing' Markdown direct à destination d'un ingénieur.

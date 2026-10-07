@@ -4,9 +4,9 @@ from typing import TypeVar
 import pytest
 from pydantic import BaseModel
 
-from watch.agents.classifier import classify_articles, validate_selected_articles
-from watch.agents.writer import format_selection_context, generate_briefing
-from watch.models import Article, SelectedArticle, SelectionResult
+from tools.watch.agents.classifier import classify_articles, validate_selected_articles
+from tools.watch.agents.writer import format_selection_context, generate_briefing
+from tools.watch.schemas import Article, SelectedArticle, SelectionResult
 from providers.base import LLMProvider
 
 T = TypeVar("T", bound=BaseModel)

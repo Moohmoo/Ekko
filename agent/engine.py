@@ -1,20 +1,19 @@
-"""Moteur d'orchestration et boucle centrale ReAct pour Ekko (Brique 2).
+"""Moteur d'orchestration et boucle centrale ReAct pour Ekko.
 
 Gère le cycle de raisonnement Thought -> Tool Call -> Observation
 avec des garde-fous stricts contre les boucles infinies.
 """
 
 import logging
-from typing import Any, Callable
+from typing import Any
 from config import Settings
 from providers import LLMProvider
 from tools.registry import ToolRegistry
 from .memory import SQLiteMemory
-from .models import AgentRequest, AgentResponse
 from .prompts import build_system_prompt, format_history_block, format_step_prompt
-from .router import AgentAction, decide_action
+from .schemas import AgentAction, AgentRequest, AgentResponse, decide_action
 
-logger = logging.getLogger("ekko.core.engine")
+logger = logging.getLogger("ekko.agent.engine")
 
 
 def normalize_request(request: AgentRequest | str, session_id: str = "default") -> AgentRequest:

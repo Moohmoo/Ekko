@@ -1,4 +1,4 @@
-"""Catalogue et constructeur de prompts pour l'agent Ekko (Approche A).
+"""Catalogue et constructeur de prompts pour l'agent Ekko.
 
 Centralise les gabarits de prompts système, les directives de raisonnement
 ReAct et les micro-exemples de décision (Few-Shot).
@@ -42,12 +42,12 @@ Décision :
 
 Exemple 3 (Restitution d'observation - Tour 2) :
 Demande : "Salut ekko, quels sont les dernières news ?"
-Observation : "Briefing du jour disponible : ### [Tech & IA] Sujet A\n- Résumé : Détail...\n- [Lien](https://...)"
+Observation : "Briefing du jour disponible : ### [Tech & IA] Sujet A\\n- Résumé : Détail...\\n- [Lien](https://...)"
 Décision :
 - thought : "Le briefing est prêt. Je restitue les articles avec une mise en page aérée."
 - tool_name : null
 - tool_arguments_json : "{}"
-- final_answer : "Voici les actualités du jour :\n\n### [Tech & IA] Sujet A\n- **Résumé :** Détail...\n- [Lien](https://...)"
+- final_answer : "Voici les actualités du jour :\\n\\n### [Tech & IA] Sujet A\\n- **Résumé :** Détail...\\n- [Lien](https://...)"
 
 Exemple 4 (Inspection système) :
 Demande : "Donne-moi l'état de la machine et du GPU"

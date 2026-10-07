@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-from watch.models import Article, SelectedArticle, SelectionResult
+from tools.watch.schemas import Article, SelectedArticle, SelectionResult
 
 
 def test_article_instantiation() -> None:
@@ -37,7 +37,7 @@ def test_invalid_article_raises() -> None:
 
 def test_agent_request_and_response() -> None:
     """Vérifie les contrats AgentRequest et AgentResponse."""
-    from core.models import AgentRequest, AgentResponse
+    from agent.schemas import AgentRequest, AgentResponse
 
     req = AgentRequest(query="Yoh !")
     assert req.query == "Yoh !"

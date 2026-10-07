@@ -1,10 +1,10 @@
-"""Gestionnaire d'état et de mémoire pour l'agent Ekko (Brique 4).
+"""Gestionnaire d'état et de mémoire pour l'agent Ekko.
 
 Combine une mémoire long terme documentaire (profil utilisateur Markdown)
-et une mémoire moyen terme relationnelle (sessions et journal de bord SQLite).
+et une mémoire relationnelle locale (sessions, tâches et articles vus).
 """
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -33,7 +33,7 @@ def load_user_profile(memory_dir: Path) -> str:
 
 
 class SQLiteMemory:
-    """Mémoire relationnelle locale pour les sessions et le journal des tâches."""
+    """Mémoire relationnelle locale pour les sessions, tâches et déduplication."""
 
     def __init__(self, db_path: Path) -> None:
         """Initialise la connexion SQLite et crée les tables au besoin."""
@@ -48,7 +48,7 @@ class SQLiteMemory:
         return conn
 
     def _init_schema(self) -> None:
-        """Crée les tables de sessions et de tâches si elles n'existent pas."""
+        """Crée les tables de sessions, de tâches et d'articles si elles n'existent pas."""
         with self._get_connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
@@ -133,8 +133,14 @@ class SQLiteMemory:
         """Enregistre un lot d'URLs avec la date courante."""
         if not urls:
             return
-        today_str = datetime.now().date().isoformat()
+        today_str = date.today().isoformat()
         entries = [(url, today_str) for url in urls]
         with self._get_connection() as conn:
             conn.executemany("INSERT OR IGNORE INTO seen_articles (url, date_added) VALUES (?, ?)", entries)
 
+    def purge_seen_articles(self, retention_days: int) -> int:
+        """Supprime les URLs antérieures au seuil de rétention configuré."""
+        threshold = (date.today() - timedelta(days=retention_days)).isoformat()
+        with self._get_connection() as conn:
+            cursor = conn.execute("DELETE FROM seen_articles WHERE date_added < ?", (threshold,))
+            return cursor.rowcount

@@ -5,9 +5,9 @@ from typing import Any, Type, TypeVar
 import pytest
 from pydantic import BaseModel
 from config import Settings
-from core.engine import EkkoEngine
-from core.memory import SQLiteMemory
-from core.router import AgentAction
+from agent.engine import EkkoEngine
+from agent.memory import SQLiteMemory
+from agent.schemas import AgentAction
 from providers.base import LLMProvider
 from tools.base import BaseTool
 from tools.registry import ToolRegistry
