@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import Any
 import pytest
 
-from agents import classify_articles
+from watch.agents import classify_articles
 from config import get_settings
-from models import Article
+from watch.models import Article
 from providers import create_llm_provider
 
 DATASET_FILE = Path(__file__).parent / "data" / "golden_evals.json"

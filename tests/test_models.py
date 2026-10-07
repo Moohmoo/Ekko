@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-from models import Article, SelectedArticle, SelectionResult
+from watch.models import Article, SelectedArticle, SelectionResult
 
 
 def test_article_instantiation() -> None:

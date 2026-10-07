@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 from pathlib import Path
-from storage import (
+from watch.storage import (
     get_today_briefing_path,
     is_already_generated,
     load_history,

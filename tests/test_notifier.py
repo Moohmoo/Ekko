@@ -1,7 +1,7 @@
 """Tests unitaires pour le module de notification système."""
 
 from unittest.mock import patch
-from notifier import send_system_notification
+from watch.notifier import send_system_notification
 
 
 def test_notifier_missing_binary() -> None:

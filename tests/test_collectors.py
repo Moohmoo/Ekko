@@ -1,7 +1,7 @@
 """Tests unitaires pour les parsers des collecteurs d'articles."""
 
-from collectors.hacker_news import parse_hn_article
-from collectors.hugging_face import parse_hf_paper
+from watch.collectors.hacker_news import parse_hn_article
+from watch.collectors.hugging_face import parse_hf_paper
 
 
 def test_parse_hn_article_with_external_url() -> None:

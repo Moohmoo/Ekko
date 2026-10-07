@@ -37,13 +37,13 @@ class Settings(BaseSettings):
         description="Identifiant du modèle local",
     )
 
-    # Chemins de stockage locaux (relatifs au dossier Ekko ou absolus)
+    # Chemins de stockage locaux pour la veille
     watch_dir_path: Path = Field(
-        default=BASE_DIR / "data" / "briefings",
+        default=BASE_DIR / "data" / "watch" / "briefings",
         description="Dossier de destination des briefings journaliers",
     )
     history_file_path: Path = Field(
-        default=BASE_DIR / "data" / "history.json",
+        default=BASE_DIR / "data" / "watch" / "history.json",
         description="Fichier de persistance des URLs traitées",
     )
     history_retention_days: int = Field(
@@ -51,7 +51,13 @@ class Settings(BaseSettings):
         description="Nombre de jours de conservation des URLs en historique",
     )
 
-    @field_validator("watch_dir_path", "history_file_path", mode="after")
+    # Chemins pour la mémoire centrale d'Ekko
+    memory_dir_path: Path = Field(
+        default=BASE_DIR / "data" / "memory",
+        description="Dossier de stockage de la mémoire du bot Ekko",
+    )
+
+    @field_validator("watch_dir_path", "history_file_path", "memory_dir_path", mode="after")
     @classmethod
     def resolve_path(cls, value: Path) -> Path:
         """Résout automatiquement les chemins relatifs par rapport à la racine du projet."""

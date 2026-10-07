@@ -11,13 +11,13 @@ import logging
 from pathlib import Path
 import sys
 
-from agents import classify_articles, generate_briefing
-from collectors import fetch_hacker_news_articles, fetch_hugging_face_papers
 from config import Settings, get_settings
-from models import Article
-from notifier import send_system_notification
 from providers import create_llm_provider
-from storage import (
+from watch.agents import classify_articles, generate_briefing
+from watch.collectors import fetch_hacker_news_articles, fetch_hugging_face_papers
+from watch.models import Article
+from watch.notifier import send_system_notification
+from watch.storage import (
     get_today_briefing_path,
     is_already_generated,
     load_history,

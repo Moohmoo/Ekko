@@ -4,7 +4,7 @@ Prend la sélection de l'Agent 1 et produit une synthèse journalistique concise
 directe et percutante au format Markdown strict sans bavardage.
 """
 
-from models import Article, SelectionResult
+from watch.models import Article, SelectionResult
 from providers import LLMProvider
 
 WRITER_SYSTEM_PROMPT = """Tu es un journaliste technique chevronné et synthétique.

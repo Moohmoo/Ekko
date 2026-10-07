@@ -9,7 +9,7 @@ import logging
 from typing import Any
 import httpx
 
-from models import Article
+from watch.models import Article
 
 logger = logging.getLogger(__name__)
 

@@ -16,8 +16,11 @@ htmlcov/
 
 # Local configuration & storage
 .env
-data/history.json
-data/briefings/*.md
+data/watch/history.json
+data/watch/briefings/*.md
+data/memory/*.db
+data/memory/*.db-journal
+data/memory/*.db-wal
 
 # System
 .DS_Store
