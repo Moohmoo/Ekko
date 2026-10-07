@@ -1,7 +1,7 @@
 [project]
 name = "ekko"
 version = "0.1.0"
-description = "Système de veille scientifique et tech automatisé à 2 agents"
+description = "Assistant personnel local et autonome d'ingénierie et de veille"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

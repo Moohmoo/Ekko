@@ -1,113 +1,103 @@
-# Ekko - Assistant de Veille Automatisée (MVP)
+# Ekko - Assistant Personnel Local d'Ingénierie & Veille
 
-Ekko est un système autonome de veille scientifique et technologique basé sur une architecture à deux agents spécialisés et une modélisation stricte Pydantic v2. Il extrait les sujets "trending" (Hacker News, Hugging Face Daily Papers), filtre les doublons via une mémoire persistante, classe les articles majeurs et génère un briefing quotidien synthétique en Markdown avec notification de bureau Ubuntu.
-
----
-
-## 🏛️ Architecture & Fonctionnement
-
-```
-[ Hacker News API ]      [ HF Daily Papers ]
-        │                        │
-        └───────────┬────────────┘
-                    ▼
-     [ Filtre Anti-Doublon & Historique ]
-             (~/.history.json)
-                    │
-                    ▼
-      [ Agent 1 : Le Trieur ]
-       - Pare-feu anti-bruit (Tech, Backend, Bio)
-       - Sortie structurée (Pydantic)
-                    │
-                    ▼
-     [ Agent 2 : Le Rédacteur ]
-       - Synthèse percutante sans bavardage
-       - Format Markdown strict
-                    │
-                    ├──────────────────────────┐
-                    ▼                          ▼
-      [ data/briefings/YYYY-MM-DD.md ]  [ notify-send OS ]
-```
-
-### 1. Collecte asynchrone
-- **Hacker News :** Top stories avec filtrage sur score minimum (> 50 points).
-- **Hugging Face Daily Papers :** Articles de recherche les plus populaires du jour.
-
-### 2. Mémoire et Idempotence
-- **Historique local (`data/history.json`) :** Indexation des URLs normalisées (nettoyage UTM, ancres) avec date et purge glissante à 60 jours.
-- **Idempotence journalière (`data/briefings/YYYY-MM-DD.md`) :** Ne recalcule pas si le briefing a déjà été généré, sauf en cas d'utilisation du flag `--force`.
-
-### 3. Architecture 2 Agents Découplés
-- **Agent 1 (Trieur) :** Pare-feu anti-bruit ciblant l'informatique et la bioinformatique. Retient 3 à 5 articles majeurs et garantit la structure via `SelectionResult`. Validation anti-hallucination d'URL intégrée.
-- **Agent 2 (Rédacteur) :** Rédige les sections directes (`C'est quoi`, `Pourquoi on en parle`, lien source) sans salutations superflues.
-
-### 4. Support Multi-Providers (Strategy Pattern)
-- **Google GenAI :** Utilise le SDK officiel `google-genai` (modèle `gemini-flash-lite-latest` par défaut).
-- **Modèle Local :** Compatible Ollama / vLLM / LM Studio via API compatible OpenAI (`http://localhost:11434/v1`).
+Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. Conçu selon les principes de simplicité radicale et d'architecture hexagonale (Rasoir d'Ockham, SOLID), il combine un moteur de raisonnement ReAct interactif en ligne de commande et un sous-système de veille scientifique et technologique automatisé.
 
 ---
 
-## 🚀 Installation & Démarrage
+## Architecture & Fonctionnement
+
+```
+   ┌─────────────────────────────────────────────────────────┐
+   │                       Ekko CLI                          │
+   │           Interface Terminal Interactive (Rich)         │
+   └────────────────────────────┬────────────────────────────┘
+                                │ AgentRequest / Streaming
+                                ▼
+   ┌─────────────────────────────────────────────────────────┐
+   │                      EkkoEngine                         │
+   │               Boucle ReAct & Streaming Events           │
+   │        (Thought -> Action -> Observation -> Answer)     │
+   └──────┬─────────────────────┬─────────────────────┬──────┘
+          │                     │                     │
+          ▼                     ▼                     ▼
+   ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
+   │ LLM Providers │     │ SQLiteMemory  │     │ ToolRegistry  │
+   │  - Gemini     │     │  - Messages   │     │  - WatchTool  │
+   │  - Ollama/Loc │     │  - Task Runs  │     │  - SysInfo    │
+   └───────────────┘     │  - TTL Purge  │     └───────┬───────┘
+                         └───────────────┘             │
+                                                       ▼
+                                         ┌───────────────────────────┐
+                                         │   Pipeline Veille SOTA    │
+                                         │  - Collecteurs (HN, HF)   │
+                                         │  - Agent 1 : Trieur       │
+                                         │  - Agent 2 : Rédacteur    │
+                                         │  - Briefing Markdown      │
+                                         └───────────────────────────┘
+```
+
+### 1. Moteur ReAct & Streaming
+- **Cycle complet :** Le moteur (`agent/engine.py`) orchestre la réflexion et l'exécution d'outils via un flux d'événements typés (`ThoughtEvent`, `ToolCallEvent`, `ToolResultEvent`, `DoneEvent`).
+- **Présentateurs :** Affichage interactif avec Rich (`ConsolePresenter`) en mode normal ou avec diagnostics détaillés (`-d / --debug`), ou sortie machine (`JsonPresenter`).
+- **Garde-fous :** Interception automatique des actions redondantes et limitation stricte du nombre d'itérations.
+
+### 2. Outils découplés (Tool Registry)
+- **`run_daily_watch` :** Outil de veille quotidienne. Si le briefing du jour existe déjà dans `data/watch/briefings/`, il le restitue instantanément avec filtrage thématique par mot-clé (`query`). Sinon, il déclenche le pipeline complet à deux agents (Trieur + Rédacteur).
+- **`get_system_info` :** Outil d'inspection du matériel hôte (OS, CPU, RAM, présence de GPU).
+
+### 3. Mémoire SQLite & Gestion de sessions
+- **Mémoire court-terme :** Fenêtre glissante conversationnelle isolée par identifiant de session.
+- **Commande `/reset` :** Réinitialise instantanément l'affichage du terminal et instancie une nouvelle session vierge.
+- **Rétention automatique (TTL) :** Purge automatique des anciens messages et exécutions d'outils au démarrage selon la configuration (`history_retention_days`).
+
+### 4. Fournisseurs LLM (Strategy Pattern)
+- **Local (par défaut) :** Compatible Ollama / vLLM / LM Studio via API standard OpenAI (`http://localhost:11434/v1`).
+- **Google GenAI :** Compatible avec les modèles Gemini via le SDK officiel `google-genai`.
+
+---
+
+## Installation & Démarrage
 
 ### Prérequis
 - Ubuntu Linux avec Python 3.11+
-- `notify-send` (inclus par défaut sur Ubuntu Desktop)
+- [uv](https://docs.astral.sh/uv/) installé sur la machine
 
-### 1. Cloner ou naviguer dans le dossier
-```bash
-cd Ekko
-```
-
-### 2. Configuration des variables d'environnement
-Copiez le gabarit `.env.example` vers `.env` :
+### 1. Configuration de l'environnement
+Copiez le gabarit `.env.example` vers `.env` et ajustez vos paramètres :
 ```bash
 cp .env.example .env
 ```
-Éditez le fichier `.env` avec votre clé API :
-```bash
-GEMINI_API_KEY=votre_cle_gemini_ici
+
+Exemple pour modèle local (Ollama) :
+```dotenv
+LLM_PROVIDER=local
+LOCAL_LLM_URL=http://localhost:11434/v1
+LOCAL_LLM_MODEL=qwen2.5:7b
 ```
 
-*(Si vous souhaitez utiliser un modèle local comme Ollama : réglez `LLM_PROVIDER=local`)*
-
-### 3. Exécution (avec uv ou python)
-
-Avec **uv** (recommandé, rapide et sans configuration) :
-```bash
-# Exécution normale du matin
-uv run main.py
-
-# Forcer la regénération même si le fichier du jour existe déjà
-uv run main.py --force
+Exemple pour Google Gemini :
+```dotenv
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=votre_cle_api_ici
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
-Ou avec le virtualenv standard :
+### 2. Lancement du CLI interactif
 ```bash
-./.venv/bin/python main.py
+uv run python cli.py
 ```
 
-Le briefing sera disponible dans `~/watch/YYYY-MM-DD.md` et une notification de bureau s'affichera.
+Options disponibles :
+- `uv run python cli.py -d` : Active le mode débogage (affiche les pensées détaillées et arguments d'outils).
+- `/reset` : Dans l'invite de commande, réinitialise la session et efface l'écran.
+- `exit` ou `quit` : Quitte la session.
 
 ---
 
-## 🧪 Tests Unitaires
+## Tests & Validation
 
-Le projet inclut une suite de tests unitaires couvrant l'ensemble des modules :
+La suite de tests unitaires et d'intégration couvre l'intégralité des modules :
 
 ```bash
-uv run pytest -v
-```
-
----
-
-## 🔮 Évolution vers Ekko (Agent Orchestrateur / JARVIS)
-
-Conçu selon le principe de simplicité radicale (**KISS** et **Rasoir d'Ockham**), ce module de veille est conçu pour être directement importable en tant que fonction/outil (`Tool`) par l'agent orchestrateur global Ekko :
-
-```python
-from main import execute_daily_watch
-from config import get_settings
-
-# Appelable directement comme tool d'orchestration
-result = await execute_daily_watch(get_settings())
+uv run pytest
 ```
