@@ -23,7 +23,7 @@ def _configure_file_handler(log_file: Path) -> logging.FileHandler:
 def _configure_loggers(debug: bool) -> None:
     """Ajuste le niveau des bibliothèques réseau pour alimenter le journal disque."""
     level = logging.DEBUG if debug else logging.INFO
-    for name in ("httpx", "httpcore", "google_genai", "urllib3"):
+    for name in ("httpx", "httpcore", "google_genai", "urllib3", "markdown_it"):
         logger = logging.getLogger(name)
         logger.setLevel(level)
         logger.handlers.clear()

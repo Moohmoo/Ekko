@@ -4,12 +4,15 @@ Gère le cycle de raisonnement Thought -> Tool Call -> Observation
 avec des garde-fous stricts contre les boucles infinies.
 """
 
+import logging
 from typing import Any, Callable
 from config import Settings
 from providers import LLMProvider
 from tools.registry import ToolRegistry
 from .memory import SQLiteMemory
 from .router import AgentAction, decide_action
+
+logger = logging.getLogger("ekko.core.engine")
 
 
 def build_system_prompt(user_profile: str, tools_catalog: str) -> str:
@@ -65,10 +68,12 @@ class EkkoEngine:
     ) -> str:
         """Exécute un outil, invoque les callbacks graphiques et journalise l'action."""
         tool_name = action.tool_name or ""
+        logger.debug("Exécution outil '%s' avec args=%s", tool_name, action.tool_arguments)
         if callbacks.get("on_tool_call"):
             callbacks["on_tool_call"](tool_name, action.tool_arguments)
 
         obs = await self.registry.execute_tool(tool_name, action.tool_arguments)
+        logger.debug("Résultat outil '%s': %s", tool_name, obs[:150])
 
         if callbacks.get("on_tool_result"):
             callbacks["on_tool_result"](tool_name, obs)
@@ -83,16 +88,21 @@ class EkkoEngine:
         callbacks: dict[str, Any] | None = None,
     ) -> str:
         """Exécute la boucle ReAct jusqu'à résolution ou limite d'itérations."""
+        logger.debug("Nouvelle requête (session=%s): '%s'", session_id, user_query)
         cb = callbacks or {}
         system_prompt = build_system_prompt(self.user_profile, self.registry.get_prompt_catalog())
         observations: list[str] = []
 
-        for _ in range(self.max_steps):
+        for step in range(self.max_steps):
             if cb.get("on_thinking_start"):
                 cb["on_thinking_start"]()
 
             prompt = format_step_prompt(user_query, observations)
             action = await decide_action(self.provider, prompt, system_prompt)
+            logger.debug(
+                "Étape %d/%d: thought='%s', tool='%s'",
+                step + 1, self.max_steps, action.thought, action.tool_name
+            )
 
             if cb.get("on_thought") and action.thought:
                 cb["on_thought"](action.thought)
