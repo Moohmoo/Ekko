@@ -11,22 +11,52 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.status import Status
+from rich.table import Table
 from rich.text import Text
 
 from agent.schemas import AgentResponse
 
 console = Console()
 
+ASCII_LOGO = (
+    "[bold cyan]     ▄▀▀▄    [/bold cyan]",
+    "[bold cyan]    ▀▀██▀▀   [/bold cyan]",
+    "[cyan]   ▀▀████▀▀  [/cyan]",
+    "[dim cyan]  ▄▀▀    ▀▀▄ [/dim cyan]",
+    "[dim cyan] ▄▀▀      ▀▀▄[/dim cyan]",
+)
+
 
 def print_banner(model_name: str, provider: str, debug: bool = False) -> None:
-    """Affiche la bannière d'accueil sobre et moderne d'Ekko."""
-    header = Text()
-    header.append("⚡ Ekko", style="bold cyan")
-    header.append(" | Assistant Personnel Local", style="bold white")
-    mode_label = " [debug]" if debug else ""
-    header.append(f" ({provider}: {model_name}{mode_label})\n", style="dim cyan")
-    header.append("Tapez votre message ou 'exit' pour quitter.", style="dim")
-    console.print(Panel(header, border_style="cyan", padding=(0, 2)))
+    """Affiche la bannière d'accueil moderne et le logo ASCII d'Ekko."""
+    mode_label = " [bold magenta][debug][/bold magenta]" if debug else ""
+    info_lines = [
+        "[bold white]Ekko CLI[/bold white] [dim cyan]0.1.0[/dim cyan]",
+        f"[cyan]{provider}: {model_name}[/cyan]{mode_label}",
+        "[dim]~[/dim]",
+        "[dim]Tapez votre message ou 'exit' pour quitter.[/dim]",
+        "",
+    ]
+    grid = Table.grid(padding=(0, 3))
+    for logo_part, info_part in zip(ASCII_LOGO, info_lines):
+        grid.add_row(logo_part, info_part)
+
+    console.print()
+    console.print(grid)
+    console.print("[dim cyan]" + "─" * 60 + "[/dim cyan]\n")
+
+
+def prompt_user_input() -> str:
+    """Affiche le délimiteur supérieur et invite l'utilisateur à saisir sa requête."""
+    console.print("[dim cyan]" + "─" * 60 + "[/dim cyan]")
+    try:
+        query = console.input("[bold cyan]> [/bold cyan]").strip()
+    except (KeyboardInterrupt, EOFError):
+        console.print()
+        return "exit"
+    if query:
+        console.print("[dim cyan]" + "─" * 60 + "[/dim cyan]")
+    return query
 
 
 def render_thought_line(thought: str, elapsed: float) -> None:

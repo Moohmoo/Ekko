@@ -1,6 +1,10 @@
-"""Tests unitaires pour l'interface console AgentUI et le formatage Rich."""
-
-from ui.console import AgentUI, print_banner, render_thought_line
+from ui.console import (
+    AgentUI,
+    console,
+    print_banner,
+    prompt_user_input,
+    render_thought_line,
+)
 
 
 def test_agent_ui_callbacks_dict() -> None:
@@ -52,3 +56,33 @@ def test_render_thought_line_truncation(capsys) -> None:
     long_thought = "A" * 120
     render_thought_line(long_thought, 1.5)
     # Ne lève pas d'exception
+
+
+def test_print_banner_renders() -> None:
+    """Vérifie que la bannière s'affiche sans erreur en mode normal et debug."""
+    print_banner("qwen2.5:7b", "local", debug=False)
+    print_banner("gemini-2.5-flash", "google", debug=True)
+
+
+def test_prompt_user_input_success(monkeypatch) -> None:
+    """Vérifie la capture d'une saisie utilisateur normale."""
+    monkeypatch.setattr(console, "input", lambda _: "Bonjour Ekko")
+    assert prompt_user_input() == "Bonjour Ekko"
+
+
+def test_prompt_user_input_interrupt(monkeypatch) -> None:
+    """Vérifie le retour 'exit' en cas d'interruption clavier."""
+    def raise_interrupt(_):
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(console, "input", raise_interrupt)
+    assert prompt_user_input() == "exit"
+
+
+def test_prompt_user_input_eof(monkeypatch) -> None:
+    """Vérifie le retour 'exit' en cas de fermeture de flux EOF."""
+    def raise_eof(_):
+        raise EOFError()
+
+    monkeypatch.setattr(console, "input", raise_eof)
+    assert prompt_user_input() == "exit"

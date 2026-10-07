@@ -9,8 +9,14 @@ from agent import AgentRequest, EkkoEngine, SQLiteMemory, load_user_profile
 from config import Settings, get_settings
 from core import format_error_for_display, setup_logging
 from providers import create_llm_provider
-from tools import default_registry
-from ui import AgentUI, console, print_banner, render_error, render_final_answer
+from ui import (
+    AgentUI,
+    console,
+    print_banner,
+    prompt_user_input,
+    render_error,
+    render_final_answer,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,7 +56,7 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
     ui = AgentUI(debug=debug)
     while True:
         try:
-            query = console.input("[bold cyan]Ekko > [/bold cyan]").strip()
+            query = prompt_user_input()
             if not query:
                 continue
             if query.lower() in {"exit", "quit", "q"}:
