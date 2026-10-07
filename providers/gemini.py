@@ -50,7 +50,7 @@ class GeminiProvider(LLMProvider):
         self,
         api_key: str,
         model_name: str = "gemini-3.1-flash-lite",
-        timeout: float = 20.0,
+        timeout: float = 12.0,
     ) -> None:
         """Initialise le client Google GenAI avec timeout et options de serveur."""
         if not api_key:

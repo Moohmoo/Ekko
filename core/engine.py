@@ -31,7 +31,9 @@ def build_system_prompt(user_profile: str, tools_catalog: str) -> str:
         "- Produis systématiquement un 'thought' concis explicitant ton analyse.\n"
         "- Si une action technique est requise, fournis 'tool_name' et 'tool_arguments' ('final_answer' = null).\n"
         "- Dès qu'aucun outil n'est requis ou la tâche finie, fournis 'final_answer' ('tool_name' = null).\n"
-        "- Réponses directes, synthétiques et factuelles."
+        "- Réponses directes, précises et sans bavardage.\n"
+        "- Formate tes réponses finales en Markdown aéré et structuré (listes à puces, sauts de ligne, "
+        "mots-clés en gras) pour une lisibilité optimale dans le terminal."
     )
 
 

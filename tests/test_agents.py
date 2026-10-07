@@ -71,7 +71,7 @@ async def test_agent_pipeline_with_mock() -> None:
     mock_selection = SelectionResult(
         articles=[SelectedArticle(title="A1", url="https://a.com", category="Tech & IA")]
     )
-    markdown_output = "### [Tech & IA] A1\n- **C'est quoi :** Découverte\n- **Pourquoi on en parle :** Impact\n- 🔗 [Lien](https://a.com)"
+    markdown_output = "### [Tech & IA] A1\n- **C'est quoi :** Découverte\n- **Pourquoi on en parle :** Impact\n- [Lien](https://a.com)"
 
     mock_provider = MockLLMProvider(structured_return=mock_selection, text_return=markdown_output)
 

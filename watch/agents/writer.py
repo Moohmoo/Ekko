@@ -16,7 +16,7 @@ Règles strictes :
 ### [Catégorie] Titre de l'article
 - **C'est quoi :** Explication concise en 1 phrase claire vulgarisant le sujet.
 - **Pourquoi on en parle :** Impact technique direct et intérêt industriel ou académique.
-- 🔗 [Lien](URL)
+- [Lien](URL)
 
 Sépare chaque article par un saut de ligne. N'altère pas les URLs.
 """

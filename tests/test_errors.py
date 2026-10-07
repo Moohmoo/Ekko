@@ -58,3 +58,5 @@ def test_format_error_display_debug() -> None:
     assert "Serveur indisponible" in display
     assert "ProviderUnavailableError" in display
     assert "HTTP 503 code" in display
+    assert "Action :" in display
+    assert "Logs : data/logs/ekko.log" in display

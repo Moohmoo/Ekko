@@ -61,17 +61,34 @@ def classify_generic_exception(exc: Exception) -> EkkoError | ProviderError:
     )
 
 
+def _get_remediation_action(error: Exception) -> str:
+    """Fournit un conseil d'action immédiat selon la nature de l'erreur."""
+    if isinstance(error, ProviderUnavailableError):
+        return "Attendez 30-60s (pic de charge temporaire chez Google) ou basculez en modèle local."
+    if isinstance(error, ProviderTimeoutError):
+        return "Le serveur distant tarde à répondre. Vérifiez votre accès réseau ou réessayez."
+    if isinstance(error, ProviderAuthError):
+        return "Vérifiez que GEMINI_API_KEY est correctement renseignée dans votre fichier .env."
+    if isinstance(error, ToolExecutionError):
+        return "Vérifiez les prérequis matériels ou les autorisations système de l'outil."
+    return "Consultez les détails dans data/logs/ekko.log ou réessayez avec une requête reformulée."
+
+
 def format_error_for_display(exc: Exception, debug: bool = False) -> str:
     """Entonnoir central formatant l'erreur pour l'affichage terminal."""
     error = exc if isinstance(exc, (EkkoError, ProviderError)) else classify_generic_exception(exc)
-    logger.error("Erreur interceptée par l'entonnoir: %s", error.technical_details or error.user_message)
+    tech = getattr(error, "technical_details", None) or str(exc)
+    user_msg = getattr(error, "user_message", None) or str(exc)
+    logger.error("Erreur interceptée par l'entonnoir: %s", tech)
 
     if not debug:
-        return error.user_message
+        return user_msg
 
-    details = error.technical_details or "Aucun détail technique supplémentaire."
+    action = _get_remediation_action(error)
     return (
-        f"{error.user_message}\n\n"
+        f"{user_msg}\n\n"
         f"[dim]Type : {type(error).__name__}[/dim]\n"
-        f"[dim]Diagnostic : {details}[/dim]"
+        f"[dim]Diagnostic : {tech}[/dim]\n"
+        f"[cyan]Action : {action}[/cyan]\n"
+        f"[dim]Logs : data/logs/ekko.log[/dim]"
     )
