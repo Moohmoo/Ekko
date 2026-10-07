@@ -4,6 +4,7 @@ from typing import Type
 import pytest
 from pydantic import BaseModel, Field
 from tools.base import BaseTool
+from tools.news import NewsSearchTool
 from tools.registry import ToolRegistry
 from tools.search import WebSearchTool
 from tools.system import SystemInfoTool
@@ -139,3 +140,51 @@ async def test_fetch_page_tool_execution(monkeypatch: pytest.MonkeyPatch) -> Non
 
     assert "Titre Paragraphe intéressant" in res
     assert "Contenu extrait" in res
+
+
+@pytest.mark.asyncio
+async def test_news_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie l'exécution et le formatage des dépêches par NewsSearchTool."""
+    fake_news = [
+        {
+            "title": "Avancée en bioinformatique",
+            "url": "https://example.com/bio-news",
+            "source": "Le Monde Informatique",
+            "date": "2026-10-06T12:00:00+00:00",
+            "body": "Une nouvelle découverte majeure utilisant l'IA.",
+        }
+    ]
+
+    def mock_ddgs_news(query: str, max_results: int) -> list[dict[str, str]]:
+        return fake_news
+
+    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", mock_ddgs_news)
+    tool = NewsSearchTool()
+    res = await tool.execute(query="bioinformatique", max_results=3)
+
+    assert "Avancée en bioinformatique" in res
+    assert "https://example.com/bio-news" in res
+    assert "Le Monde Informatique" in res
+    assert "2026-10-06" in res
+    assert "Une nouvelle découverte majeure" in res
+
+
+@pytest.mark.asyncio
+async def test_news_search_tool_empty_results(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le message quand aucune actualité n'est trouvée."""
+    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", lambda q, m: [])
+    tool = NewsSearchTool()
+    res = await tool.execute(query="sujet_inconnu")
+    assert "Aucune actualité récente trouvée" in res
+
+
+@pytest.mark.asyncio
+async def test_news_search_tool_error_handling(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie la gestion d'erreur réseau pour NewsSearchTool."""
+    def mock_fail(query: str, max_results: int) -> list[dict[str, str]]:
+        raise ConnectionError("Service injoignable")
+
+    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", mock_fail)
+    tool = NewsSearchTool()
+    res = await tool.execute(query="fail")
+    assert "Erreur lors de la recherche d'actualités" in res

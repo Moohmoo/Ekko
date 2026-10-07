@@ -28,7 +28,8 @@ Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. C
                          └───────────────┘             ▼
                                          ┌───────────────────────────┐
                                          │Outils Primitifs Génériques│
-                                         │ - web_search (DuckDuckGo) │
+                                         │ - news_search (Actus/News)│
+                                         │ - web_search (Doc/Web)    │
                                          │ - fetch_page (Lecteur Web)│
                                          │ - get_system_info (Matos) │
                                          └───────────────────────────┘
@@ -40,7 +41,8 @@ Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. C
 - **Garde-fous :** Interception automatique des actions redondantes et limitation stricte du nombre d'itérations.
 
 ### 2. Outils découplés (Tool Registry - Primitives LEGO)
-- **`web_search` :** Recherche universelle sur le web sans clé d'API via DuckDuckGo (`ddgs`). Permet d'extraire les actualités récentes, documentations ou solutions techniques.
+- **`news_search` :** Recherche d'actualités et dépêches horodatées récentes sur DuckDuckGo News (`ddgs`). Restitue titres, sources de presse, dates de publication et URLs d'articles.
+- **`web_search` :** Recherche universelle sur le web sans clé d'API via DuckDuckGo (`ddgs`). Permet d'extraire la documentation technique, des articles de fond ou des solutions.
 - **`fetch_page` :** Lecteur de page web asynchrone via `httpx`. Extrait le contenu textuel pur d'une URL en supprimant le bruit (scripts, styles, balises HTML).
 - **`get_system_info` :** Inspection matérielle locale de la machine hôte (OS, CPU, mémoire vive disponible, détection GPU Nvidia).
 
