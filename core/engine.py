@@ -18,11 +18,14 @@ def build_system_prompt(user_profile: str, tools_catalog: str) -> str:
         "Tu es Ekko, un assistant personnel d'ingénierie autonome opérant sur la machine locale.\n\n"
         f"### PROFIL UTILISATEUR :\n{user_profile}\n\n"
         f"### OUTILS DISPONIBLES :\n{tools_catalog}\n\n"
-        "### INSTRUCTIONS REACT :\n"
-        "- Produis systématiquement un 'thought' pour expliciter ton raisonnement technique.\n"
-        "- Si une action est requise, fournis 'tool_name' et 'tool_arguments' (avec 'final_answer' = null).\n"
-        "- Si aucun outil n'est requis ou si la tâche est finie, fournis 'final_answer' et 'tool_name' = null.\n"
-        "- Respecte scrupuleusement la concision et le style direct demandé par l'utilisateur."
+        "### RÈGLES DE DÉCISION REACT :\n"
+        "- Pour une salutation ('salut', 'bonjour'), un échange informel ou une question sans action "
+        "technique requise, N'EXÉCUTE AUCUN OUTIL : réponds immédiatement via 'final_answer'.\n"
+        "- N'appelle un outil QUE si la demande exige concrètement son exécution.\n"
+        "- Produis systématiquement un 'thought' concis explicitant ton analyse.\n"
+        "- Si une action technique est requise, fournis 'tool_name' et 'tool_arguments' ('final_answer' = null).\n"
+        "- Dès qu'aucun outil n'est requis ou la tâche finie, fournis 'final_answer' ('tool_name' = null).\n"
+        "- Réponses directes, synthétiques et factuelles."
     )
 
 
@@ -32,7 +35,7 @@ def format_step_prompt(user_query: str, observations: list[str]) -> str:
     if observations:
         prompt += "\nObservations des outils précédents :\n"
         prompt += "\n".join(observations) + "\n"
-    prompt += "\nQuelle est l'étape suivante ?"
+    prompt += "\nDécide de l'action technique ou formule la réponse finale directement."
     return prompt
 
 

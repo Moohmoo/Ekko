@@ -21,6 +21,8 @@ data/watch/briefings/*.md
 data/memory/*.db
 data/memory/*.db-journal
 data/memory/*.db-wal
+data/logs/
+*.log
 
 # System
 .DS_Store

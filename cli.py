@@ -5,8 +5,8 @@ Lance directement la session interactive avec option de débogage (-d / --debug)
 
 import argparse
 import asyncio
-from config import get_settings
-from core import EkkoEngine, SQLiteMemory, load_user_profile
+from config import Settings, get_settings
+from core import EkkoEngine, SQLiteMemory, load_user_profile, setup_logging
 from providers import create_llm_provider
 from tools import default_registry
 from ui import AgentUI, console, print_banner, render_error, render_final_answer
@@ -24,16 +24,16 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def initialize_engine() -> EkkoEngine:
+def initialize_engine(settings: Settings | None = None) -> EkkoEngine:
     """Initialise et configure le moteur ReAct avec la mémoire et les outils."""
-    settings = get_settings()
-    provider = create_llm_provider(settings)
-    memory_db = settings.memory_dir_path / "ekko.db"
+    cfg = settings or get_settings()
+    provider = create_llm_provider(cfg)
+    memory_db = cfg.memory_dir_path / "ekko.db"
     memory = SQLiteMemory(memory_db)
-    user_profile = load_user_profile(settings.memory_dir_path)
+    user_profile = load_user_profile(cfg.memory_dir_path)
 
     return EkkoEngine(
-        settings=settings,
+        settings=cfg,
         provider=provider,
         registry=default_registry,
         memory=memory,
@@ -70,7 +70,9 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
 def main() -> None:
     """Point d'entrée principal synchrone."""
     args = parse_args()
-    engine = initialize_engine()
+    settings = get_settings()
+    setup_logging(settings.log_dir_path, debug=args.debug)
+    engine = initialize_engine(settings)
     asyncio.run(run_interactive_repl(engine, debug=args.debug))
 
 

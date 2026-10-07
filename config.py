@@ -56,8 +56,18 @@ class Settings(BaseSettings):
         default=BASE_DIR / "data" / "memory",
         description="Dossier de stockage de la mémoire du bot Ekko",
     )
+    log_dir_path: Path = Field(
+        default=BASE_DIR / "data" / "logs",
+        description="Dossier de stockage des journaux techniques",
+    )
 
-    @field_validator("watch_dir_path", "history_file_path", "memory_dir_path", mode="after")
+    @field_validator(
+        "watch_dir_path",
+        "history_file_path",
+        "memory_dir_path",
+        "log_dir_path",
+        mode="after",
+    )
     @classmethod
     def resolve_path(cls, value: Path) -> Path:
         """Résout automatiquement les chemins relatifs par rapport à la racine du projet."""
