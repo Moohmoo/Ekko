@@ -1,0 +1,127 @@
+"""Tests d'intégration pour le moteur ReAct EkkoEngine (Brique 2)."""
+
+from pathlib import Path
+from typing import Any, Type, TypeVar
+import pytest
+from pydantic import BaseModel
+from config import Settings
+from core.engine import EkkoEngine
+from core.memory import SQLiteMemory
+from core.router import AgentAction
+from providers.base import LLMProvider
+from tools.base import BaseTool
+from tools.registry import ToolRegistry
+
+T = TypeVar("T", bound=BaseModel)
+
+
+class MockLLMProvider(LLMProvider):
+    """Fournisseur LLM factice rejouant une séquence d'actions."""
+
+    def __init__(self, actions: list[AgentAction]) -> None:
+        self.actions = actions
+        self.call_count = 0
+
+    async def generate_structured(
+        self, prompt: str, schema: type[T], system_instruction: str = ""
+    ) -> T:
+        action = self.actions[self.call_count]
+        self.call_count += 1
+        return action  # type: ignore[return-value]
+
+    async def generate_text(self, prompt: str, system_instruction: str = "") -> str:
+        return "mock text"
+
+
+class MockToolParams(BaseModel):
+    query: str = ""
+
+
+class MockTool(BaseTool):
+    name: str = "mock_search"
+    description: str = "Recherche factice"
+    parameters_schema: Type[BaseModel] = MockToolParams
+
+    async def execute(self, **kwargs: object) -> str:
+        return f"Trouvé: {kwargs.get('query')}"
+
+
+def setup_engine(tmp_path: Path, actions: list[AgentAction]) -> tuple[EkkoEngine, SQLiteMemory]:
+    """Prépare un moteur et sa mémoire temporaire pour les tests."""
+    settings = Settings()
+    memory = SQLiteMemory(tmp_path / "test_engine.db")
+    registry = ToolRegistry()
+    registry.register(MockTool())
+    provider = MockLLMProvider(actions)
+    engine = EkkoEngine(
+        settings=settings,
+        provider=provider,
+        registry=registry,
+        memory=memory,
+        user_profile="Profil de test",
+        max_steps=3,
+    )
+    return engine, memory
+
+
+@pytest.mark.asyncio
+async def test_engine_direct_answer(tmp_path: Path) -> None:
+    """Vérifie la résolution immédiate sans appel d'outil."""
+    actions = [AgentAction(thought="Réponse directe", final_answer="Voici l'information")]
+    engine, memory = setup_engine(tmp_path, actions)
+
+    events: list[str] = []
+    callbacks = {"on_thought": lambda t: events.append(f"thought:{t}")}
+
+    res = await engine.run("Question simple", session_id="test_sess", callbacks=callbacks)
+
+    assert res == "Voici l'information"
+    assert events == ["thought:Réponse directe"]
+    history = memory.get_recent_messages("test_sess")
+    assert len(history) == 2
+
+
+@pytest.mark.asyncio
+async def test_engine_tool_call_flow(tmp_path: Path) -> None:
+    """Vérifie le cycle complet Thought -> Tool Call -> Observation -> Final Answer."""
+    actions = [
+        AgentAction(
+            thought="Besoin de chercher",
+            tool_name="mock_search",
+            tool_arguments_json='{"query": "antigravity"}',
+        ),
+        AgentAction(
+            thought="Résultat trouvé, conclusion",
+            final_answer="La recherche a trouvé antigravity.",
+        ),
+    ]
+    engine, memory = setup_engine(tmp_path, actions)
+
+    calls: list[str] = []
+    callbacks = {
+        "on_tool_call": lambda name, args: calls.append(f"call:{name}"),
+        "on_tool_result": lambda name, res: calls.append(f"res:{res}"),
+    }
+
+    res = await engine.run("Trouve antigravity", callbacks=callbacks)
+
+    assert "antigravity" in res
+    assert calls == ["call:mock_search", "res:Trouvé: antigravity"]
+    tasks = memory.get_recent_tasks()
+    assert len(tasks) == 1
+    assert tasks[0]["tool_name"] == "mock_search"
+
+
+@pytest.mark.asyncio
+async def test_engine_max_steps_safeguard(tmp_path: Path) -> None:
+    """Vérifie le déclenchement du garde-fou si la boucle ne converge pas."""
+    loop_action = AgentAction(
+        thought="En boucle...",
+        tool_name="mock_search",
+        tool_arguments_json='{"query": "loop"}',
+    )
+    actions = [loop_action, loop_action, loop_action]
+    engine, _ = setup_engine(tmp_path, actions)
+
+    res = await engine.run("Boucle sans fin")
+    assert "Limite maximale d'étapes" in res
