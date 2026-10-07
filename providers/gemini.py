@@ -24,8 +24,8 @@ class GeminiProvider(LLMProvider):
     def __init__(
         self,
         api_key: str,
-        model_name: str = "gemini-2.5-flash",
-        timeout: float = 12.0,
+        model_name: str = "gemini-flash-lite-latest",
+        timeout: float = 20.0,
     ) -> None:
         """Initialise le client Google GenAI avec timeout et options de serveur."""
         if not api_key:

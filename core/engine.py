@@ -32,14 +32,33 @@ def build_system_prompt(user_profile: str, tools_catalog: str) -> str:
     )
 
 
-def format_step_prompt(user_query: str, observations: list[str]) -> str:
-    """Met en forme l'état de la demande et des observations accumulées."""
-    prompt = f"Demande utilisateur : {user_query}\n"
+def format_history_block(history: list[dict[str, str]]) -> str:
+    """Formate l'historique conversationnel récent avec garde-fou de taille."""
+    if not history:
+        return ""
+    lines: list[str] = []
+    for msg in history:
+        role = "Utilisateur" if msg["role"] == "user" else "Ekko"
+        content = " ".join(msg["content"].strip().split())
+        short_content = content[:250] + "..." if len(content) > 250 else content
+        lines.append(f"- {role} : {short_content}")
+    return "### HISTORIQUE CONVERSATIONNEL RÉCENT :\n" + "\n".join(lines)
+
+
+def format_step_prompt(
+    user_query: str,
+    observations: list[str],
+    history_block: str = "",
+) -> str:
+    """Met en forme l'état de la demande, de l'historique et des observations."""
+    sections: list[str] = []
+    if history_block:
+        sections.append(history_block)
+    sections.append(f"Demande utilisateur : {user_query}")
     if observations:
-        prompt += "\nObservations des outils précédents :\n"
-        prompt += "\n".join(observations) + "\n"
-    prompt += "\nDécide de l'action technique ou formule la réponse finale directement."
-    return prompt
+        sections.append("Observations des outils précédents :\n" + "\n".join(observations))
+    sections.append("Décide de l'action technique ou formule la réponse finale directement.")
+    return "\n\n".join(sections)
 
 
 class EkkoEngine:
@@ -91,13 +110,15 @@ class EkkoEngine:
         logger.debug("Nouvelle requête (session=%s): '%s'", session_id, user_query)
         cb = callbacks or {}
         system_prompt = build_system_prompt(self.user_profile, self.registry.get_prompt_catalog())
+        history = self.memory.get_recent_messages(session_id, limit=6)
+        history_block = format_history_block(history)
         observations: list[str] = []
 
         for step in range(self.max_steps):
             if cb.get("on_thinking_start"):
                 cb["on_thinking_start"]()
 
-            prompt = format_step_prompt(user_query, observations)
+            prompt = format_step_prompt(user_query, observations, history_block)
             action = await decide_action(self.provider, prompt, system_prompt)
             logger.debug(
                 "Étape %d/%d: thought='%s', tool='%s'",

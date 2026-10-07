@@ -125,3 +125,24 @@ async def test_engine_max_steps_safeguard(tmp_path: Path) -> None:
 
     res = await engine.run("Boucle sans fin")
     assert "Limite maximale d'étapes" in res
+
+
+@pytest.mark.asyncio
+async def test_engine_conversation_history_passed(tmp_path: Path) -> None:
+    """Vérifie que l'historique conversationnel est bien conservé et chaîné."""
+    actions = [
+        AgentAction(thought="Tour 1", final_answer="Réponse 1"),
+        AgentAction(thought="Tour 2", final_answer="Réponse 2"),
+    ]
+    engine, memory = setup_engine(tmp_path, actions)
+
+    await engine.run("Première question", session_id="multi_turn")
+    await engine.run("Seconde question", session_id="multi_turn")
+
+    history = memory.get_recent_messages("multi_turn")
+    assert len(history) == 4
+    assert history[0]["content"] == "Première question"
+    assert history[1]["content"] == "Réponse 1"
+    assert history[2]["content"] == "Seconde question"
+    assert history[3]["content"] == "Réponse 2"
+
