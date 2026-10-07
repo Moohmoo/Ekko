@@ -4,6 +4,7 @@ Gère les indicateurs discrets de réflexion et d'outils en mode normal,
 et les panneaux détaillés en mode debug (-d / --debug).
 """
 
+import asyncio
 import time
 from typing import Any
 from rich.console import Console
@@ -88,13 +89,35 @@ class AgentUI:
     def __init__(self, debug: bool = False) -> None:
         self.debug = debug
         self._status: Status | None = None
+        self._timer_task: asyncio.Task[None] | None = None
         self._step_start: float = 0.0
 
-    def on_thinking_start(self) -> None:
-        """Démarre le spinner d'attente pour la réflexion du modèle."""
+    def _start_spinner(self, label: str) -> None:
+        """Démarre le spinner et lance la mise à jour dynamique du chronomètre."""
+        self.stop_spinner()
         self._step_start = time.perf_counter()
-        self._status = console.status("[dim]Réflexion en cours...[/dim]", spinner="dots")
+        self._status = console.status(f"[dim]{label} (0.0s)[/dim]", spinner="dots")
         self._status.start()
+        try:
+            loop = asyncio.get_running_loop()
+            self._timer_task = loop.create_task(self._update_timer(label))
+        except RuntimeError:
+            self._timer_task = None
+
+    async def _update_timer(self, label: str) -> None:
+        """Met à jour le chronomètre affiché dans le spinner toutes les 300ms."""
+        try:
+            while self._status is not None:
+                await asyncio.sleep(0.3)
+                if self._status is not None:
+                    elapsed = time.perf_counter() - self._step_start
+                    self._status.update(f"[dim]{label} ({elapsed:.1f}s)[/dim]")
+        except asyncio.CancelledError:
+            pass
+
+    def on_thinking_start(self) -> None:
+        """Démarre le spinner dynamique pour la réflexion du modèle."""
+        self._start_spinner("Réflexion en cours...")
 
     def on_thought(self, thought: str) -> None:
         """Arrête le spinner et affiche la pensée (discrète ou détaillée)."""
@@ -106,12 +129,11 @@ class AgentUI:
             render_thought_line(thought, elapsed)
 
     def on_tool_call(self, tool_name: str, arguments: dict[str, Any]) -> None:
-        """Démarre l'exécution d'un outil avec spinner contextuel."""
+        """Démarre l'exécution d'un outil avec spinner dynamique."""
         self.stop_spinner()
         if self.debug:
             render_tool_call_panel(tool_name, arguments)
-        self._status = console.status(f"[dim]Exécution de {tool_name}...[/dim]", spinner="dots")
-        self._status.start()
+        self._start_spinner(f"Exécution de {tool_name}...")
 
     def on_tool_result(self, tool_name: str, result: str) -> None:
         """Termine l'exécution d'un outil."""
@@ -122,7 +144,10 @@ class AgentUI:
             console.print(f"[dim]● Ran tool {tool_name}[/dim]")
 
     def stop_spinner(self) -> None:
-        """Arrête proprement le spinner en cours s'il existe."""
+        """Arrête proprement le spinner et annule la tâche de mise à jour."""
+        if self._timer_task is not None:
+            self._timer_task.cancel()
+            self._timer_task = None
         if self._status is not None:
             self._status.stop()
             self._status = None

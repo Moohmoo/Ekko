@@ -1,10 +1,11 @@
 """Implémentation du fournisseur LLM via le SDK officiel Google GenAI.
 
 Exploite les fonctionnalités natives de Structured Output de Gemini
-pour garantir des retours conformes aux schémas Pydantic.
+pour garantir des retours conformes aux schémas Pydantic avec timeout strict.
 """
 
-from typing import TypeVar
+import asyncio
+from typing import Any, TypeVar
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
@@ -17,12 +18,36 @@ T = TypeVar("T", bound=BaseModel)
 class GeminiProvider(LLMProvider):
     """Fournisseur exploitant les modèles Gemini via l'API Google GenAI."""
 
-    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash") -> None:
-        """Initialise le client asynchrone Google GenAI avec la clé fournie."""
+    def __init__(
+        self,
+        api_key: str,
+        model_name: str = "gemini-2.5-flash",
+        timeout: float = 20.0,
+    ) -> None:
+        """Initialise le client Google GenAI avec clé et délai d'expiration strict."""
         if not api_key:
             raise ValueError("Une clé GEMINI_API_KEY valide est requise pour GeminiProvider.")
         self.client = genai.Client(api_key=api_key)
         self.model_name = model_name
+        self.timeout = timeout
+
+    async def _call_api_with_timeout(
+        self, prompt: str, config: types.GenerateContentConfig
+    ) -> Any:
+        """Exécute l'appel distant avec un garde-fou d'expiration temporel strict."""
+        try:
+            return await asyncio.wait_for(
+                self.client.aio.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                    config=config,
+                ),
+                timeout=self.timeout,
+            )
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError(
+                f"Le serveur Gemini ({self.model_name}) n'a pas répondu sous {self.timeout}s."
+            ) from exc
 
     async def generate_structured(
         self,
@@ -38,11 +63,7 @@ class GeminiProvider(LLMProvider):
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             temperature=0.2,
         )
-        response = await self.client.aio.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-            config=config,
-        )
+        response = await self._call_api_with_timeout(prompt, config)
         if hasattr(response, "parsed") and isinstance(response.parsed, schema):
             return response.parsed
         return schema.model_validate_json(response.text or "{}")
@@ -58,9 +79,5 @@ class GeminiProvider(LLMProvider):
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             temperature=0.3,
         )
-        response = await self.client.aio.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-            config=config,
-        )
+        response = await self._call_api_with_timeout(prompt, config)
         return (response.text or "").strip()
