@@ -13,9 +13,34 @@ from google.genai import types
 from pydantic import BaseModel
 
 from .base import LLMProvider
+from .errors import ProviderAuthError, ProviderTimeoutError, ProviderUnavailableError
 
 logger = logging.getLogger("ekko.providers.gemini")
 T = TypeVar("T", bound=BaseModel)
+
+
+def _translate_gemini_error(exc: Exception, model_name: str, elapsed: float, max_retries: int) -> Exception:
+    """Traduit une exception de l'API Google GenAI en erreur typée pour Ekko."""
+    err_str = str(exc)
+    if "503" in err_str or "UNAVAILABLE" in err_str:
+        return ProviderUnavailableError(
+            "Les serveurs Google Gemini sont actuellement saturés (HTTP 503 : forte affluence).",
+            technical_details=f"Modèle: {model_name} | Latence: {elapsed:.2f}s | {exc}",
+        )
+    if "504" in err_str or "DEADLINE_EXCEEDED" in err_str or isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
+        return ProviderTimeoutError(
+            f"Le serveur Gemini a dépassé le délai imparti ({elapsed:.1f}s).",
+            technical_details=f"Modèle: {model_name} | Délai: {elapsed:.2f}s | {exc}",
+        )
+    if "401" in err_str or "403" in err_str or "API_KEY_INVALID" in err_str:
+        return ProviderAuthError(
+            "Clé API Google Gemini invalide ou non autorisée.",
+            technical_details=f"Modèle: {model_name} | {exc}",
+        )
+    return ProviderUnavailableError(
+        f"Le serveur Gemini a échoué après {max_retries} tentatives.",
+        technical_details=f"Modèle: {model_name} | {exc}",
+    )
 
 
 class GeminiProvider(LLMProvider):
@@ -56,7 +81,7 @@ class GeminiProvider(LLMProvider):
                 elapsed = time.perf_counter() - t0
                 logger.warning("Échec tentative %d/%d (%.2fs): %s", attempt, max_retries, elapsed, exc)
                 if attempt == max_retries:
-                    raise TimeoutError(f"Le serveur Gemini n'a pas répondu après {max_retries} essais.") from exc
+                    raise _translate_gemini_error(exc, self.model_name, elapsed, max_retries) from exc
                 await asyncio.sleep(0.5)
 
     async def generate_structured(

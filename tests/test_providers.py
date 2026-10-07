@@ -21,7 +21,7 @@ async def test_gemini_provider_timeout_handling() -> None:
         await asyncio.sleep(0.2)
 
     with patch.object(provider.client.aio.models, "generate_content", side_effect=slow_generate):
-        with pytest.raises(TimeoutError, match="n'a pas répondu après 2 essais"):
+        with pytest.raises(TimeoutError, match="délai imparti"):
             await provider.generate_text("Test prompt")
 
 

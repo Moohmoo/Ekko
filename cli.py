@@ -7,6 +7,7 @@ import argparse
 import asyncio
 from config import Settings, get_settings
 from core import EkkoEngine, SQLiteMemory, load_user_profile, setup_logging
+from core.errors import format_error_for_display
 from providers import create_llm_provider
 from tools import default_registry
 from ui import AgentUI, console, print_banner, render_error, render_final_answer
@@ -61,7 +62,7 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
             console.print("\n[dim]Session interrompue. Au revoir ![/dim]")
             break
         except Exception as exc:
-            render_error(f"Erreur d'exécution : {exc}")
+            render_error(format_error_for_display(exc, debug=debug))
         finally:
             ui.stop_spinner()
 

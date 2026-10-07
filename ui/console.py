@@ -79,8 +79,9 @@ def render_final_answer(answer: str) -> None:
 
 
 def render_error(message: str) -> None:
-    """Affiche un message d'erreur d'exécution."""
-    console.print(Panel(Text(message, style="bold red"), border_style="red"))
+    """Affiche un message d'erreur d'exécution mis en forme."""
+    content = Text.from_markup(message) if "[" in message else Text(message, style="bold red")
+    console.print(Panel(content, border_style="red"))
 
 
 class AgentUI:

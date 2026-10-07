@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from core.logger import setup_logging
+from core.logger import Logger, setup_logging
 
 
 def test_setup_logging_creates_file_and_records(tmp_path: Path) -> None:
@@ -30,3 +30,18 @@ def test_setup_logging_debug_mode(tmp_path: Path) -> None:
     setup_logging(tmp_path, debug=True)
     root = logging.getLogger()
     assert root.level == logging.DEBUG
+
+
+def test_logger_class_methods(tmp_path: Path) -> None:
+    """Vérifie l'écriture via les méthodes dédiées de la classe Logger."""
+    setup_logging(tmp_path, debug=False)
+    log = Logger("test_component")
+    log.info("Message info")
+    log.warning("Message warning")
+    log.error("Message error")
+
+    content = (tmp_path / "ekko.log").read_text(encoding="utf-8")
+    assert "Message info" in content
+    assert "Message warning" in content
+    assert "Message error" in content
+    assert "[test_component]" in content
