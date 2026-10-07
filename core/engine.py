@@ -85,6 +85,9 @@ class EkkoEngine:
         observations: list[str] = []
 
         for _ in range(self.max_steps):
+            if cb.get("on_thinking_start"):
+                cb["on_thinking_start"]()
+
             prompt = format_step_prompt(user_query, observations)
             action = await decide_action(self.provider, prompt, system_prompt)
 

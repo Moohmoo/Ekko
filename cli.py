@@ -1,47 +1,31 @@
 """Point d'entrée interactif de l'assistant Ekko (Interface Terminal style agy).
 
-Permet d'exécuter l'agent en mode commande unique ou en boucle REPL interactive.
+Lance directement la session interactive avec option de débogage (-d / --debug).
 """
 
 import argparse
 import asyncio
-import sys
-from pathlib import Path
-from typing import Any
-
 from config import get_settings
 from core import EkkoEngine, SQLiteMemory, load_user_profile
 from providers import create_llm_provider
 from tools import default_registry
-from ui import (
-    console,
-    print_banner,
-    render_error,
-    render_final_answer,
-    render_thought,
-    render_tool_call,
-    render_tool_result,
-)
-
-
-def get_callbacks() -> dict[str, Any]:
-    """Retourne le mapping des callbacks graphiques Rich pour le moteur ReAct."""
-    return {
-        "on_thought": render_thought,
-        "on_tool_call": render_tool_call,
-        "on_tool_result": render_tool_result,
-    }
+from ui import AgentUI, console, print_banner, render_error, render_final_answer
 
 
 def parse_args() -> argparse.Namespace:
-    """Analyse les arguments passés à la commande ekko."""
+    """Analyse les options de ligne de commande passées à ekko."""
     parser = argparse.ArgumentParser(description="Ekko - Assistant Personnel Local")
-    parser.add_argument("query", nargs="*", help="Requête directe à exécuter (mode one-shot)")
+    parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Active le mode verbeux (affiche les prompts, thoughts et JSON bruts)",
+    )
     return parser.parse_args()
 
 
 def initialize_engine() -> EkkoEngine:
-    """Initialise et configure le moteur avec la configuration active."""
+    """Initialise et configure le moteur ReAct avec la mémoire et les outils."""
     settings = get_settings()
     provider = create_llm_provider(settings)
     memory_db = settings.memory_dir_path / "ekko.db"
@@ -57,13 +41,13 @@ def initialize_engine() -> EkkoEngine:
     )
 
 
-async def run_interactive_repl(engine: EkkoEngine) -> None:
-    """Lance la boucle interactive en invite de commande."""
+async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
+    """Exécute la boucle interactive principale de l'assistant."""
     settings = get_settings()
-    model_name = settings.gemini_model if settings.llm_provider == "gemini" else settings.local_llm_model
-    print_banner(model_name, settings.llm_provider)
+    model = settings.gemini_model if settings.llm_provider == "gemini" else settings.local_llm_model
+    print_banner(model, settings.llm_provider, debug=debug)
 
-    callbacks = get_callbacks()
+    ui = AgentUI(debug=debug)
     while True:
         try:
             query = console.input("[bold cyan]Ekko > [/bold cyan]").strip()
@@ -72,35 +56,22 @@ async def run_interactive_repl(engine: EkkoEngine) -> None:
             if query.lower() in {"exit", "quit", "q"}:
                 console.print("[dim]Au revoir ![/dim]")
                 break
-
-            answer = await engine.run(query, callbacks=callbacks)
+            answer = await engine.run(query, callbacks=ui.get_callbacks())
             render_final_answer(answer)
         except (KeyboardInterrupt, EOFError):
-            console.print("\n[dim]Interruption détectée. Au revoir ![/dim]")
+            console.print("\n[dim]Session interrompue. Au revoir ![/dim]")
             break
         except Exception as exc:
-            render_error(f"Une erreur est survenue : {exc}")
-
-
-async def run_single_query(engine: EkkoEngine, query: str) -> None:
-    """Exécute une requête unique transmise en ligne de commande."""
-    try:
-        answer = await engine.run(query, callbacks=get_callbacks())
-        render_final_answer(answer)
-    except Exception as exc:
-        render_error(f"Erreur d'exécution : {exc}")
+            render_error(f"Erreur d'exécution : {exc}")
+        finally:
+            ui.stop_spinner()
 
 
 def main() -> None:
     """Point d'entrée principal synchrone."""
     args = parse_args()
     engine = initialize_engine()
-    raw_query = " ".join(args.query).strip()
-
-    if raw_query:
-        asyncio.run(run_single_query(engine, raw_query))
-    else:
-        asyncio.run(run_interactive_repl(engine))
+    asyncio.run(run_interactive_repl(engine, debug=args.debug))
 
 
 if __name__ == "__main__":
