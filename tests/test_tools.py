@@ -86,7 +86,7 @@ async def test_web_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> Non
         {"title": "SFBI Bioinfo", "href": "https://example.com/bioinfo", "body": "Actualités bioinformatique"},
     ]
 
-    def mock_ddgs(query: str, max_results: int) -> list[dict[str, str]]:
+    def mock_ddgs(query: str, max_results: int, region: str = "fr-fr") -> list[dict[str, str]]:
         return fake_results
 
     monkeypatch.setattr("tools.search.tool._perform_ddgs_search", mock_ddgs)
@@ -101,7 +101,7 @@ async def test_web_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> Non
 @pytest.mark.asyncio
 async def test_web_search_tool_error_handling(monkeypatch: pytest.MonkeyPatch) -> None:
     """Vérifie la capture d'erreur lors d'une défaillance réseau dans WebSearchTool."""
-    def mock_fail(query: str, max_results: int) -> list[dict[str, str]]:
+    def mock_fail(query: str, max_results: int, region: str = "fr-fr") -> list[dict[str, str]]:
         raise RuntimeError("Réseau indisponible")
 
     monkeypatch.setattr("tools.search.tool._perform_ddgs_search", mock_fail)
@@ -155,7 +155,7 @@ async def test_news_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> No
         }
     ]
 
-    def mock_ddgs_news(query: str, max_results: int) -> list[dict[str, str]]:
+    def mock_ddgs_news(query: str, max_results: int, region: str = "fr-fr") -> list[dict[str, str]]:
         return fake_news
 
     monkeypatch.setattr("tools.news.tool._perform_ddgs_news", mock_ddgs_news)
@@ -170,9 +170,26 @@ async def test_news_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 @pytest.mark.asyncio
+async def test_news_search_tool_empty_query_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie que la requête vide est remplacée par un fallback sain."""
+    captured: dict[str, str] = {}
+
+    def mock_ddgs_news(query: str, max_results: int, region: str) -> list[dict[str, str]]:
+        captured["query"] = query
+        captured["region"] = region
+        return []
+
+    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", mock_ddgs_news)
+    tool = NewsSearchTool()
+    await tool.execute(query="   ")
+    assert captured["query"] == "actualités récentes"
+    assert captured["region"] == "fr-fr"
+
+
+@pytest.mark.asyncio
 async def test_news_search_tool_empty_results(monkeypatch: pytest.MonkeyPatch) -> None:
     """Vérifie le message quand aucune actualité n'est trouvée."""
-    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", lambda q, m: [])
+    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", lambda q, m, r: [])
     tool = NewsSearchTool()
     res = await tool.execute(query="sujet_inconnu")
     assert "Aucune actualité récente trouvée" in res
@@ -181,10 +198,21 @@ async def test_news_search_tool_empty_results(monkeypatch: pytest.MonkeyPatch) -
 @pytest.mark.asyncio
 async def test_news_search_tool_error_handling(monkeypatch: pytest.MonkeyPatch) -> None:
     """Vérifie la gestion d'erreur réseau pour NewsSearchTool."""
-    def mock_fail(query: str, max_results: int) -> list[dict[str, str]]:
+    def mock_fail(query: str, max_results: int, region: str = "fr-fr") -> list[dict[str, str]]:
         raise ConnectionError("Service injoignable")
 
     monkeypatch.setattr("tools.news.tool._perform_ddgs_news", mock_fail)
     tool = NewsSearchTool()
     res = await tool.execute(query="fail")
     assert "Erreur lors de la recherche d'actualités" in res
+
+
+def test_get_region_for_language_mapping() -> None:
+    """Vérifie le mappage cohérent des langues système vers les régions de recherche."""
+    from config import get_region_for_language
+
+    assert get_region_for_language("fr") == "fr-fr"
+    assert get_region_for_language("en") == "en-us"
+    assert get_region_for_language("de") == "de-de"
+    assert get_region_for_language("unknown") == "wt-wt"
+

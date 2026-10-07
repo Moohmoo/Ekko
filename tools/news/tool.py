@@ -8,6 +8,7 @@ import asyncio
 from typing import Any
 from ddgs import DDGS
 from pydantic import BaseModel, Field
+from config import get_region_for_language, get_settings
 from tools.base import BaseTool
 
 
@@ -15,15 +16,19 @@ class NewsSearchParams(BaseModel):
     """Parameters for news search requests."""
 
     query: str = Field(
-        description="Mots-clés ou sujet d'actualité recherché (ex: 'bioinformatique', 'intelligence artificielle')."
+        description="Mots-clés ou sujet d'actualité recherché (ex: 'bioinformatique', 'intelligence artificielle').",
     )
     max_results: int = Field(default=5, description="Nombre maximum de dépêches souhaitées (1 à 10).")
+    region: str | None = Field(
+        default=None,
+        description="Code région optionnel (ex: 'fr-fr', 'en-us', 'wt-wt'). Si omis, déduit de la langue système.",
+    )
 
 
-def _perform_ddgs_news(query: str, max_results: int) -> list[dict[str, Any]]:
+def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[dict[str, Any]]:
     """Execute synchronous DuckDuckGo news search in a thread worker."""
     with DDGS() as client:
-        return list(client.news(query.strip(), max_results=max_results))
+        return list(client.news(query.strip(), region=region, max_results=max_results))
 
 
 def _format_news_item(idx: int, item: dict[str, Any]) -> str:
@@ -58,11 +63,13 @@ class NewsSearchTool(BaseTool):
     )
     parameters_schema = NewsSearchParams
 
-    async def execute(self, query: str, max_results: int = 5) -> str:
+    async def execute(self, query: str = "", max_results: int = 5, region: str | None = None) -> str:
         """Execute news search asynchronously and format observation."""
         try:
+            clean_query = query.strip() or "actualités récentes"
+            effective_region = region or get_region_for_language(get_settings().default_language)
             limit = max(1, min(max_results, 10))
-            raw_results = await asyncio.to_thread(_perform_ddgs_news, query, limit)
-            return _format_news_results(raw_results, query)
+            raw_results = await asyncio.to_thread(_perform_ddgs_news, clean_query, limit, effective_region)
+            return _format_news_results(raw_results, clean_query)
         except Exception as exc:
             return f"Erreur lors de la recherche d'actualités pour '{query}' : {exc}"

@@ -104,8 +104,9 @@ class EkkoEngine:
                 if action_key in executed_actions:
                     logger.warning("Action redondante interceptée : %s", action_key)
                     obs = (
-                        f"Action redondante : `{action.tool_name}` a déjà été exécuté avec ces arguments. "
-                        "Tu ne dois pas le réexécuter. Conclus obligatoirement dans 'final_answer'."
+                        f"Action redondante : `{action.tool_name}` a déjà été exécuté avec ces arguments identiques. "
+                        "Pour relancer, modifie obligatoirement tes mots-clés (ex: termes plus complets). "
+                        "Sinon, formule ta conclusion dans 'final_answer'."
                     )
                     yield ToolResultEvent(tool_name=action.tool_name, result=obs)
                     observations.append(obs)

@@ -41,3 +41,13 @@ def test_agent_action_sanitize_tool_name(raw_name: str, expected: str | None) ->
     """Vérifie le nettoyage des valeurs sentinelles dans tool_name."""
     action = AgentAction(thought="Test", tool_name=raw_name)
     assert action.tool_name == expected
+
+
+def test_agent_action_tolerance_on_none_and_dict() -> None:
+    """Vérifie la robustesse face à tool_arguments_json valant None ou un dictionnaire."""
+    action_none = AgentAction(thought="Test", tool_arguments_json=None)
+    assert action_none.tool_arguments_json == "{}"
+    assert action_none.tool_arguments == {}
+
+    action_dict = AgentAction(thought="Test", tool_arguments_json={"query": "test"})
+    assert action_dict.tool_arguments == {"query": "test"}

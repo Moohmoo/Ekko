@@ -36,6 +36,12 @@ class Settings(BaseSettings):
         description="Identifiant du modèle local",
     )
 
+    # Langue système par défaut
+    default_language: str = Field(
+        default="fr",
+        description="Langue par défaut du système Ekko (ex: 'fr', 'en')",
+    )
+
     # Rétention d'historique (jours)
     history_retention_days: int = Field(
         default=30,
@@ -73,3 +79,10 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Retourne l'instance unique mise en cache des paramètres de configuration."""
     return Settings()
+
+
+def get_region_for_language(language: str) -> str:
+    """Map a system language code to a search engine region code."""
+    mapping = {"fr": "fr-fr", "en": "en-us", "es": "es-es", "de": "de-de"}
+    return mapping.get(language.strip().lower(), "wt-wt")
+

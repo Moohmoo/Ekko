@@ -35,6 +35,20 @@ class AgentAction(BaseModel):
         description="Message final clair et direct à l'utilisateur lorsque la tâche est achevée.",
     )
 
+    @field_validator("tool_arguments_json", mode="before")
+    @classmethod
+    def sanitize_arguments_json(cls, value: Any) -> str:
+        """Normalise les arguments JSON qu'ils soient reçus sous forme de dict, null ou str."""
+        if value is None:
+            return "{}"
+        if isinstance(value, dict):
+            import json
+            return json.dumps(value)
+        if isinstance(value, str):
+            clean = value.strip()
+            return clean if clean else "{}"
+        return "{}"
+
     @field_validator("tool_name", mode="after")
     @classmethod
     def sanitize_tool_name(cls, value: str | None) -> str | None:
