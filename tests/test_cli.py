@@ -59,3 +59,12 @@ async def test_run_interactive_repl_handles_query() -> None:
     inputs = ["Bonjour Ekko", "exit"]
     with patch("cli.prompt_user_input", side_effect=inputs):
         await run_interactive_repl(engine, debug=False)
+
+
+@pytest.mark.asyncio
+async def test_run_interactive_repl_handles_reset() -> None:
+    """Vérifie la réinitialisation de session via la commande /reset."""
+    engine = MagicMock()
+    inputs = ["/reset", "exit"]
+    with patch("cli.prompt_user_input", side_effect=inputs):
+        await run_interactive_repl(engine, debug=False)

@@ -62,3 +62,31 @@ def test_sqlite_memory_seen_articles(tmp_path: Path) -> None:
     assert not memory.is_article_seen("https://example.com/art3")
     assert memory.get_seen_urls() == {"https://example.com/art1", "https://example.com/art2"}
 
+
+def test_sqlite_memory_clear_session_messages(tmp_path: Path) -> None:
+    """Vérifie la suppression ciblée des messages d'une session."""
+    db_file = tmp_path / "test_ekko.db"
+    memory = SQLiteMemory(db_file)
+
+    memory.record_message("sess_a", "user", "Hello A")
+    memory.record_message("sess_b", "user", "Hello B")
+
+    deleted = memory.clear_session_messages("sess_a")
+    assert deleted == 1
+    assert len(memory.get_recent_messages("sess_a")) == 0
+    assert len(memory.get_recent_messages("sess_b")) == 1
+
+
+def test_sqlite_memory_purge_old_history(tmp_path: Path) -> None:
+    """Vérifie la purge globale des messages et tâches selon le TTL."""
+    db_file = tmp_path / "test_ekko.db"
+    memory = SQLiteMemory(db_file)
+
+    memory.record_message("sess_old", "user", "Old message")
+    memory.record_task_run("old_tool", "success", "Old summary")
+
+    # Purge avec 0 jours (tout est antérieur ou égal à l'instant présent)
+    res = memory.purge_old_history(retention_days=0)
+    assert res["messages"] >= 1
+    assert res["task_runs"] >= 1
+

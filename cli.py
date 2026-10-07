@@ -5,6 +5,7 @@ Lance directement la session interactive avec option de débogage (-d / --debug)
 
 import argparse
 import asyncio
+import uuid
 from agent import AgentRequest, EkkoEngine, SQLiteMemory, load_user_profile
 from config import Settings, get_settings
 from core import format_error_for_display, setup_logging
@@ -36,6 +37,7 @@ def initialize_engine(settings: Settings | None = None) -> EkkoEngine:
     cfg = settings or get_settings()
     provider = create_llm_provider(cfg)
     memory = SQLiteMemory(cfg.db_path)
+    memory.purge_old_history(cfg.history_retention_days)
     user_profile = load_user_profile(cfg.memory_dir_path)
 
     return EkkoEngine(
@@ -53,6 +55,7 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
     model = settings.gemini_model if settings.llm_provider == "gemini" else settings.local_llm_model
     print_banner(model, settings.llm_provider, debug=debug)
 
+    session_id = f"sess_{uuid.uuid4().hex[:8]}"
     presenter = ConsolePresenter(debug=debug)
     while True:
         try:
@@ -62,7 +65,13 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
             if query.lower() in {"exit", "quit", "q"}:
                 console.print("[dim]Au revoir ![/dim]")
                 break
-            request = AgentRequest(query=query)
+            if query.lower() in {"/reset", "/clear"}:
+                console.clear()
+                print_banner(model, settings.llm_provider, debug=debug)
+                session_id = f"sess_{uuid.uuid4().hex[:8]}"
+                console.print("[dim]Session réinitialisée.[/dim]\n")
+                continue
+            request = AgentRequest(query=query, session_id=session_id)
             await presenter.render_stream(engine.run_stream(request))
         except (KeyboardInterrupt, EOFError):
             console.print("\n[dim]Session interrompue. Au revoir ![/dim]")

@@ -34,7 +34,7 @@ def print_banner(model_name: str, provider: str, debug: bool = False) -> None:
         "[bold white]Ekko CLI[/bold white] [dim cyan]0.1.0[/dim cyan]",
         f"[cyan]{provider}: {model_name}[/cyan]{mode_label}",
         "[dim]~[/dim]",
-        "[dim]Tapez votre message ou 'exit' pour quitter.[/dim]",
+        "[dim]Tapez votre message, '/reset' ou 'exit' pour quitter.[/dim]",
         "",
     ]
     grid = Table.grid(padding=(0, 3))

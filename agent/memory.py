@@ -144,3 +144,18 @@ class SQLiteMemory:
         with self._get_connection() as conn:
             cursor = conn.execute("DELETE FROM seen_articles WHERE date_added < ?", (threshold,))
             return cursor.rowcount
+
+    def purge_old_history(self, retention_days: int = 30) -> dict[str, int]:
+        """Supprime les messages, tâches et articles antérieurs au seuil de rétention."""
+        threshold_dt = (datetime.now() - timedelta(days=retention_days)).isoformat()
+        with self._get_connection() as conn:
+            c1 = conn.execute("DELETE FROM messages WHERE timestamp < ?", (threshold_dt,)).rowcount
+            c2 = conn.execute("DELETE FROM task_runs WHERE timestamp < ?", (threshold_dt,)).rowcount
+        c3 = self.purge_seen_articles(retention_days)
+        return {"messages": c1, "task_runs": c2, "seen_articles": c3}
+
+    def clear_session_messages(self, session_id: str) -> int:
+        """Supprime tous les messages d'une session spécifique."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+            return cursor.rowcount
