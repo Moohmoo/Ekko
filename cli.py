@@ -9,6 +9,7 @@ from agent import AgentRequest, EkkoEngine, SQLiteMemory, load_user_profile
 from config import Settings, get_settings
 from core import format_error_for_display, setup_logging
 from providers import create_llm_provider
+from tools import default_registry
 from ui import (
     AgentUI,
     console,
