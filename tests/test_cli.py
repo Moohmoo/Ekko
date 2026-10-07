@@ -43,3 +43,19 @@ async def test_run_interactive_repl_quits() -> None:
     engine = MagicMock()
     with patch("cli.prompt_user_input", return_value="exit"):
         await run_interactive_repl(engine, debug=False)
+
+
+@pytest.mark.asyncio
+async def test_run_interactive_repl_handles_query() -> None:
+    """Vérifie le traitement d'une requête et le rendu en streaming dans le REPL."""
+    from agent.schemas import AgentResponse, DoneEvent
+
+    engine = MagicMock()
+
+    async def mock_stream(request):
+        yield DoneEvent(response=AgentResponse(content="Réponse test"))
+
+    engine.run_stream = mock_stream
+    inputs = ["Bonjour Ekko", "exit"]
+    with patch("cli.prompt_user_input", side_effect=inputs):
+        await run_interactive_repl(engine, debug=False)

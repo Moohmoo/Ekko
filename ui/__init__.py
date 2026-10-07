@@ -12,9 +12,12 @@ from .console import (
     render_tool_call_panel,
     render_tool_result_panel,
 )
+from .presenter import ConsolePresenter, JsonPresenter
 
 __all__ = [
     "AgentUI",
+    "ConsolePresenter",
+    "JsonPresenter",
     "console",
     "print_banner",
     "prompt_user_input",

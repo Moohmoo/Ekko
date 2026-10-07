@@ -1,3 +1,11 @@
+import pytest
+from agent.schemas import (
+    AgentResponse,
+    DoneEvent,
+    ThoughtEvent,
+    ToolCallEvent,
+    ToolResultEvent,
+)
 from ui.console import (
     AgentUI,
     console,
@@ -5,6 +13,7 @@ from ui.console import (
     prompt_user_input,
     render_thought_line,
 )
+from ui.presenter import ConsolePresenter, JsonPresenter
 
 
 def test_agent_ui_callbacks_dict() -> None:
@@ -86,3 +95,32 @@ def test_prompt_user_input_eof(monkeypatch) -> None:
 
     monkeypatch.setattr(console, "input", raise_eof)
     assert prompt_user_input() == "exit"
+
+
+@pytest.mark.asyncio
+async def test_console_presenter_render_stream() -> None:
+    """Vérifie la consommation d'un flux d'événements par ConsolePresenter."""
+    async def sample_stream():
+        yield ThoughtEvent(thought="Réflexion test", elapsed=0.5)
+        yield ToolCallEvent(tool_name="test_tool", arguments={"k": "v"})
+        yield ToolResultEvent(tool_name="test_tool", result="succès")
+        yield DoneEvent(response=AgentResponse(content="Réponse finale"))
+
+    presenter = ConsolePresenter(debug=False)
+    resp = await presenter.render_stream(sample_stream())
+    assert resp is not None
+    assert resp.content == "Réponse finale"
+
+
+@pytest.mark.asyncio
+async def test_json_presenter_render_stream(capsys) -> None:
+    """Vérifie la sérialisation JSON stricte sur stdout par JsonPresenter."""
+    async def sample_stream():
+        yield DoneEvent(response=AgentResponse(content="JSON final"))
+
+    presenter = JsonPresenter()
+    resp = await presenter.render_stream(sample_stream())
+    assert resp is not None
+    assert resp.content == "JSON final"
+    captured = capsys.readouterr()
+    assert '"content": "JSON final"' in captured.out

@@ -64,6 +64,36 @@ class AgentResponse(BaseModel):
     thought: str = Field(default="", description="Dernière réflexion ayant conduit à la conclusion.")
 
 
+class ThoughtEvent(BaseModel):
+    """Événement émis lors d'une étape de réflexion interne."""
+
+    thought: str
+    elapsed: float = 0.0
+
+
+class ToolCallEvent(BaseModel):
+    """Événement émis lors du déclenchement d'un outil externe."""
+
+    tool_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolResultEvent(BaseModel):
+    """Événement émis lors de la réception du résultat d'un outil."""
+
+    tool_name: str
+    result: str
+
+
+class DoneEvent(BaseModel):
+    """Événement terminal signalant l'achèvement de la tâche."""
+
+    response: AgentResponse
+
+
+AgentEvent = ThoughtEvent | ToolCallEvent | ToolResultEvent | DoneEvent
+
+
 async def decide_action(
     provider: LLMProvider,
     prompt: str,

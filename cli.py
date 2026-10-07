@@ -11,12 +11,11 @@ from core import format_error_for_display, setup_logging
 from providers import create_llm_provider
 from tools import default_registry
 from ui import (
-    AgentUI,
+    ConsolePresenter,
     console,
     print_banner,
     prompt_user_input,
     render_error,
-    render_final_answer,
 )
 
 
@@ -54,7 +53,7 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
     model = settings.gemini_model if settings.llm_provider == "gemini" else settings.local_llm_model
     print_banner(model, settings.llm_provider, debug=debug)
 
-    ui = AgentUI(debug=debug)
+    presenter = ConsolePresenter(debug=debug)
     while True:
         try:
             query = prompt_user_input()
@@ -64,15 +63,14 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
                 console.print("[dim]Au revoir ![/dim]")
                 break
             request = AgentRequest(query=query)
-            response = await engine.run(request, callbacks=ui.get_callbacks())
-            render_final_answer(response)
+            await presenter.render_stream(engine.run_stream(request))
         except (KeyboardInterrupt, EOFError):
             console.print("\n[dim]Session interrompue. Au revoir ![/dim]")
             break
         except Exception as exc:
             render_error(format_error_for_display(exc, debug=debug))
         finally:
-            ui.stop_spinner()
+            presenter.ui.stop_spinner()
 
 
 def main() -> None:

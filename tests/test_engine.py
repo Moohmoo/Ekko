@@ -7,7 +7,13 @@ from pydantic import BaseModel
 from config import Settings
 from agent.engine import EkkoEngine
 from agent.memory import SQLiteMemory
-from agent.schemas import AgentAction
+from agent.schemas import (
+    AgentAction,
+    DoneEvent,
+    ThoughtEvent,
+    ToolCallEvent,
+    ToolResultEvent,
+)
 from providers.base import LLMProvider
 from tools.base import BaseTool
 from tools.registry import ToolRegistry
@@ -147,4 +153,34 @@ async def test_engine_conversation_history_passed(tmp_path: Path) -> None:
     assert history[1]["content"] == "Réponse 1"
     assert history[2]["content"] == "Seconde question"
     assert history[3]["content"] == "Réponse 2"
+
+
+@pytest.mark.asyncio
+async def test_engine_run_stream_events(tmp_path: Path) -> None:
+    """Vérifie l'émission séquentielle des événements typés via run_stream."""
+    actions = [
+        AgentAction(
+            thought="Recherche requise",
+            tool_name="mock_search",
+            tool_arguments_json='{"query": "ekko"}',
+        ),
+        AgentAction(
+            thought="Synthèse",
+            final_answer="Voici ekko.",
+        ),
+    ]
+    engine, _ = setup_engine(tmp_path, actions)
+    events = [ev async for ev in engine.run_stream("Cherche ekko")]
+
+    assert len(events) == 5
+    assert isinstance(events[0], ThoughtEvent)
+    assert events[0].thought == "Recherche requise"
+    assert isinstance(events[1], ToolCallEvent)
+    assert events[1].tool_name == "mock_search"
+    assert isinstance(events[2], ToolResultEvent)
+    assert "ekko" in events[2].result
+    assert isinstance(events[3], ThoughtEvent)
+    assert events[3].thought == "Synthèse"
+    assert isinstance(events[4], DoneEvent)
+    assert events[4].response.content == "Voici ekko."
 
