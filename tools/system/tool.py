@@ -5,7 +5,7 @@ Fournit des métriques sur la mémoire RAM, le processeur et la carte graphique 
 
 import shutil
 import subprocess
-from .base import BaseTool, EmptyParams
+from tools.base import BaseTool, EmptyParams
 
 
 def get_gpu_brief() -> str:

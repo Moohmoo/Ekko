@@ -98,14 +98,14 @@ async def test_watch_tool_existing_briefing(tmp_path: Path, monkeypatch: pytest.
 
 @pytest.mark.asyncio
 async def test_watch_tool_error_handling(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie le message d'erreur lorsque execute_daily_watch échoue."""
+    """Vérifie le message d'erreur lorsque la génération du briefing échoue."""
     dummy_settings = Settings(watch_dir_path=tmp_path)
     monkeypatch.setattr("tools.watch.tool.get_settings", lambda: dummy_settings)
 
-    async def mock_fail(*args: object, **kwargs: object) -> int:
-        return 1
+    async def mock_fail(*args: object, **kwargs: object) -> tuple[str, bool]:
+        raise RuntimeError("Service indisponible")
 
-    monkeypatch.setattr("tools.watch.tool.execute_daily_watch", mock_fail)
+    monkeypatch.setattr("tools.watch.tool.get_or_create_daily_briefing", mock_fail)
     tool = WatchTool()
     res = await tool.execute(force=True)
     assert "Une erreur est survenue" in res

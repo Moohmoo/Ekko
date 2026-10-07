@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field
 
 from config import get_settings
 from tools.base import BaseTool
-from .pipeline import execute_daily_watch
-from .storage import get_today_briefing_path, is_already_generated
+from .service import get_or_create_daily_briefing
+from .storage import get_today_briefing_path
 
 
 class WatchToolParams(BaseModel):
@@ -47,15 +47,12 @@ def _filter_articles(blocks: list[str], query: str) -> str:
     )
 
 
-def _format_briefing_result(briefing_path: Path, prefix: str, query: str | None = None) -> str:
-    """Lit et formate le contenu du briefing pour l'observation de l'agent."""
-    if not briefing_path.is_file():
-        return f"{prefix} (`{briefing_path}`), mais le fichier est introuvable."
-    content = briefing_path.read_text(encoding="utf-8").strip()
+def _format_briefing_result(content: str, label: str, query: str | None = None) -> str:
+    """Formate le contenu du briefing pour l'observation de l'agent."""
     if query and query.strip():
         blocks = _extract_article_blocks(content)
         return _filter_articles(blocks, query)
-    return f"{prefix} (`{briefing_path}`) :\n\n{content}"
+    return f"{label} :\n\n{content}"
 
 
 class WatchTool(BaseTool):
@@ -72,11 +69,10 @@ class WatchTool(BaseTool):
         """Déclenche ou consulte la veille avec filtrage thématique optionnel."""
         settings = get_settings()
         briefing_path = get_today_briefing_path(settings.watch_dir_path)
-
-        if is_already_generated(briefing_path) and not force:
-            return _format_briefing_result(briefing_path, "Briefing du jour disponible", query)
-
-        exit_code = await execute_daily_watch(settings, force=force)
-        if exit_code == 0:
-            return _format_briefing_result(briefing_path, "Briefing généré avec succès", query)
-        return "Une erreur est survenue lors de l'exécution de la veille."
+        try:
+            content, is_new = await get_or_create_daily_briefing(settings, force=force)
+            status_text = "Briefing généré avec succès" if is_new else "Briefing du jour disponible"
+            label = f"{status_text} (`{briefing_path}`)"
+            return _format_briefing_result(content, label, query)
+        except Exception as exc:
+            return f"Une erreur est survenue lors de l'exécution de la veille : {exc}"
