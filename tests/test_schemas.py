@@ -1,50 +1,45 @@
-"""Tests unitaires pour la validation des modèles Pydantic."""
+"""Tests unitaires pour la validation des modèles et contrats Pydantic."""
 
 import pytest
 from pydantic import ValidationError
-from tools.watch.schemas import Article, SelectedArticle, SelectionResult
-
-
-def test_article_instantiation() -> None:
-    """Vérifie l'instanciation correcte du modèle Article."""
-    art = Article(
-        title="Nouveau LLM Open Source",
-        url="https://example.com/llm",
-        summary="Description courte",
-        source_name="Hacker News",
-    )
-    assert art.title == "Nouveau LLM Open Source"
-    assert art.source_name == "Hacker News"
-
-
-def test_selected_article_and_result() -> None:
-    """Vérifie le modèle SelectedArticle et la liste SelectionResult."""
-    selected = SelectedArticle(
-        title="Breakthrough Bio",
-        url="https://example.com/bio",
-        category="Sciences & Bio",
-    )
-    result = SelectionResult(articles=[selected])
-    assert len(result.articles) == 1
-    assert result.articles[0].category == "Sciences & Bio"
-
-
-def test_invalid_article_raises() -> None:
-    """Vérifie qu'un article sans URL ou sans titre lève une ValidationError."""
-    with pytest.raises(ValidationError):
-        Article.model_validate({"title": "Sans URL"})
+from agent.schemas import AgentAction, AgentRequest, AgentResponse
+from tools.search.tool import WebSearchParams
+from tools.web.tool import FetchPageParams
 
 
 def test_agent_request_and_response() -> None:
     """Vérifie les contrats AgentRequest et AgentResponse."""
-    from agent.schemas import AgentRequest, AgentResponse
-
-    req = AgentRequest(query="Yoh !")
+    req = AgentRequest(query="Yoh !", session_id="test_sess")
     assert req.query == "Yoh !"
-    assert req.session_id == "default"
+    assert req.session_id == "test_sess"
 
-    resp = AgentResponse(content="Salut !", tools_used=["run_daily_watch"])
+    resp = AgentResponse(content="Salut !", tools_used=["web_search"], thought="Penser")
     assert resp.content == "Salut !"
-    assert resp.tools_used == ["run_daily_watch"]
-    assert resp.thought == ""
+    assert resp.tools_used == ["web_search"]
+    assert resp.thought == "Penser"
 
+
+def test_agent_action_defaults() -> None:
+    """Vérifie les valeurs par défaut du schéma AgentAction."""
+    action = AgentAction(thought="Reflexion")
+    assert action.thought == "Reflexion"
+    assert action.tool_name is None
+    assert action.tool_arguments == {}
+    assert action.final_answer is None
+
+
+def test_web_search_params() -> None:
+    """Vérifie la validation des paramètres de recherche."""
+    params = WebSearchParams(query="bioinformatique")
+    assert params.query == "bioinformatique"
+    assert params.max_results == 5
+
+    with pytest.raises(ValidationError):
+        WebSearchParams()  # type: ignore[call-arg]
+
+
+def test_fetch_page_params() -> None:
+    """Vérifie la validation des paramètres d'extraction de page."""
+    params = FetchPageParams(url="https://example.com")
+    assert params.url == "https://example.com"
+    assert params.max_chars == 3000

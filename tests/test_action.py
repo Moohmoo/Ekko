@@ -8,12 +8,12 @@ def test_agent_action_valid_arguments() -> None:
     """Vérifie la désérialisation correcte d'arguments JSON valides."""
     action = AgentAction(
         thought="Analyse du besoin",
-        tool_name="run_daily_watch",
-        tool_arguments_json='{"force": true}',
+        tool_name="web_search",
+        tool_arguments_json='{"query": "bioinformatique"}',
     )
     assert action.thought == "Analyse du besoin"
-    assert action.tool_name == "run_daily_watch"
-    assert action.tool_arguments == {"force": True}
+    assert action.tool_name == "web_search"
+    assert action.tool_arguments == {"query": "bioinformatique"}
 
 
 def test_agent_action_fallback_on_invalid_json() -> None:
@@ -34,7 +34,7 @@ def test_agent_action_fallback_on_invalid_json() -> None:
         ("none", None),
         ("false", None),
         ("", None),
-        ("  run_daily_watch  ", "run_daily_watch"),
+        ("  web_search  ", "web_search"),
     ],
 )
 def test_agent_action_sanitize_tool_name(raw_name: str, expected: str | None) -> None:

@@ -1,15 +1,13 @@
-"""Tests unitaires pour le registre d'outils et les adaptateurs (Brique 3)."""
+"""Tests unitaires pour le registre d'outils et les adaptateurs natifs."""
 
-from datetime import date
-from pathlib import Path
 from typing import Type
 import pytest
 from pydantic import BaseModel, Field
-from config import Settings
 from tools.base import BaseTool
 from tools.registry import ToolRegistry
+from tools.search import WebSearchTool
 from tools.system import SystemInfoTool
-from tools.watch import WatchTool
+from tools.web import FetchPageTool
 
 
 class DummyParams(BaseModel):
@@ -81,68 +79,63 @@ async def test_system_info_tool_execution() -> None:
 
 
 @pytest.mark.asyncio
-async def test_watch_tool_existing_briefing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie que WatchTool retourne le texte du briefing si déjà existant."""
-    today_file = tmp_path / f"{date.today().isoformat()}.md"
-    today_file.write_text("# Briefing SOTA\n- Sujet 1", encoding="utf-8")
+async def test_web_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie l'exécution et le formatage des résultats par WebSearchTool."""
+    fake_results = [
+        {"title": "SFBI Bioinfo", "href": "https://example.com/bioinfo", "body": "Actualités bioinformatique"},
+    ]
 
-    dummy_settings = Settings(watch_dir_path=tmp_path)
-    monkeypatch.setattr("tools.watch.tool.get_settings", lambda: dummy_settings)
+    def mock_ddgs(query: str, max_results: int) -> list[dict[str, str]]:
+        return fake_results
 
-    tool = WatchTool()
-    res = await tool.execute(force=False)
-    assert "Briefing du jour disponible" in res
-    assert "Briefing SOTA" in res
-    assert "Sujet 1" in res
+    monkeypatch.setattr("tools.search.tool._perform_ddgs_search", mock_ddgs)
+    tool = WebSearchTool()
+    res = await tool.execute(query="bioinfo", max_results=3)
 
-
-@pytest.mark.asyncio
-async def test_watch_tool_error_handling(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie le message d'erreur lorsque la génération du briefing échoue."""
-    dummy_settings = Settings(watch_dir_path=tmp_path)
-    monkeypatch.setattr("tools.watch.tool.get_settings", lambda: dummy_settings)
-
-    async def mock_fail(*args: object, **kwargs: object) -> tuple[str, bool]:
-        raise RuntimeError("Service indisponible")
-
-    monkeypatch.setattr("tools.watch.tool.get_or_create_daily_briefing", mock_fail)
-    tool = WatchTool()
-    res = await tool.execute(force=True)
-    assert "Une erreur est survenue" in res
+    assert "SFBI Bioinfo" in res
+    assert "https://example.com/bioinfo" in res
+    assert "Actualités bioinformatique" in res
 
 
 @pytest.mark.asyncio
-async def test_watch_tool_filter_matching_query(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie le filtrage d'articles correspondant à un mot-clé précis."""
-    today_file = tmp_path / f"{date.today().isoformat()}.md"
-    today_file.write_text(
-        "### Tech & IA Paper A: Vision Transformer\n- Résumé vision\n\n"
-        "### Tech & IA Paper B: Audio Synthesis\n- Résumé audio",
-        encoding="utf-8",
-    )
-    dummy_settings = Settings(watch_dir_path=tmp_path)
-    monkeypatch.setattr("tools.watch.tool.get_settings", lambda: dummy_settings)
+async def test_web_search_tool_error_handling(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie la capture d'erreur lors d'une défaillance réseau dans WebSearchTool."""
+    def mock_fail(query: str, max_results: int) -> list[dict[str, str]]:
+        raise RuntimeError("Réseau indisponible")
 
-    tool = WatchTool()
-    res = await tool.execute(query="vision")
-    assert "Articles correspondant à 'vision'" in res
-    assert "Paper A" in res
-    assert "Paper B" not in res
+    monkeypatch.setattr("tools.search.tool._perform_ddgs_search", mock_fail)
+    tool = WebSearchTool()
+    res = await tool.execute(query="fail")
+    assert "Erreur lors de la recherche" in res
 
 
 @pytest.mark.asyncio
-async def test_watch_tool_filter_no_match_query(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie le message d'absence d'articles avec les sujets disponibles listés."""
-    today_file = tmp_path / f"{date.today().isoformat()}.md"
-    today_file.write_text(
-        "### Tech & IA Paper A: Vision Transformer\n- Résumé vision",
-        encoding="utf-8",
-    )
-    dummy_settings = Settings(watch_dir_path=tmp_path)
-    monkeypatch.setattr("tools.watch.tool.get_settings", lambda: dummy_settings)
+async def test_fetch_page_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le téléchargement et le nettoyage HTML par FetchPageTool."""
+    html_content = "<html><body><h1>Titre</h1><p>Paragraphe intéressant</p></body></html>"
 
-    tool = WatchTool()
-    res = await tool.execute(query="bioinfo")
-    assert "Aucun article ne correspond à 'bioinfo'" in res
-    assert "Paper A: Vision Transformer" in res
+    class MockResponse:
+        text = html_content
 
+        def raise_for_status(self) -> None:
+            pass
+
+    class MockAsyncClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args: object):
+            pass
+
+        async def get(self, *args: object, **kwargs: object):
+            return MockResponse()
+
+    monkeypatch.setattr("httpx.AsyncClient", MockAsyncClient)
+    tool = FetchPageTool()
+    res = await tool.execute(url="https://example.com/page")
+
+    assert "Titre Paragraphe intéressant" in res
+    assert "Contenu extrait" in res

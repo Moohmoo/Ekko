@@ -11,6 +11,7 @@ dependencies = [
     "google-genai>=2.0",
     "python-dotenv>=1.0",
     "rich>=15.0.0",
+    "ddgs>=9.16.0",
 ]
 
 [project.scripts]
@@ -25,7 +26,3 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-markers = [
-    "e2e: End-to-end evaluations requiring external network LLM calls",
-]
-addopts = "-m 'not e2e'"

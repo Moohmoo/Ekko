@@ -1,6 +1,6 @@
-# Ekko - Assistant Personnel Local d'Ingénierie & Veille
+# Ekko - Assistant Personnel Local d'Ingénierie
 
-Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. Conçu selon les principes de simplicité radicale et d'architecture hexagonale (Rasoir d'Ockham, SOLID), il combine un moteur de raisonnement ReAct interactif en ligne de commande et un sous-système de veille scientifique et technologique automatisé.
+Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. Conçu selon les principes de simplicité radicale et d'architecture modulaire (Rasoir d'Ockham, SOLID), il combine un moteur de raisonnement ReAct interactif en ligne de commande et des outils primitifs universels (recherche web, lecteur de pages, inspection système).
 
 ---
 
@@ -22,17 +22,15 @@ Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. C
           ▼                     ▼                     ▼
    ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
    │ LLM Providers │     │ SQLiteMemory  │     │ ToolRegistry  │
-   │  - Gemini     │     │  - Messages   │     │  - WatchTool  │
-   │  - Ollama/Loc │     │  - Task Runs  │     │  - SysInfo    │
-   └───────────────┘     │  - TTL Purge  │     └───────┬───────┘
-                         └───────────────┘             │
-                                                       ▼
+   │  - Gemini     │     │  - Messages   │     │  (LEGO Tools) │
+   │  - Ollama/Loc │     │  - Task Runs  │     └───────┬───────┘
+   └───────────────┘     │  - TTL Purge  │             │
+                         └───────────────┘             ▼
                                          ┌───────────────────────────┐
-                                         │   Pipeline Veille SOTA    │
-                                         │  - Collecteurs (HN, HF)   │
-                                         │  - Agent 1 : Trieur       │
-                                         │  - Agent 2 : Rédacteur    │
-                                         │  - Briefing Markdown      │
+                                         │Outils Primitifs Génériques│
+                                         │ - web_search (DuckDuckGo) │
+                                         │ - fetch_page (Lecteur Web)│
+                                         │ - get_system_info (Matos) │
                                          └───────────────────────────┘
 ```
 
@@ -41,9 +39,10 @@ Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. C
 - **Présentateurs :** Affichage interactif avec Rich (`ConsolePresenter`) en mode normal ou avec diagnostics détaillés (`-d / --debug`), ou sortie machine (`JsonPresenter`).
 - **Garde-fous :** Interception automatique des actions redondantes et limitation stricte du nombre d'itérations.
 
-### 2. Outils découplés (Tool Registry)
-- **`run_daily_watch` :** Outil de veille quotidienne. Si le briefing du jour existe déjà dans `data/watch/briefings/`, il le restitue instantanément avec filtrage thématique par mot-clé (`query`). Sinon, il déclenche le pipeline complet à deux agents (Trieur + Rédacteur).
-- **`get_system_info` :** Outil d'inspection du matériel hôte (OS, CPU, RAM, présence de GPU).
+### 2. Outils découplés (Tool Registry - Primitives LEGO)
+- **`web_search` :** Recherche universelle sur le web sans clé d'API via DuckDuckGo (`ddgs`). Permet d'extraire les actualités récentes, documentations ou solutions techniques.
+- **`fetch_page` :** Lecteur de page web asynchrone via `httpx`. Extrait le contenu textuel pur d'une URL en supprimant le bruit (scripts, styles, balises HTML).
+- **`get_system_info` :** Inspection matérielle locale de la machine hôte (OS, CPU, mémoire vive disponible, détection GPU Nvidia).
 
 ### 3. Mémoire SQLite & Gestion de sessions
 - **Mémoire court-terme :** Fenêtre glissante conversationnelle isolée par identifiant de session.

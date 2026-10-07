@@ -2,11 +2,13 @@
 
 from .base import BaseTool, EmptyParams
 from .registry import ToolRegistry, default_registry
+from .search import WebSearchTool
 from .system import SystemInfoTool
-from .watch import WatchTool
+from .web import FetchPageTool
 
 # Enregistrement des outils natifs par défaut
-default_registry.register(WatchTool())
+default_registry.register(WebSearchTool())
+default_registry.register(FetchPageTool())
 default_registry.register(SystemInfoTool())
 
 __all__ = [
@@ -14,6 +16,7 @@ __all__ = [
     "EmptyParams",
     "ToolRegistry",
     "default_registry",
-    "WatchTool",
+    "WebSearchTool",
+    "FetchPageTool",
     "SystemInfoTool",
 ]

@@ -16,8 +16,6 @@ htmlcov/
 
 # Local configuration & storage
 .env
-data/watch/history.json
-data/watch/briefings/*.md
 data/memory/*.db
 data/memory/*.db-journal
 data/memory/*.db-wal

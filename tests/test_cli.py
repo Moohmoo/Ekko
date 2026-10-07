@@ -33,7 +33,7 @@ def test_initialize_engine_creates_instance(tmp_path) -> None:
     engine = initialize_engine(settings)
     assert engine is not None
     assert engine.provider is not None
-    assert engine.registry.get_tool("run_daily_watch") is not None
+    assert engine.registry.get_tool("web_search") is not None
     assert engine.registry.get_tool("get_system_info") is not None
 
 

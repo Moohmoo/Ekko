@@ -68,12 +68,6 @@ class SQLiteMemory:
                     timestamp TEXT NOT NULL
                 )
             """)
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS seen_articles (
-                    url TEXT PRIMARY KEY,
-                    date_added TEXT NOT NULL
-                )
-            """)
 
     def record_message(self, session_id: str, role: str, content: str) -> None:
         """Enregistre un message dans l'historique de la session courante."""
@@ -117,42 +111,13 @@ class SQLiteMemory:
             ).fetchall()
         return [dict(row) for row in rows]
 
-    def is_article_seen(self, url: str) -> bool:
-        """Vérifie si une URL a déjà été répertoriée dans la base."""
-        with self._get_connection() as conn:
-            row = conn.execute("SELECT 1 FROM seen_articles WHERE url = ?", (url,)).fetchone()
-            return row is not None
-
-    def get_seen_urls(self) -> set[str]:
-        """Récupère l'ensemble de toutes les URLs répertoriées."""
-        with self._get_connection() as conn:
-            rows = conn.execute("SELECT url FROM seen_articles").fetchall()
-            return {row["url"] for row in rows}
-
-    def record_seen_articles(self, urls: list[str]) -> None:
-        """Enregistre un lot d'URLs avec la date courante."""
-        if not urls:
-            return
-        today_str = date.today().isoformat()
-        entries = [(url, today_str) for url in urls]
-        with self._get_connection() as conn:
-            conn.executemany("INSERT OR IGNORE INTO seen_articles (url, date_added) VALUES (?, ?)", entries)
-
-    def purge_seen_articles(self, retention_days: int) -> int:
-        """Supprime les URLs antérieures au seuil de rétention configuré."""
-        threshold = (date.today() - timedelta(days=retention_days)).isoformat()
-        with self._get_connection() as conn:
-            cursor = conn.execute("DELETE FROM seen_articles WHERE date_added < ?", (threshold,))
-            return cursor.rowcount
-
     def purge_old_history(self, retention_days: int = 30) -> dict[str, int]:
-        """Supprime les messages, tâches et articles antérieurs au seuil de rétention."""
+        """Supprime les messages et tâches antérieurs au seuil de rétention."""
         threshold_dt = (datetime.now() - timedelta(days=retention_days)).isoformat()
         with self._get_connection() as conn:
             c1 = conn.execute("DELETE FROM messages WHERE timestamp < ?", (threshold_dt,)).rowcount
             c2 = conn.execute("DELETE FROM task_runs WHERE timestamp < ?", (threshold_dt,)).rowcount
-        c3 = self.purge_seen_articles(retention_days)
-        return {"messages": c1, "task_runs": c2, "seen_articles": c3}
+        return {"messages": c1, "task_runs": c2}
 
     def clear_session_messages(self, session_id: str) -> int:
         """Supprime tous les messages d'une session spécifique."""
