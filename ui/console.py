@@ -103,11 +103,22 @@ def render_tool_result_panel(tool_name: str, result: str) -> None:
     )
 
 
+def format_markdown_output(text: str) -> str:
+    """Aère et normalise la syntaxe Markdown (titres, puces) avant restitution."""
+    import re
+
+    cleaned = text.strip()
+    cleaned = re.sub(r"(?<!\n)\s*###\s+", "\n\n### ", cleaned)
+    cleaned = re.sub(r"(?<=[^\n])\s+-\s+(?=\*?[A-Za-z])", "\n- ", cleaned)
+    return cleaned
+
+
 def render_final_answer(answer: AgentResponse | str) -> None:
-    """Affiche la réponse finale formatée en Markdown."""
-    text_content = answer.content if isinstance(answer, AgentResponse) else answer
+    """Affiche la réponse finale formatée en Markdown et aérée."""
+    raw_content = answer.content if isinstance(answer, AgentResponse) else answer
+    formatted_content = format_markdown_output(raw_content)
     console.print()
-    console.print(Markdown(text_content.strip()))
+    console.print(Markdown(formatted_content))
     console.print()
 
 

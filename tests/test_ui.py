@@ -9,6 +9,7 @@ from agent.schemas import (
 from ui.console import (
     AgentUI,
     console,
+    format_markdown_output,
     print_banner,
     prompt_user_input,
     render_thought_line,
@@ -124,3 +125,13 @@ async def test_json_presenter_render_stream(capsys) -> None:
     assert resp.content == "JSON final"
     captured = capsys.readouterr()
     assert '"content": "JSON final"' in captured.out
+
+
+def test_format_markdown_output_decompression() -> None:
+    """Vérifie la décompression des titres et puces collés sur une seule ligne."""
+    collapsed = "Titre - C'est quoi : X - Pourquoi : Y ### Titre B - Detail : Z"
+    result = format_markdown_output(collapsed)
+    assert "\n\n### Titre B" in result
+    assert "\n- C'est quoi : X" in result
+    assert "\n- Pourquoi : Y" in result
+    assert "\n- Detail : Z" in result
