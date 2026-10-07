@@ -110,3 +110,39 @@ async def test_watch_tool_error_handling(tmp_path: Path, monkeypatch: pytest.Mon
     res = await tool.execute(force=True)
     assert "Une erreur est survenue" in res
 
+
+@pytest.mark.asyncio
+async def test_watch_tool_filter_matching_query(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le filtrage d'articles correspondant à un mot-clé précis."""
+    today_file = tmp_path / f"{date.today().isoformat()}.md"
+    today_file.write_text(
+        "### Tech & IA Paper A: Vision Transformer\n- Résumé vision\n\n"
+        "### Tech & IA Paper B: Audio Synthesis\n- Résumé audio",
+        encoding="utf-8",
+    )
+    dummy_settings = Settings(watch_dir_path=tmp_path)
+    monkeypatch.setattr("tools.watch.tool.get_settings", lambda: dummy_settings)
+
+    tool = WatchTool()
+    res = await tool.execute(query="vision")
+    assert "Articles correspondant à 'vision'" in res
+    assert "Paper A" in res
+    assert "Paper B" not in res
+
+
+@pytest.mark.asyncio
+async def test_watch_tool_filter_no_match_query(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le message d'absence d'articles avec les sujets disponibles listés."""
+    today_file = tmp_path / f"{date.today().isoformat()}.md"
+    today_file.write_text(
+        "### Tech & IA Paper A: Vision Transformer\n- Résumé vision",
+        encoding="utf-8",
+    )
+    dummy_settings = Settings(watch_dir_path=tmp_path)
+    monkeypatch.setattr("tools.watch.tool.get_settings", lambda: dummy_settings)
+
+    tool = WatchTool()
+    res = await tool.execute(query="bioinfo")
+    assert "Aucun article ne correspond à 'bioinfo'" in res
+    assert "Paper A: Vision Transformer" in res
+

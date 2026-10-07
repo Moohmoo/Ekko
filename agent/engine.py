@@ -85,6 +85,7 @@ class EkkoEngine:
         history_block = format_history_block(self.memory.get_recent_messages(req.session_id, limit=6))
         observations: list[str] = []
         tools_used: list[str] = []
+        executed_actions: set[tuple[str, str]] = set()
         last_thought: str = ""
 
         for step in range(self.max_steps):
@@ -106,11 +107,22 @@ class EkkoEngine:
                 return
 
             if action.tool_name:
-                tools_used.append(action.tool_name)
-                yield ToolCallEvent(tool_name=action.tool_name, arguments=action.tool_arguments)
-                obs = await self._execute_tool(action.tool_name, action.tool_arguments)
-                yield ToolResultEvent(tool_name=action.tool_name, result=obs)
-                observations.append(f"- Résultat de `{action.tool_name}` : {obs}")
+                action_key = (action.tool_name, action.tool_arguments_json.strip())
+                if action_key in executed_actions:
+                    logger.warning("Action redondante interceptée : %s", action_key)
+                    obs = (
+                        f"Action redondante : `{action.tool_name}` a déjà été exécuté avec ces arguments. "
+                        "Tu ne dois pas le réexécuter. Conclus obligatoirement dans 'final_answer'."
+                    )
+                    yield ToolResultEvent(tool_name=action.tool_name, result=obs)
+                    observations.append(obs)
+                else:
+                    executed_actions.add(action_key)
+                    tools_used.append(action.tool_name)
+                    yield ToolCallEvent(tool_name=action.tool_name, arguments=action.tool_arguments)
+                    obs = await self._execute_tool(action.tool_name, action.tool_arguments)
+                    yield ToolResultEvent(tool_name=action.tool_name, result=obs)
+                    observations.append(f"- Résultat de `{action.tool_name}` : {obs}")
 
         limit_msg = "Limite maximale d'étapes de raisonnement atteinte sans conclusion."
         yield DoneEvent(response=AgentResponse(content=limit_msg, tools_used=tools_used, thought=last_thought))

@@ -184,3 +184,24 @@ async def test_engine_run_stream_events(tmp_path: Path) -> None:
     assert isinstance(events[4], DoneEvent)
     assert events[4].response.content == "Voici ekko."
 
+
+@pytest.mark.asyncio
+async def test_engine_redundant_action_intercepted(tmp_path: Path) -> None:
+    """Vérifie que la répétition d'un même outil est interceptée par le moteur."""
+    repeated_action = AgentAction(
+        thought="Même recherche",
+        tool_name="mock_search",
+        tool_arguments_json='{"query": "antigravity"}',
+    )
+    final_action = AgentAction(
+        thought="Conclusion forcée",
+        final_answer="Réponse finale après avertissement.",
+    )
+    engine, _ = setup_engine(tmp_path, [repeated_action, repeated_action, final_action])
+    events = [ev async for ev in engine.run_stream("Recherche en double")]
+
+    tool_results = [ev for ev in events if isinstance(ev, ToolResultEvent)]
+    assert len(tool_results) == 2
+    assert "antigravity" in tool_results[0].result
+    assert "Action redondante" in tool_results[1].result
+
