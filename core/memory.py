@@ -14,7 +14,7 @@ DEFAULT_PROFILE_CONTENT = """# Profil Utilisateur - Mohamed
 - **Rôle :** Ingénieur informatique & Bioinformatique
 - **Préférences de communication :**
   - Réponses directes, synthétiques et factuelles.
-  - Zéro bavardage, pas de salutations ni de politesses superflues.
+  - Zéro bavardage inutile, style direct et sobre.
   - Précision technique et rigueur d'ingénierie logicielle.
 - **Environnement technique :**
   - OS : Ubuntu Linux

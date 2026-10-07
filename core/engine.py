@@ -14,56 +14,7 @@ from .router import AgentAction, decide_action
 
 logger = logging.getLogger("ekko.core.engine")
 
-
-def build_system_prompt(user_profile: str, tools_catalog: str) -> str:
-    """Construit le prompt système global combinant profil utilisateur et catalogue d'outils."""
-    return (
-        "Tu es Ekko, un assistant personnel d'ingénierie autonome opérant sur la machine locale.\n\n"
-        f"### PROFIL UTILISATEUR :\n{user_profile}\n\n"
-        f"### OUTILS DISPONIBLES :\n{tools_catalog}\n\n"
-        "### RÈGLES DE DÉCISION REACT :\n"
-        "- Tu disposes de connaissances générales approfondies en informatique, bioinformatique, code et sciences : "
-        "réponds directement via 'final_answer' sans exécuter d'outil pour ces questions.\n"
-        "- Pour une salutation, un échange informel ou une question théorique, N'EXÉCUTE AUCUN OUTIL.\n"
-        "- N'appelle un outil QUE si la demande exige concrètement son exécution (ex: veille, système).\n"
-        "- Si une information requiert des données temps réel externes non couvertes par tes outils "
-        "(ex: météo), indique sobrement dans 'final_answer' qu'aucun outil météo n'est disponible.\n"
-        "- Produis systématiquement un 'thought' concis explicitant ton analyse.\n"
-        "- Si une action technique est requise, fournis 'tool_name' et 'tool_arguments' ('final_answer' = null).\n"
-        "- Dès qu'aucun outil n'est requis ou la tâche finie, fournis 'final_answer' ('tool_name' = null).\n"
-        "- Réponses directes, précises et sans bavardage.\n"
-        "- Formate tes réponses finales en Markdown aéré et structuré (listes à puces, sauts de ligne, "
-        "mots-clés en gras) pour une lisibilité optimale dans le terminal."
-    )
-
-
-def format_history_block(history: list[dict[str, str]]) -> str:
-    """Formate l'historique conversationnel récent avec garde-fou de taille."""
-    if not history:
-        return ""
-    lines: list[str] = []
-    for msg in history:
-        role = "Utilisateur" if msg["role"] == "user" else "Ekko"
-        content = " ".join(msg["content"].strip().split())
-        short_content = content[:250] + "..." if len(content) > 250 else content
-        lines.append(f"- {role} : {short_content}")
-    return "### HISTORIQUE CONVERSATIONNEL RÉCENT :\n" + "\n".join(lines)
-
-
-def format_step_prompt(
-    user_query: str,
-    observations: list[str],
-    history_block: str = "",
-) -> str:
-    """Met en forme l'état de la demande, de l'historique et des observations."""
-    sections: list[str] = []
-    if history_block:
-        sections.append(history_block)
-    sections.append(f"Demande utilisateur : {user_query}")
-    if observations:
-        sections.append("Observations des outils précédents :\n" + "\n".join(observations))
-    sections.append("Décide de l'action technique ou formule la réponse finale directement.")
-    return "\n\n".join(sections)
+from .prompts import build_system_prompt, format_history_block, format_step_prompt
 
 
 class EkkoEngine:

@@ -35,8 +35,8 @@ class WatchTool(BaseTool):
 
     name = "run_daily_watch"
     description = (
-        "Collecte les actualités tech, IA et sciences du jour (Hacker News et Hugging Face), "
-        "élimine les doublons et génère le Morning Briefing Markdown dans data/watch/briefings/."
+        "Collecte et synthétise les actualités, news et la veille tech/IA du jour "
+        "(Hacker News et Hugging Face) sous forme d'un Morning Briefing Markdown."
     )
     parameters_schema = WatchToolParams
 
