@@ -70,20 +70,29 @@ def setup_engine(tmp_path: Path, actions: list[AgentAction]) -> tuple[EkkoEngine
     return engine, memory
 
 
+async def consume_engine(
+    engine: EkkoEngine, req: str, session_id: str = "default"
+) -> tuple[list[AgentEvent], AgentResponse]:
+    """Consomme le flux run_stream et retourne les événements et la réponse finale."""
+    events: list[AgentEvent] = []
+    async for ev in engine.run_stream(req, session_id=session_id):
+        events.append(ev)
+        if isinstance(ev, DoneEvent):
+            return events, ev.response
+    raise RuntimeError("Aucun DoneEvent émis par le flux")
+
+
 @pytest.mark.asyncio
 async def test_engine_direct_answer(tmp_path: Path) -> None:
     """Vérifie la résolution immédiate sans appel d'outil."""
     actions = [AgentAction(thought="Réponse directe", final_answer="Voici l'information")]
     engine, memory = setup_engine(tmp_path, actions)
 
-    events: list[str] = []
-    callbacks = {"on_thought": lambda t: events.append(f"thought:{t}")}
-
-    res = await engine.run("Question simple", session_id="test_sess", callbacks=callbacks)
+    events, res = await consume_engine(engine, "Question simple", session_id="test_sess")
 
     assert res.content == "Voici l'information"
     assert res.tools_used == []
-    assert events == ["thought:Réponse directe"]
+    assert any(isinstance(ev, ThoughtEvent) and ev.thought == "Réponse directe" for ev in events)
     history = memory.get_recent_messages("test_sess")
     assert len(history) == 2
 
@@ -104,17 +113,12 @@ async def test_engine_tool_call_flow(tmp_path: Path) -> None:
     ]
     engine, memory = setup_engine(tmp_path, actions)
 
-    calls: list[str] = []
-    callbacks = {
-        "on_tool_call": lambda name, args: calls.append(f"call:{name}"),
-        "on_tool_result": lambda name, res: calls.append(f"res:{res}"),
-    }
-
-    res = await engine.run("Trouve antigravity", callbacks=callbacks)
+    events, res = await consume_engine(engine, "Trouve antigravity")
 
     assert "antigravity" in res.content
     assert res.tools_used == ["mock_search"]
-    assert calls == ["call:mock_search", "res:Trouvé: antigravity"]
+    assert any(isinstance(ev, ToolCallEvent) and ev.tool_name == "mock_search" for ev in events)
+    assert any(isinstance(ev, ToolResultEvent) and "antigravity" in ev.result for ev in events)
     tasks = memory.get_recent_tasks()
     assert len(tasks) == 1
     assert tasks[0]["tool_name"] == "mock_search"
@@ -131,7 +135,7 @@ async def test_engine_max_steps_safeguard(tmp_path: Path) -> None:
     actions = [loop_action, loop_action, loop_action]
     engine, _ = setup_engine(tmp_path, actions)
 
-    res = await engine.run("Boucle sans fin")
+    _, res = await consume_engine(engine, "Boucle sans fin")
     assert "Limite maximale d'étapes" in res.content
 
 
@@ -144,8 +148,8 @@ async def test_engine_conversation_history_passed(tmp_path: Path) -> None:
     ]
     engine, memory = setup_engine(tmp_path, actions)
 
-    await engine.run("Première question", session_id="multi_turn")
-    await engine.run("Seconde question", session_id="multi_turn")
+    await consume_engine(engine, "Première question", session_id="multi_turn")
+    await consume_engine(engine, "Seconde question", session_id="multi_turn")
 
     history = memory.get_recent_messages("multi_turn")
     assert len(history) == 4

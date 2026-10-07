@@ -17,15 +17,6 @@ from ui.console import (
 from ui.presenter import ConsolePresenter, JsonPresenter
 
 
-def test_agent_ui_callbacks_dict() -> None:
-    """Vérifie la présence des 4 callbacks requis dans le dictionnaire."""
-    ui = AgentUI(debug=False)
-    callbacks = ui.get_callbacks()
-    assert "on_thinking_start" in callbacks
-    assert "on_thought" in callbacks
-    assert "on_tool_call" in callbacks
-    assert "on_tool_result" in callbacks
-
 
 def test_agent_ui_normal_lifecycle() -> None:
     """Vérifie le cycle d'affichage sans lever d'exception en mode normal."""

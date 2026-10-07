@@ -5,13 +5,13 @@ et les transforme en modèles d'articles unifiés.
 """
 
 import asyncio
-import logging
 from typing import Any
 import httpx
 
+from core import Logger
 from ..schemas import Article
 
-logger = logging.getLogger(__name__)
+logger = Logger("ekko.watch.collectors.hn")
 
 HN_TOP_STORIES_URL = "https://hacker-news.firebaseio.com/v0/topstories.json"
 HN_ITEM_URL = "https://hacker-news.firebaseio.com/v0/item/{item_id}.json"

@@ -5,17 +5,17 @@ options HTTP explicites (X-Server-Timeout), retry automatique et logs de diagnos
 """
 
 import asyncio
-import logging
 import time
 from typing import Any, TypeVar
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
+from core.logger import Logger
 from .base import LLMProvider
 from .errors import ProviderAuthError, ProviderTimeoutError, ProviderUnavailableError
 
-logger = logging.getLogger("ekko.providers.gemini")
+logger = Logger("ekko.providers.gemini")
 T = TypeVar("T", bound=BaseModel)
 
 

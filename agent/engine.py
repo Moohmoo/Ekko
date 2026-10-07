@@ -5,11 +5,11 @@ avec des garde-fous stricts contre les boucles infinies.
 """
 
 import json
-import logging
 import time
 from collections.abc import AsyncIterator
 from typing import Any
 from config import Settings
+from core import Logger
 from providers import LLMProvider
 from tools.registry import ToolRegistry
 from .memory import SQLiteMemory
@@ -26,7 +26,7 @@ from .schemas import (
     decide_action,
 )
 
-logger = logging.getLogger("ekko.agent.engine")
+logger = Logger("ekko.agent.engine")
 
 
 def normalize_request(request: AgentRequest | str, session_id: str = "default") -> AgentRequest:
@@ -65,15 +65,6 @@ class EkkoEngine:
         """Enregistre le tour de dialogue complet dans la mémoire SQLite."""
         self.memory.record_message(session_id, "user", query)
         self.memory.record_message(session_id, "assistant", answer)
-
-    def _dispatch_legacy_callback(self, event: AgentEvent, cb: dict[str, Any]) -> None:
-        """Achemine les événements vers les anciens callbacks pour rétrocompatibilité."""
-        if isinstance(event, ThoughtEvent) and cb.get("on_thought"):
-            cb["on_thought"](event.thought)
-        elif isinstance(event, ToolCallEvent) and cb.get("on_tool_call"):
-            cb["on_tool_call"](event.tool_name, event.arguments)
-        elif isinstance(event, ToolResultEvent) and cb.get("on_tool_result"):
-            cb["on_tool_result"](event.tool_name, event.result)
 
     async def run_stream(
         self,
@@ -128,17 +119,3 @@ class EkkoEngine:
 
         limit_msg = "Limite maximale d'étapes de raisonnement atteinte sans conclusion."
         yield DoneEvent(response=AgentResponse(content=limit_msg, tools_used=tools_used, thought=last_thought))
-
-    async def run(
-        self,
-        request: AgentRequest | str,
-        session_id: str = "default",
-        callbacks: dict[str, Any] | None = None,
-    ) -> AgentResponse:
-        """Exécute la boucle ReAct de manière bloquante (rétrocompatible)."""
-        cb = callbacks or {}
-        async for event in self.run_stream(request, session_id):
-            self._dispatch_legacy_callback(event, cb)
-            if isinstance(event, DoneEvent):
-                return event.response
-        return AgentResponse(content="Erreur : flux d'événements interrompu sans conclusion.")

@@ -196,12 +196,3 @@ class AgentUI:
         if self._status is not None:
             self._status.stop()
             self._status = None
-
-    def get_callbacks(self) -> dict[str, Any]:
-        """Retourne le mapping de callbacks pour le moteur ReAct."""
-        return {
-            "on_thinking_start": self.on_thinking_start,
-            "on_thought": self.on_thought,
-            "on_tool_call": self.on_tool_call,
-            "on_tool_result": self.on_tool_result,
-        }

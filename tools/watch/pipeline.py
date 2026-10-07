@@ -4,14 +4,12 @@ Coordonne les collecteurs, la persistance locale anti-doublon
 et les agents IA spécialisés (Trieur et Rédacteur).
 """
 
-import argparse
 import asyncio
 from datetime import date
-import logging
 from pathlib import Path
-import sys
 
 from config import Settings, get_settings
+from core import Logger
 from providers import create_llm_provider
 from .agents import classify_articles, generate_briefing
 from .collectors import fetch_hacker_news_articles, fetch_hugging_face_papers
@@ -26,24 +24,7 @@ from .storage import (
     write_briefing,
 )
 
-logger = logging.getLogger("ekko.tools.watch")
-
-
-def parse_cli_args() -> argparse.Namespace:
-    """Analyse les arguments passés en ligne de commande."""
-    parser = argparse.ArgumentParser(description="Ekko - Morning Briefing automatisé")
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force la regénération du briefing même si le fichier du jour existe déjà",
-    )
-    parser.add_argument(
-        "--date",
-        type=str,
-        default=None,
-        help="Date cible au format YYYY-MM-DD (par défaut: date du jour)",
-    )
-    return parser.parse_args()
+logger = Logger("ekko.tools.watch")
 
 
 async def collect_all_candidates(settings: Settings) -> list[Article]:
@@ -113,15 +94,3 @@ async def execute_daily_watch(settings: Settings, force: bool = False, custom_da
 
     save_seen_urls(settings.db_path, [art.url for art in fresh_articles])
     return 0
-
-
-def main() -> None:
-    """Fonction principale d'exécution synchrone."""
-    args = parse_cli_args()
-    settings = get_settings()
-    exit_code = asyncio.run(execute_daily_watch(settings, force=args.force, custom_date=args.date))
-    sys.exit(exit_code)
-
-
-if __name__ == "__main__":
-    main()

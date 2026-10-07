@@ -1,5 +1,6 @@
 """Package central définissant le socle technique transverse d'Ekko."""
 
+from .logger import Logger, setup_logging
 from .errors import (
     AgentLoopError,
     EkkoError,
@@ -9,7 +10,6 @@ from .errors import (
     ToolExecutionError,
     format_error_for_display,
 )
-from .logger import Logger, setup_logging
 
 __all__ = [
     "Logger",

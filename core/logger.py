@@ -19,21 +19,21 @@ class Logger:
         """Initialise une instance de journalisation avec son composant identifié."""
         self._logger = logging.getLogger(name)
 
-    def info(self, message: str, *args: object) -> None:
+    def info(self, message: str, *args: object, exc_info: bool = False) -> None:
         """Consigne un événement informatif."""
-        self._logger.info(message, *args)
+        self._logger.info(message, *args, exc_info=exc_info)
 
-    def warning(self, message: str, *args: object) -> None:
+    def warning(self, message: str, *args: object, exc_info: bool = False) -> None:
         """Consigne un avertissement opérationnel."""
-        self._logger.warning(message, *args)
+        self._logger.warning(message, *args, exc_info=exc_info)
 
-    def error(self, message: str, *args: object) -> None:
+    def error(self, message: str, *args: object, exc_info: bool = False) -> None:
         """Consigne une erreur d'exécution."""
-        self._logger.error(message, *args)
+        self._logger.error(message, *args, exc_info=exc_info)
 
-    def debug(self, message: str, *args: object) -> None:
+    def debug(self, message: str, *args: object, exc_info: bool = False) -> None:
         """Consigne un détail technique réservé aux diagnostics."""
-        self._logger.debug(message, *args)
+        self._logger.debug(message, *args, exc_info=exc_info)
 
 
 def _configure_file_handler(log_file: Path) -> logging.FileHandler:

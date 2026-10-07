@@ -4,15 +4,15 @@ Catégorise les défaillances (réseau, authentification, outils, boucle agent)
 pour produire des diagnostics clairs en mode normal et enrichis en debug.
 """
 
-import logging
 from providers.errors import (
     ProviderAuthError,
     ProviderError,
     ProviderTimeoutError,
     ProviderUnavailableError,
 )
+from .logger import Logger
 
-logger = logging.getLogger("ekko.core.errors")
+logger = Logger("ekko.core.errors")
 
 
 class EkkoError(Exception):

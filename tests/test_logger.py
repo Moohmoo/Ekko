@@ -34,14 +34,16 @@ def test_setup_logging_debug_mode(tmp_path: Path) -> None:
 
 def test_logger_class_methods(tmp_path: Path) -> None:
     """Vérifie l'écriture via les méthodes dédiées de la classe Logger."""
-    setup_logging(tmp_path, debug=False)
+    setup_logging(tmp_path, debug=True)
     log = Logger("test_component")
     log.info("Message info")
     log.warning("Message warning")
-    log.error("Message error")
+    log.debug("Message debug")
+    log.error("Message error", exc_info=False)
 
     content = (tmp_path / "ekko.log").read_text(encoding="utf-8")
     assert "Message info" in content
     assert "Message warning" in content
+    assert "Message debug" in content
     assert "Message error" in content
     assert "[test_component]" in content

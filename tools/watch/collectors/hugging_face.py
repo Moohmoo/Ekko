@@ -4,13 +4,13 @@ Récupère les articles scientifiques populaires du jour publiés sur Hugging Fa
 et les formate selon le modèle Article standard.
 """
 
-import logging
 from typing import Any
 import httpx
 
+from core import Logger
 from ..schemas import Article
 
-logger = logging.getLogger(__name__)
+logger = Logger("ekko.watch.collectors.hf")
 
 HF_DAILY_PAPERS_URL = "https://huggingface.co/api/daily_papers"
 
