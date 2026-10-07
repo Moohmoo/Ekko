@@ -43,7 +43,7 @@ def print_banner(model_name: str, provider: str, debug: bool = False) -> None:
 
     console.print()
     console.print(grid)
-    console.print("[dim cyan]" + "─" * 60 + "[/dim cyan]\n")
+    console.print()
 
 
 def prompt_user_input() -> str:

@@ -4,6 +4,7 @@ Gère le cycle de raisonnement Thought -> Tool Call -> Observation
 avec des garde-fous stricts contre les boucles infinies.
 """
 
+import json
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -107,7 +108,8 @@ class EkkoEngine:
                 return
 
             if action.tool_name:
-                action_key = (action.tool_name, action.tool_arguments_json.strip())
+                clean_args = {k: v for k, v in action.tool_arguments.items() if v is not None and v != ""}
+                action_key = (action.tool_name, json.dumps(clean_args, sort_keys=True))
                 if action_key in executed_actions:
                     logger.warning("Action redondante interceptée : %s", action_key)
                     obs = (
