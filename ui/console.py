@@ -19,11 +19,11 @@ from agent.schemas import AgentResponse
 console = Console()
 
 ASCII_LOGO = (
-    "[bold cyan]     ▄▀▀▄    [/bold cyan]",
-    "[bold cyan]    ▀▀██▀▀   [/bold cyan]",
-    "[cyan]   ▀▀████▀▀  [/cyan]",
-    "[dim cyan]  ▄▀▀    ▀▀▄ [/dim cyan]",
-    "[dim cyan] ▄▀▀      ▀▀▄[/dim cyan]",
+    "[bold cyan]   ▄▄██▄▄   [/bold cyan]",
+    "[bold cyan]  ▄█ ▄▄ █▄  [/bold cyan]",
+    "[cyan] ██ ▀▀▀▀ ██ [/cyan]",
+    "[dim cyan]  ▀█ ▄▄ █▀  [/dim cyan]",
+    "[dim cyan]   ▀▀██▀▀   [/dim cyan]",
 )
 
 
