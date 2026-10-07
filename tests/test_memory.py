@@ -47,3 +47,18 @@ def test_sqlite_memory_tasks_flow(tmp_path: Path) -> None:
     assert tasks[0]["tool_name"] == "test_tool"
     assert tasks[0]["status"] == "success"
     assert "Opération terminée" in tasks[0]["summary"]
+
+
+def test_sqlite_memory_seen_articles(tmp_path: Path) -> None:
+    """Vérifie l'enregistrement et le statut d'articles répertoriés dans la mémoire."""
+    db_file = tmp_path / "test_ekko.db"
+    memory = SQLiteMemory(db_file)
+
+    assert not memory.is_article_seen("https://example.com/art1")
+    memory.record_seen_articles(["https://example.com/art1", "https://example.com/art2"])
+
+    assert memory.is_article_seen("https://example.com/art1")
+    assert memory.is_article_seen("https://example.com/art2")
+    assert not memory.is_article_seen("https://example.com/art3")
+    assert memory.get_seen_urls() == {"https://example.com/art1", "https://example.com/art2"}
+

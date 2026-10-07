@@ -68,6 +68,12 @@ class SQLiteMemory:
                     timestamp TEXT NOT NULL
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS seen_articles (
+                    url TEXT PRIMARY KEY,
+                    date_added TEXT NOT NULL
+                )
+            """)
 
     def record_message(self, session_id: str, role: str, content: str) -> None:
         """Enregistre un message dans l'historique de la session courante."""
@@ -110,3 +116,25 @@ class SQLiteMemory:
                 (limit,),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def is_article_seen(self, url: str) -> bool:
+        """Vérifie si une URL a déjà été répertoriée dans la base."""
+        with self._get_connection() as conn:
+            row = conn.execute("SELECT 1 FROM seen_articles WHERE url = ?", (url,)).fetchone()
+            return row is not None
+
+    def get_seen_urls(self) -> set[str]:
+        """Récupère l'ensemble de toutes les URLs répertoriées."""
+        with self._get_connection() as conn:
+            rows = conn.execute("SELECT url FROM seen_articles").fetchall()
+            return {row["url"] for row in rows}
+
+    def record_seen_articles(self, urls: list[str]) -> None:
+        """Enregistre un lot d'URLs avec la date courante."""
+        if not urls:
+            return
+        today_str = datetime.now().date().isoformat()
+        entries = [(url, today_str) for url in urls]
+        with self._get_connection() as conn:
+            conn.executemany("INSERT OR IGNORE INTO seen_articles (url, date_added) VALUES (?, ?)", entries)
+

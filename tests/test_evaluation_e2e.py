@@ -29,6 +29,7 @@ def load_scenarios() -> list[dict[str, Any]]:
 SCENARIOS = load_scenarios()
 
 
+@pytest.mark.e2e
 @pytest.mark.asyncio
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=[s["id"] for s in SCENARIOS])
 async def test_classifier_golden_scenarios(scenario: dict[str, Any]) -> None:

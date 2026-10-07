@@ -28,8 +28,7 @@ def initialize_engine(settings: Settings | None = None) -> EkkoEngine:
     """Initialise et configure le moteur ReAct avec la mémoire et les outils."""
     cfg = settings or get_settings()
     provider = create_llm_provider(cfg)
-    memory_db = cfg.memory_dir_path / "ekko.db"
-    memory = SQLiteMemory(memory_db)
+    memory = SQLiteMemory(cfg.db_path)
     user_profile = load_user_profile(cfg.memory_dir_path)
 
     return EkkoEngine(

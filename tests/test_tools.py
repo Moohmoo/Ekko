@@ -1,11 +1,15 @@
 """Tests unitaires pour le registre d'outils et les adaptateurs (Brique 3)."""
 
+from datetime import date
+from pathlib import Path
 from typing import Type
 import pytest
 from pydantic import BaseModel, Field
+from config import Settings
 from tools.base import BaseTool
 from tools.registry import ToolRegistry
 from tools.system_tool import SystemInfoTool
+from tools.watch_tool import WatchTool
 
 
 class DummyParams(BaseModel):
@@ -74,3 +78,35 @@ async def test_system_info_tool_execution() -> None:
     info = await tool.execute()
     assert "OS" in info
     assert "Accélération matérielle" in info
+
+
+@pytest.mark.asyncio
+async def test_watch_tool_existing_briefing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie que WatchTool retourne le texte du briefing si déjà existant."""
+    today_file = tmp_path / f"{date.today().isoformat()}.md"
+    today_file.write_text("# Briefing SOTA\n- Sujet 1", encoding="utf-8")
+
+    dummy_settings = Settings(watch_dir_path=tmp_path)
+    monkeypatch.setattr("tools.watch_tool.get_settings", lambda: dummy_settings)
+
+    tool = WatchTool()
+    res = await tool.execute(force=False)
+    assert "Briefing du jour disponible" in res
+    assert "Briefing SOTA" in res
+    assert "Sujet 1" in res
+
+
+@pytest.mark.asyncio
+async def test_watch_tool_error_handling(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le message d'erreur lorsque execute_daily_watch échoue."""
+    dummy_settings = Settings(watch_dir_path=tmp_path)
+    monkeypatch.setattr("tools.watch_tool.get_settings", lambda: dummy_settings)
+
+    async def mock_fail(*args: object, **kwargs: object) -> int:
+        return 1
+
+    monkeypatch.setattr("tools.watch_tool.execute_daily_watch", mock_fail)
+    tool = WatchTool()
+    res = await tool.execute(force=True)
+    assert "Une erreur est survenue" in res
+

@@ -7,6 +7,7 @@ la purge temporelle et la génération des briefings Markdown (~/watch/YYYY-MM-D
 import json
 from datetime import date, datetime, timedelta
 from pathlib import Path
+import sqlite3
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 # Paramètres de tracking à nettoyer pour la déduplication
@@ -33,6 +34,61 @@ def normalize_url(url: str) -> str:
     ))
     return normalized
 
+
+def init_storage_db(db_path: Path) -> None:
+    """Initialise la table des articles traités si elle n'existe pas."""
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS seen_articles (
+                url TEXT PRIMARY KEY,
+                date_added TEXT NOT NULL
+            )
+        """)
+
+
+def load_seen_urls(db_path: Path) -> set[str]:
+    """Charge l'ensemble des URLs déjà traitées depuis la base SQLite."""
+    init_storage_db(db_path)
+    with sqlite3.connect(db_path) as conn:
+        rows = conn.execute("SELECT url FROM seen_articles").fetchall()
+        return {row[0] for row in rows}
+
+
+def save_seen_urls(db_path: Path, urls: list[str]) -> None:
+    """Enregistre de nouvelles URLs dans la base SQLite avec la date du jour."""
+    if not urls:
+        return
+    init_storage_db(db_path)
+    today_str = date.today().isoformat()
+    entries = [(normalize_url(url), today_str) for url in urls]
+    with sqlite3.connect(db_path) as conn:
+        conn.executemany(
+            "INSERT OR IGNORE INTO seen_articles (url, date_added) VALUES (?, ?)",
+            entries,
+        )
+
+
+def purge_old_urls(db_path: Path, retention_days: int) -> int:
+    """Supprime les URLs antérieures au seuil de rétention configuré."""
+    init_storage_db(db_path)
+    threshold = (date.today() - timedelta(days=retention_days)).isoformat()
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute("DELETE FROM seen_articles WHERE date_added < ?", (threshold,))
+        return cursor.rowcount
+
+
+def migrate_json_history_if_exists(json_path: Path, db_path: Path) -> None:
+    """Migre l'ancien fichier history.json vers la base SQLite s'il existe."""
+    if not json_path.is_file():
+        return
+    history = load_history(json_path)
+    if history:
+        save_seen_urls(db_path, list(history.keys()))
+    try:
+        json_path.unlink()
+    except OSError:
+        pass
 
 
 def load_history(path: Path) -> dict[str, str]:

@@ -25,3 +25,7 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "e2e: End-to-end evaluations requiring external network LLM calls",
+]
+addopts = "-m 'not e2e'"

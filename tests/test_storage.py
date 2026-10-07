@@ -2,13 +2,18 @@
 
 from datetime import date, timedelta
 from pathlib import Path
+import sqlite3
 from watch.storage import (
     get_today_briefing_path,
     is_already_generated,
     load_history,
+    load_seen_urls,
+    migrate_json_history_if_exists,
     normalize_url,
     purge_old_history,
+    purge_old_urls,
     save_history,
+    save_seen_urls,
     write_briefing,
 )
 
@@ -67,3 +72,40 @@ def test_briefing_write_and_check(tmp_path: Path) -> None:
     write_briefing(briefing_path, "# Briefing du jour")
     assert is_already_generated(briefing_path)
     assert briefing_path.read_text(encoding="utf-8").strip() == "# Briefing du jour"
+
+
+def test_sqlite_seen_urls(tmp_path: Path) -> None:
+    """Vérifie l'enregistrement et le chargement d'URLs dans la base SQLite."""
+    db_file = tmp_path / "test.db"
+    save_seen_urls(db_file, ["https://example.com/1", "https://example.com/2/"])
+    urls = load_seen_urls(db_file)
+    assert "https://example.com/1" in urls
+    assert "https://example.com/2" in urls
+
+
+def test_sqlite_purge_old_urls(tmp_path: Path) -> None:
+    """Vérifie la purge temporelle des anciennes URLs en SQLite."""
+    db_file = tmp_path / "test.db"
+    save_seen_urls(db_file, ["https://example.com/recent"])
+    with sqlite3.connect(db_file) as conn:
+        conn.execute(
+            "INSERT INTO seen_articles (url, date_added) VALUES (?, ?)",
+            ("https://example.com/old", "2020-01-01"),
+        )
+    purged_count = purge_old_urls(db_file, retention_days=60)
+    assert purged_count == 1
+    urls = load_seen_urls(db_file)
+    assert "https://example.com/recent" in urls
+    assert "https://example.com/old" not in urls
+
+
+def test_migrate_json_history(tmp_path: Path) -> None:
+    """Vérifie la migration d'un fichier JSON existant vers SQLite."""
+    json_file = tmp_path / "history.json"
+    json_file.write_text('{"https://example.com/migrated": "2026-10-06"}', encoding="utf-8")
+    db_file = tmp_path / "migrated.db"
+    migrate_json_history_if_exists(json_file, db_file)
+    assert not json_file.exists()
+    urls = load_seen_urls(db_file)
+    assert "https://example.com/migrated" in urls
+

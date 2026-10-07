@@ -4,7 +4,7 @@ Permet à l'agent d'appeler la veille quotidienne sans dupliquer
 ni modifier la logique métier du package watch.
 """
 
-from datetime import date
+from pathlib import Path
 from pydantic import BaseModel, Field
 
 from config import get_settings
@@ -22,6 +22,14 @@ class WatchToolParams(BaseModel):
     )
 
 
+def _format_briefing_result(briefing_path: Path, prefix: str) -> str:
+    """Lit et formate le contenu du briefing pour l'observation de l'agent."""
+    if briefing_path.is_file():
+        content = briefing_path.read_text(encoding="utf-8").strip()
+        return f"{prefix} (`{briefing_path}`) :\n\n{content}"
+    return f"{prefix} (`{briefing_path}`), mais le fichier est introuvable."
+
+
 class WatchTool(BaseTool):
     """Outil permettant à l'agent Ekko de générer le Morning Briefing."""
 
@@ -33,21 +41,14 @@ class WatchTool(BaseTool):
     parameters_schema = WatchToolParams
 
     async def execute(self, force: bool = False) -> str:
-        """Déclenche le pipeline de veille et retourne un compte-rendu pour le modèle."""
+        """Déclenche le pipeline de veille et retourne le contenu du briefing."""
         settings = get_settings()
         briefing_path = get_today_briefing_path(settings.watch_dir_path)
 
         if is_already_generated(briefing_path) and not force:
-            return (
-                f"Le briefing du jour ({date.today().isoformat()}) existe déjà dans "
-                f"`{briefing_path}`. Spécifiez 'force=True' pour forcer une réactualisation."
-            )
+            return _format_briefing_result(briefing_path, "Briefing du jour disponible")
 
         exit_code = await execute_daily_watch(settings, force=force)
         if exit_code == 0:
-            return (
-                f"Veille quotidienne exécutée avec succès. "
-                f"Le briefing Markdown a été rédigé dans `{briefing_path}` "
-                f"et une notification système a été émise."
-            )
+            return _format_briefing_result(briefing_path, "Briefing du jour généré avec succès")
         return "Une erreur est survenue lors de l'exécution de la veille."

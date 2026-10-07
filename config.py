@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Fournisseur LLM ('gemini' ou 'local')
     llm_provider: str = Field(default="gemini", description="Provider LLM actif")
     gemini_api_key: str = Field(default="", description="Clé d'API Google Gemini")
-    gemini_model: str = Field(default="gemini-flash-lite-latest", description="Nom du modèle Gemini")
+    gemini_model: str = Field(default="gemini-3.1-flash-lite", description="Nom du modèle Gemini")
 
     # Configuration modèle local (Ollama / vLLM)
     local_llm_url: str = Field(
@@ -56,6 +56,10 @@ class Settings(BaseSettings):
         default=BASE_DIR / "data" / "memory",
         description="Dossier de stockage de la mémoire du bot Ekko",
     )
+    db_path: Path = Field(
+        default=BASE_DIR / "data" / "memory" / "ekko.db",
+        description="Base de données SQLite centrale",
+    )
     log_dir_path: Path = Field(
         default=BASE_DIR / "data" / "logs",
         description="Dossier de stockage des journaux techniques",
@@ -65,6 +69,7 @@ class Settings(BaseSettings):
         "watch_dir_path",
         "history_file_path",
         "memory_dir_path",
+        "db_path",
         "log_dir_path",
         mode="after",
     )

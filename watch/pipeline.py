@@ -20,10 +20,11 @@ from watch.notifier import send_system_notification
 from watch.storage import (
     get_today_briefing_path,
     is_already_generated,
-    load_history,
+    load_seen_urls,
+    migrate_json_history_if_exists,
     normalize_url,
-    purge_old_history,
-    save_history,
+    purge_old_urls,
+    save_seen_urls,
     write_briefing,
 )
 
@@ -68,25 +69,15 @@ async def collect_all_candidates(settings: Settings) -> list[Article]:
 
 def filter_unseen_articles(
     articles: list[Article],
-    history: dict[str, str],
+    seen_urls: set[str] | dict[str, str],
 ) -> list[Article]:
-    """Élimine les articles déjà présents dans l'historique."""
+    """Élimine les articles déjà répertoriés dans la base de données."""
     unseen: list[Article] = []
     for art in articles:
         canon_url = normalize_url(art.url)
-        if canon_url not in history:
+        if canon_url not in seen_urls:
             unseen.append(art)
     return unseen
-
-
-def update_history_with_articles(
-    history: dict[str, str],
-    articles: list[Article],
-) -> None:
-    """Enregistre les nouvelles URLs dans l'historique avec la date du jour."""
-    today_str = date.today().isoformat()
-    for art in articles:
-        history[normalize_url(art.url)] = today_str
 
 
 async def execute_daily_watch(settings: Settings, force: bool = False, custom_date: str | None = None) -> int:
@@ -96,11 +87,12 @@ async def execute_daily_watch(settings: Settings, force: bool = False, custom_da
         logger.info("Le briefing du jour existe déjà : %s (utiliser --force)", briefing_file)
         return 0
 
-    history = load_history(settings.history_file_path)
-    history = purge_old_history(history, settings.history_retention_days)
+    migrate_json_history_if_exists(settings.history_file_path, settings.db_path)
+    purge_old_urls(settings.db_path, settings.history_retention_days)
+    seen_urls = load_seen_urls(settings.db_path)
 
     candidates = await collect_all_candidates(settings)
-    fresh_articles = filter_unseen_articles(candidates, history)
+    fresh_articles = filter_unseen_articles(candidates, seen_urls)
     logger.info("Articles collectés : %d | Nouveaux articles : %d", len(candidates), len(fresh_articles))
 
     if not fresh_articles:
@@ -124,8 +116,7 @@ async def execute_daily_watch(settings: Settings, force: bool = False, custom_da
     write_briefing(briefing_file, briefing_md)
     logger.info("Briefing écrit avec succès : %s", briefing_file)
 
-    update_history_with_articles(history, fresh_articles)
-    save_history(settings.history_file_path, history)
+    save_seen_urls(settings.db_path, [art.url for art in fresh_articles])
 
     send_system_notification()
     return 0
