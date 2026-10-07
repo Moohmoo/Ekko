@@ -43,3 +43,13 @@ def test_fetch_page_params() -> None:
     params = FetchPageParams(url="https://example.com")
     assert params.url == "https://example.com"
     assert params.max_chars == 3000
+
+
+def test_news_search_params_normalization() -> None:
+    """Vérifie la normalisation automatique des arguments de news_search."""
+    from tools.news.tool import NewsSearchParams
+
+    assert NewsSearchParams().query == "actualités générales"
+    assert NewsSearchParams(query="   ").query == "actualités générales"
+    assert NewsSearchParams(query="bioinfo").query == "bioinfo"
+

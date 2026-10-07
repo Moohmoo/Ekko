@@ -7,7 +7,7 @@ restituant les titres, sources, dates de publication, extraits et URLs.
 import asyncio
 from typing import Any
 from ddgs import DDGS
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from config import get_region_for_language, get_settings
 from tools.base import BaseTool
 
@@ -16,6 +16,7 @@ class NewsSearchParams(BaseModel):
     """Parameters for news search requests."""
 
     query: str = Field(
+        default="actualités générales",
         description="Mots-clés ou sujet d'actualité recherché (ex: 'bioinformatique', 'intelligence artificielle').",
     )
     max_results: int = Field(default=5, description="Nombre maximum de dépêches souhaitées (1 à 10).")
@@ -23,6 +24,13 @@ class NewsSearchParams(BaseModel):
         default=None,
         description="Code région optionnel (ex: 'fr-fr', 'en-us', 'wt-wt'). Si omis, déduit de la langue système.",
     )
+
+    @field_validator("query", mode="before")
+    @classmethod
+    def normalize_query(cls, value: Any) -> str:
+        """Normalize empty or whitespace-only queries to default."""
+        clean = str(value or "").strip()
+        return clean if clean else "actualités générales"
 
 
 def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[dict[str, Any]]:

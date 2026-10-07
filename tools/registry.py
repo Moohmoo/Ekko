@@ -45,6 +45,16 @@ class ToolRegistry:
             )
         return "\n\n".join(catalog_entries)
 
+    def validate_arguments(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Valide et normalise les arguments via le schéma Pydantic de l'outil."""
+        tool = self.get_tool(name)
+        if not tool:
+            return arguments
+        try:
+            return tool.parameters_schema.model_validate(arguments).model_dump()
+        except Exception:
+            return arguments
+
     async def execute_tool(self, name: str, arguments: dict[str, Any]) -> str:
         """Valide et exécute un outil par son nom avec les arguments fournis."""
         tool = self.get_tool(name)

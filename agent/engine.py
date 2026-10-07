@@ -99,7 +99,8 @@ class EkkoEngine:
                 return
 
             if action.tool_name:
-                clean_args = {k: v for k, v in action.tool_arguments.items() if v is not None and v != ""}
+                validated_args = self.registry.validate_arguments(action.tool_name, action.tool_arguments)
+                clean_args = {k: v for k, v in validated_args.items() if v is not None}
                 action_key = (action.tool_name, json.dumps(clean_args, sort_keys=True))
                 if action_key in executed_actions:
                     logger.warning("Action redondante interceptée : %s", action_key)
@@ -113,8 +114,8 @@ class EkkoEngine:
                 else:
                     executed_actions.add(action_key)
                     tools_used.append(action.tool_name)
-                    yield ToolCallEvent(tool_name=action.tool_name, arguments=action.tool_arguments)
-                    obs = await self._execute_tool(action.tool_name, action.tool_arguments)
+                    yield ToolCallEvent(tool_name=action.tool_name, arguments=clean_args)
+                    obs = await self._execute_tool(action.tool_name, clean_args)
                     yield ToolResultEvent(tool_name=action.tool_name, result=obs)
                     observations.append(f"- Résultat de `{action.tool_name}` : {obs}")
 
