@@ -190,6 +190,15 @@ async def test_search_tool_news_focus(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "2026-10-06" in res
 
 
+def test_build_news_search_query() -> None:
+    """Vérifie le nettoyage des mots parasites et la protection de l'acronyme AI."""
+    from tools.search.tool import _build_news_search_query
+
+    assert _build_news_search_query("latest AI news 2026") == '"AI" 2026'
+    assert _build_news_search_query("recent AI models release") == '"AI" models release'
+    assert _build_news_search_query("bioinformatics new tools") == "bioinformatics new tools"
+
+
 @pytest.mark.asyncio
 async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     """Vérifie le téléchargement et le nettoyage HTML par ReaderTool."""

@@ -5,6 +5,7 @@ et la recherche web générale (DuckDuckGo) via un sélecteur d'angle (focus).
 """
 
 import asyncio
+import re
 from typing import Any, Literal
 import xml.etree.ElementTree as ET
 from ddgs import DDGS
@@ -121,14 +122,24 @@ def _perform_ddgs_web(query: str, max_results: int, region: str) -> list[dict[st
         return list(client.text(query.strip(), region=region, max_results=max_results))
 
 
+def _build_news_search_query(query: str) -> str:
+    """Nettoie et affine la requête d'actualités en éliminant les termes parasites."""
+    tokens = [w.strip() for w in query.strip().split() if w.strip()]
+    stop_news = {"news", "latest", "recent", "actualites", "actualite", "nouvelles"}
+    clean_tokens = [w for w in tokens if w.lower() not in stop_news]
+    cleaned = " ".join(clean_tokens) if clean_tokens else query.strip()
+    return re.sub(r"\b[Aa][Ii]\b", '"AI"', cleaned)
+
+
 def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[dict[str, Any]]:
     """Exécute la recherche DuckDuckGo News d'articles d'actualité récents horodatés."""
+    refined_query = _build_news_search_query(query)
     with DDGS() as client:
         try:
-            results = list(client.news(query.strip(), region=region, timelimit="w", max_results=max_results))
-            return results if results else list(client.news(query.strip(), region=region, max_results=max_results))
+            results = list(client.news(refined_query, region=region, timelimit="w", max_results=max_results))
+            return results if results else list(client.news(refined_query, region=region, max_results=max_results))
         except Exception:
-            return list(client.news(query.strip(), region=region, max_results=max_results))
+            return list(client.news(refined_query, region=region, max_results=max_results))
 
 
 def _format_academic_results(results: list[dict[str, Any]], query: str) -> str:
