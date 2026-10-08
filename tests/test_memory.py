@@ -35,21 +35,6 @@ def test_sqlite_memory_messages_flow(tmp_path: Path) -> None:
     assert history[1] == {"role": "assistant", "content": "Réponse 1"}
 
 
-def test_sqlite_memory_tasks_flow(tmp_path: Path) -> None:
-    """Vérifie l'enregistrement et la consultation du journal des tâches."""
-    db_file = tmp_path / "test_ekko.db"
-    memory = SQLiteMemory(db_file)
-
-    memory.record_task_run("test_tool", "success", "Opération terminée avec succès")
-    tasks = memory.get_recent_tasks(limit=5)
-
-    assert len(tasks) == 1
-    assert tasks[0]["tool_name"] == "test_tool"
-    assert tasks[0]["status"] == "success"
-    assert "Opération terminée" in tasks[0]["summary"]
-
-
-
 def test_sqlite_memory_clear_session_messages(tmp_path: Path) -> None:
     """Vérifie la suppression ciblée des messages d'une session."""
     db_file = tmp_path / "test_ekko.db"
@@ -65,15 +50,13 @@ def test_sqlite_memory_clear_session_messages(tmp_path: Path) -> None:
 
 
 def test_sqlite_memory_purge_old_history(tmp_path: Path) -> None:
-    """Vérifie la purge globale des messages et tâches selon le TTL."""
+    """Vérifie la purge globale des messages selon le TTL."""
     db_file = tmp_path / "test_ekko.db"
     memory = SQLiteMemory(db_file)
 
     memory.record_message("sess_old", "user", "Old message")
-    memory.record_task_run("old_tool", "success", "Old summary")
 
     # Purge avec 0 jours (tout est antérieur ou égal à l'instant présent)
     res = memory.purge_old_history(retention_days=0)
     assert res["messages"] >= 1
-    assert res["task_runs"] >= 1
 

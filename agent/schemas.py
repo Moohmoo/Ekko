@@ -239,16 +239,3 @@ AgentEvent = (
     | StreamChunkEvent
     | DoneEvent
 )
-
-
-async def decide_action(
-    provider: LLMProvider,
-    prompt: str,
-    system_prompt: str,
-) -> AgentAction:
-    """Interroge le LLM et extrait une action de décision typée et validée."""
-    return await provider.generate_structured(
-        prompt=prompt,
-        schema=AgentAction,
-        system_instruction=system_prompt,
-    )

@@ -140,9 +140,8 @@ async def test_engine_tool_call_flow(tmp_path: Path) -> None:
     assert res.tools_used == ["mock_search"]
     assert any(isinstance(ev, ToolCallEvent) and ev.tool_name == "mock_search" for ev in events)
     assert any(isinstance(ev, ToolResultEvent) and "antigravity" in ev.result for ev in events)
-    tasks = memory.get_recent_tasks()
-    assert len(tasks) == 1
-    assert tasks[0]["tool_name"] == "mock_search"
+    history = memory.get_recent_messages("default")
+    assert len(history) == 2
 
 
 @pytest.mark.asyncio

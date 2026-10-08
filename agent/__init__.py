@@ -1,3 +1,5 @@
+"""Module agent d'Ekko : orchestration, handlers et persistance."""
+
 from .context import (
     EnvironmentContext,
     ExecutionContext,
@@ -6,8 +8,7 @@ from .context import (
     build_execution_context,
 )
 from .engine import EkkoEngine
-from .memory import SQLiteMemory, load_user_profile
-from .prompts import build_system_prompt, format_history_block, format_step_prompt
+from .handlers import ActionHandler, BaseHandler, ChatHandler, ResearchHandler
 from .router import classify_intent
 from .schemas import (
     AgentAction,
@@ -15,13 +16,15 @@ from .schemas import (
     AgentRequest,
     AgentResponse,
     DoneEvent,
+    PlanEvent,
+    RetrievalEvent,
+    StreamChunkEvent,
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
     ValidationEvent,
-    decide_action,
 )
-from .validator import validate_draft
+from .storage import DEFAULT_PROFILE_CONTENT, SQLiteMemory, SessionStorage, load_user_profile
 
 __all__ = [
     "EnvironmentContext",
@@ -30,21 +33,25 @@ __all__ = [
     "WorkingMemoryContext",
     "build_execution_context",
     "EkkoEngine",
+    "BaseHandler",
+    "ChatHandler",
+    "ResearchHandler",
+    "ActionHandler",
+    "SessionStorage",
     "SQLiteMemory",
     "load_user_profile",
+    "DEFAULT_PROFILE_CONTENT",
     "classify_intent",
     "AgentRequest",
     "AgentResponse",
     "AgentAction",
     "AgentEvent",
+    "PlanEvent",
+    "RetrievalEvent",
     "ThoughtEvent",
     "ToolCallEvent",
     "ToolResultEvent",
     "ValidationEvent",
+    "StreamChunkEvent",
     "DoneEvent",
-    "decide_action",
-    "validate_draft",
-    "build_system_prompt",
-    "format_history_block",
-    "format_step_prompt",
 ]
