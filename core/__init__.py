@@ -2,12 +2,10 @@
 
 from .logger import Logger, setup_logging
 from .errors import (
-    AgentLoopError,
     EkkoError,
     ProviderAuthError,
     ProviderTimeoutError,
     ProviderUnavailableError,
-    ToolExecutionError,
     format_error_for_display,
 )
 
@@ -18,7 +16,5 @@ __all__ = [
     "ProviderUnavailableError",
     "ProviderTimeoutError",
     "ProviderAuthError",
-    "ToolExecutionError",
-    "AgentLoopError",
     "format_error_for_display",
 ]

@@ -83,12 +83,10 @@ def test_user_intent_with_thought_and_normalization() -> None:
 def test_search_plan_schema_mimicry_tolerance() -> None:
     """Vérifie que SearchPlan tolère les fragments de schéma JSON émis par les SLMs."""
     raw_payload = {
-        "is_search_needed": {"default": True, "type": "boolean"},
         "focus": {"default": "academic", "type": "string"},
         "queries": {"default": ["RNA folding"], "type": "array"},
     }
     plan = SearchPlan.model_validate(raw_payload)
-    assert plan.is_search_needed is True
     assert plan.focus == "academic"
     assert plan.queries == ["RNA folding"]
 

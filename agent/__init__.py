@@ -3,8 +3,6 @@
 from .context import (
     EnvironmentContext,
     ExecutionContext,
-    UserProfileContext,
-    WorkingMemoryContext,
     build_execution_context,
 )
 from .engine import EkkoEngine
@@ -31,8 +29,6 @@ from .storage import SessionStorage
 __all__ = [
     "EnvironmentContext",
     "ExecutionContext",
-    "UserProfileContext",
-    "WorkingMemoryContext",
     "build_execution_context",
     "EkkoEngine",
     "BaseHandler",

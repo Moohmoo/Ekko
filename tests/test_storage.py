@@ -41,7 +41,7 @@ def test_session_storage_purge_old_history(tmp_path: Path) -> None:
     storage.record_message("sess_old", "user", "Old message")
 
     # Purge avec 0 jours (tout est antérieur ou égal à l'instant présent)
-    res = storage.purge_old_history(retention_days=0)
+    res = storage.purge_old_history(days=0)
     assert res["messages"] >= 1
 
 

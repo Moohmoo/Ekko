@@ -36,6 +36,7 @@ class SessionStorage:
             conn.execute("PRAGMA journal_mode = WAL")
             conn.execute("PRAGMA synchronous = NORMAL")
             conn.execute("PRAGMA busy_timeout = 10000")
+            conn.execute("DROP TABLE IF EXISTS task_runs")
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,10 +77,9 @@ class SessionStorage:
         with self._connection() as conn:
             return conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,)).rowcount
 
-    def purge_old_history(self, days: int = 30, retention_days: int | None = None) -> dict[str, int]:
+    def purge_old_history(self, days: int = 30) -> dict[str, int]:
         """Supprime les messages antérieurs au seuil de rétention configuré."""
-        effective_days = retention_days if retention_days is not None else days
-        threshold = (datetime.now() - timedelta(days=effective_days)).isoformat()
+        threshold = (datetime.now() - timedelta(days=days)).isoformat()
         with self._connection() as conn:
             count = conn.execute("DELETE FROM messages WHERE timestamp <= ?", (threshold,)).rowcount
         return {"messages": count}

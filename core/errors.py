@@ -24,12 +24,6 @@ class EkkoError(Exception):
         self.technical_details = technical_details
 
 
-class ToolExecutionError(EkkoError):
-    """Signalé lors de la défaillance d'un outil local de l'agent."""
-
-
-class AgentLoopError(EkkoError):
-    """Signalé lorsque la boucle de raisonnement ReAct atteint sa limite."""
 
 
 def classify_generic_exception(exc: Exception) -> EkkoError | ProviderError:
@@ -69,8 +63,6 @@ def _get_remediation_action(error: Exception) -> str:
         return "Le serveur distant tarde à répondre. Vérifiez votre accès réseau ou réessayez."
     if isinstance(error, ProviderAuthError):
         return "Vérifiez vos identifiants ou clés d'API dans votre fichier .env."
-    if isinstance(error, ToolExecutionError):
-        return "Vérifiez les prérequis matériels ou les autorisations système de l'outil."
     return "Consultez les détails dans data/logs/ekko.log ou réessayez avec une requête reformulée."
 
 

@@ -6,7 +6,6 @@ de sortie (AgentResponse) et de décision ReAct (AgentAction).
 
 from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
-from providers.base import LLMProvider
 
 
 def _clean_thought_value(value: Any) -> str:
@@ -64,10 +63,6 @@ class SearchPlan(BaseModel):
         default="",
         description="Courte réflexion identifiant le sujet technique clé et l'intention de recherche.",
     )
-    is_search_needed: bool = Field(
-        default=True,
-        description="True si la question nécessite une recherche externe, False pour salutation, conversation ou théorie pure.",
-    )
     focus: Literal["academic", "code", "news", "web"] = Field(
         default="news",
         description="Angle de recherche ('news' pour actualités et annonces, 'academic' pour arXiv, 'code' pour GitHub, 'web' pour doc technique).",
@@ -82,20 +77,6 @@ class SearchPlan(BaseModel):
     def sanitize_thought(cls, value: Any) -> str:
         """Assure que la réflexion est toujours une chaîne propre."""
         return _clean_thought_value(value)
-
-    @field_validator("is_search_needed", mode="before")
-    @classmethod
-    def sanitize_is_search_needed(cls, value: Any) -> bool:
-        """Coerce toute valeur ou fragment de schéma en booléen sûr."""
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, dict):
-            if "default" in value:
-                return bool(value["default"])
-            return True
-        if isinstance(value, str):
-            return value.strip().lower() not in {"false", "0", "no", "null"}
-        return bool(value)
 
     @field_validator("focus", mode="before")
     @classmethod

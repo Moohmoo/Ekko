@@ -77,14 +77,12 @@ class MockSearchTool(SearchTool):
 async def test_plan_research() -> None:
     """Vérifie la formulation du plan de recherche via le provider."""
     expected_plan = SearchPlan(
-        is_search_needed=True,
         focus="academic",
         queries=["RNA structure folding", "RNA inverse design"],
     )
     provider = MockPipelineProvider(expected_plan)
     plan = await plan_research(provider, "Repliement d'ARN")
 
-    assert plan.is_search_needed is True
     assert plan.focus == "academic"
     assert len(plan.queries) == 2
 
@@ -92,7 +90,7 @@ async def test_plan_research() -> None:
 @pytest.mark.asyncio
 async def test_collect_sources_deduplication() -> None:
     """Vérifie que collect_sources fusionne et dédoublonne les blocs identiques."""
-    plan = SearchPlan(is_search_needed=True, focus="academic", queries=["q1", "q1"])
+    plan = SearchPlan(focus="academic", queries=["q1", "q1"])
     tool = MockSearchTool()
     sources, count, elapsed = await collect_sources(tool, plan)
 
@@ -104,7 +102,7 @@ async def test_collect_sources_deduplication() -> None:
 @pytest.mark.asyncio
 async def test_synthesize_findings() -> None:
     """Vérifie la synthèse technique formatée."""
-    plan = SearchPlan(is_search_needed=True)
+    plan = SearchPlan(focus="news")
     provider = MockPipelineProvider(plan, synthesis_text="- **[Paper](URL)** : résultat")
     res = await synthesize_findings(provider, "Question", "Sources", "Profil")
 
@@ -115,7 +113,6 @@ async def test_synthesize_findings() -> None:
 async def test_engine_pipeline_stream(tmp_path: Path) -> None:
     """Vérifie le flux complet d'événements du pipeline dans EkkoEngine."""
     plan = SearchPlan(
-        is_search_needed=True,
         focus="academic",
         queries=["RNA folding"],
     )
