@@ -32,7 +32,9 @@ RÈGLE TEMPORELLE ABSOLUE : Utilise l'année en cours ({year}) ou des termes ré
 
 ### MISSION :
 Formule 1 ou 2 requêtes en ANGLAIS.
-Pour 'news', cible directement l'objet technique recherché (modèles, frameworks, outils, benchmarks) et proscris les termes génériques vagues ou financiers."""
+Pour 'news', ne jamais utiliser le mot 'news'. Formule obligatoirement 2 requêtes complémentaires :
+1. Modèles et annonces majeures : [sujet] model release announcement
+2. Outils et frameworks : [sujet] tools frameworks benchmark"""
 
 
 SYNTHESIZER_SYSTEM_PROMPT = """Tu es le Rédacteur Scientifique et Technique d'Ekko pour Mohamed.
@@ -88,8 +90,9 @@ async def collect_sources(
     if not queries:
         return "Aucune source trouvée.", 0, 0.0
 
+    limit = 6 if plan.focus == "news" else 4
     tasks = [
-        search_tool.execute(query=q, focus=plan.focus, max_results=4)
+        search_tool.execute(query=q, focus=plan.focus, max_results=limit)
         for q in queries
     ]
     raw_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -106,7 +109,7 @@ async def collect_sources(
                 if key not in seen_snippets and not block.startswith("Aucun"):
                     seen_snippets.add(key)
                     valid_blocks.append(block)
-                    if block.startswith(("1.", "2.", "3.", "4.", "5.")):
+                    if block.startswith(("1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.")):
                         total_items += 1
 
     consolidated = "\n\n".join(valid_blocks) if valid_blocks else "Aucune source trouvée."
