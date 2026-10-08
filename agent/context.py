@@ -22,13 +22,51 @@ class EnvironmentContext(BaseModel):
     cwd: str = Field(default="", description="Répertoire de travail actuel")
 
 
+class UserProfileContext(BaseModel):
+    """Contexte typé du profil utilisateur et de ses préférences."""
+
+    raw_content: str = Field(default="", description="Contenu markdown complet du profil")
+
+    def __str__(self) -> str:
+        return self.raw_content
+
+
+class WorkingMemoryContext(BaseModel):
+    """Mémoire de travail typée de la session active."""
+
+    session_id: str = Field(default="default", description="Identifiant unique de session")
+    messages: list[dict[str, str]] = Field(default_factory=list, description="Messages récents")
+    history_block: str = Field(default="", description="Historique formaté prêt pour l'injection")
+
+    def __str__(self) -> str:
+        return self.history_block
+
+
 class ExecutionContext(BaseModel):
     """Contexte d'exécution global immuable passé à tous les composants."""
 
     env: EnvironmentContext
-    user_profile: str = Field(default="", description="Profil markdown de l'utilisateur")
-    history_block: str = Field(default="", description="Historique récent formaté de la session")
-    session_id: str = Field(default="default", description="Identifiant unique de session")
+    user: UserProfileContext = Field(default_factory=UserProfileContext)
+    memory: WorkingMemoryContext = Field(default_factory=WorkingMemoryContext)
+    user_profile: str = Field(default="")
+    history_block: str = Field(default="")
+    session_id: str = Field(default="default")
+
+    def model_post_init(self, __context: object) -> None:
+        """Synchronise les représentations riches et les accès plats."""
+        if self.user_profile and not self.user.raw_content:
+            self.user = UserProfileContext(raw_content=self.user_profile)
+        elif self.user.raw_content and not self.user_profile:
+            self.user_profile = self.user.raw_content
+
+        if self.history_block and not self.memory.history_block:
+            self.memory = WorkingMemoryContext(
+                session_id=self.session_id,
+                history_block=self.history_block,
+            )
+        elif self.memory.history_block and not self.history_block:
+            self.history_block = self.memory.history_block
+            self.session_id = self.memory.session_id
 
     @property
     def current_year(self) -> int:
@@ -59,8 +97,17 @@ def build_execution_context(
     recent_messages = memory.get_recent_messages(session_id, limit=history_limit)
     history_str = format_history_block(recent_messages)
 
+    user_ctx = UserProfileContext(raw_content=user_profile)
+    mem_ctx = WorkingMemoryContext(
+        session_id=session_id,
+        messages=recent_messages,
+        history_block=history_str,
+    )
+
     return ExecutionContext(
         env=env,
+        user=user_ctx,
+        memory=mem_ctx,
         user_profile=user_profile,
         history_block=history_str,
         session_id=session_id,

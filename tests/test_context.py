@@ -36,7 +36,11 @@ def test_build_execution_context_aggregation(tmp_path: Path) -> None:
 
     assert isinstance(ctx, ExecutionContext)
     assert ctx.current_year == datetime.now().year
+    assert ctx.user.raw_content == "Profil test Mohamed"
+    assert str(ctx.user) == "Profil test Mohamed"
     assert ctx.user_profile == "Profil test Mohamed"
+    assert ctx.memory.session_id == "s1"
+    assert len(ctx.memory.messages) == 2
     assert "Bonjour" in ctx.history_block
-    assert "Salut Mohamed" in ctx.history_block
+    assert "Salut Mohamed" in str(ctx.memory)
     assert ctx.session_id == "s1"

@@ -1,4 +1,10 @@
-from .context import ExecutionContext, build_execution_context
+from .context import (
+    EnvironmentContext,
+    ExecutionContext,
+    UserProfileContext,
+    WorkingMemoryContext,
+    build_execution_context,
+)
 from .engine import EkkoEngine
 from .memory import SQLiteMemory, load_user_profile
 from .prompts import build_system_prompt, format_history_block, format_step_prompt
@@ -18,7 +24,10 @@ from .schemas import (
 from .validator import validate_draft
 
 __all__ = [
+    "EnvironmentContext",
     "ExecutionContext",
+    "UserProfileContext",
+    "WorkingMemoryContext",
     "build_execution_context",
     "EkkoEngine",
     "SQLiteMemory",
