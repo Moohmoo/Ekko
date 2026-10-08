@@ -73,3 +73,14 @@ def test_clean_json_payload_unwraps_properties_and_defaults() -> None:
     assert json.loads(cleaned4) == {"focus": "news", "direct_answer": None}
 
 
+def test_clean_json_text_strips_markdown_fences() -> None:
+    """Vérifie que _clean_json_text nettoie les balises markdown pour Gemini."""
+    from providers.gemini import _clean_json_text
+
+    assert _clean_json_text('```json\n{"intent": "chat"}\n```') == '{"intent": "chat"}'
+    assert _clean_json_text('```\n{"intent": "chat"}\n```') == '{"intent": "chat"}'
+    assert _clean_json_text('{"intent": "chat"}') == '{"intent": "chat"}'
+    assert _clean_json_text(None) == "{}"
+
+
+

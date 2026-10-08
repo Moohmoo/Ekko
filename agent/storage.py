@@ -24,7 +24,7 @@ class SessionStorage:
         return conn
 
     def _init_schema(self) -> None:
-        """Initialise la table unique des messages ordonnés par session."""
+        """Initialise la table unique des messages et son index de session."""
         with self._get_connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
@@ -34,6 +34,10 @@ class SessionStorage:
                     content TEXT NOT NULL,
                     timestamp TEXT NOT NULL
                 )
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_messages_session
+                ON messages(session_id, id DESC)
             """)
 
     def record_message(self, session_id: str, role: str, content: str) -> None:

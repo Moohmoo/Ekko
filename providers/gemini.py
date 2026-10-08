@@ -6,6 +6,7 @@ options HTTP explicites (X-Server-Timeout), retry automatique et logs de diagnos
 
 import asyncio
 from collections.abc import AsyncIterator
+import re
 import time
 from typing import Any, TypeVar
 from google import genai
@@ -42,6 +43,15 @@ def _translate_gemini_error(exc: Exception, model_name: str, elapsed: float, max
         f"Le serveur Gemini a échoué après {max_retries} tentatives.",
         technical_details=f"Modèle: {model_name} | {exc}",
     )
+
+
+def _clean_json_text(raw_text: str | None) -> str:
+    """Nettoie les blocs de code Markdown éventuels autour d'une réponse JSON."""
+    if not raw_text:
+        return "{}"
+    text = raw_text.strip()
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+    return match.group(1).strip() if match else text
 
 
 class GeminiProvider(LLMProvider):
@@ -102,7 +112,8 @@ class GeminiProvider(LLMProvider):
         response = await self._call_api_with_retry(prompt, config)
         if hasattr(response, "parsed") and isinstance(response.parsed, schema):
             return response.parsed
-        return schema.model_validate_json(response.text or "{}")
+        cleaned = _clean_json_text(response.text)
+        return schema.model_validate_json(cleaned)
 
     async def generate_text(
         self,
@@ -123,17 +134,22 @@ class GeminiProvider(LLMProvider):
         prompt: str,
         system_instruction: str = "",
     ) -> AsyncIterator[str]:
-        """Produit une réponse textuelle en streaming continu."""
+        """Produit une réponse textuelle en streaming continu avec gestion d'erreurs."""
         config = types.GenerateContentConfig(
             system_instruction=system_instruction or None,
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             temperature=0.3,
         )
-        stream = await self.client.aio.models.generate_content_stream(
-            model=self.model_name,
-            contents=prompt,
-            config=config,
-        )
-        async for chunk in stream:
-            if chunk.text:
-                yield chunk.text
+        t0 = time.perf_counter()
+        try:
+            stream = await self.client.aio.models.generate_content_stream(
+                model=self.model_name,
+                contents=prompt,
+                config=config,
+            )
+            async for chunk in stream:
+                if chunk.text:
+                    yield chunk.text
+        except Exception as exc:
+            elapsed = time.perf_counter() - t0
+            raise _translate_gemini_error(exc, self.model_name, elapsed, max_retries=1) from exc

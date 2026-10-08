@@ -28,7 +28,7 @@ class ResearchHandler(BaseHandler):
         self,
         provider: LLMProvider,
         storage: SessionStorage,
-        search_tool: BaseTool,
+        search_tool: BaseTool | None = None,
     ) -> None:
         self.provider = provider
         self.storage = storage
@@ -76,6 +76,11 @@ class ResearchHandler(BaseHandler):
         yield PlanEvent(focus=plan.focus, queries=plan.queries, elapsed=el_plan)
 
         # 2. Collecte
+        if not self.search_tool:
+            async for ev in self._handle_no_sources(req):
+                yield ev
+            return
+
         sources, count, el_retrieval = await collect_sources(self.search_tool, plan)
         yield RetrievalEvent(source=plan.focus, count=count, elapsed=el_retrieval)
 

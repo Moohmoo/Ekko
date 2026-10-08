@@ -91,6 +91,21 @@ async def test_system_info_tool_execution() -> None:
     assert "Accélération matérielle" in info
 
 
+def test_get_gpu_brief_multigpu(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le parsing résilient sur les configurations multi-GPU."""
+    import subprocess
+    from tools.system.tool import get_gpu_brief
+
+    monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/nvidia-smi")
+    fake_output = "NVIDIA RTX 4090, 100, 24576\nNVIDIA RTX 4090, 200, 24576\n"
+    fake_res = subprocess.CompletedProcess(args=[], returncode=0, stdout=fake_output)
+    monkeypatch.setattr("subprocess.run", lambda *args, **kwargs: fake_res)
+
+    brief = get_gpu_brief()
+    assert "NVIDIA RTX 4090 : 100 Mo / 24576 Mo VRAM" in brief
+    assert " | " in brief
+
+
 @pytest.mark.asyncio
 async def test_search_tool_web_focus(monkeypatch: pytest.MonkeyPatch) -> None:
     """Vérifie l'exécution de la recherche en mode web."""

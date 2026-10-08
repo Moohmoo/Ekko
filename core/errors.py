@@ -34,7 +34,7 @@ class AgentLoopError(EkkoError):
 
 def classify_generic_exception(exc: Exception) -> EkkoError | ProviderError:
     """Convertit une exception non typée en une erreur catégorisée d'Ekko."""
-    if isinstance(exc, (TimeoutError, TimeoutError)):
+    if isinstance(exc, TimeoutError):
         return ProviderTimeoutError(
             "Le serveur distant n'a pas répondu dans le délai imparti.",
             technical_details=str(exc),
@@ -42,7 +42,7 @@ def classify_generic_exception(exc: Exception) -> EkkoError | ProviderError:
     msg = str(exc).lower()
     if "503" in msg or "high demand" in msg or "unavailable" in msg:
         return ProviderUnavailableError(
-            "Les serveurs Google Gemini sont actuellement saturés (forte affluence).",
+            "Les serveurs du fournisseur LLM sont actuellement saturés (forte affluence).",
             technical_details=str(exc),
         )
     if "504" in msg or "deadline_exceeded" in msg or "timeout" in msg:
