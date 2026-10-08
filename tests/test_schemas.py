@@ -38,7 +38,7 @@ def test_search_params() -> None:
     """Vérifie la validation des paramètres de recherche universelle."""
     params = SearchParams(query="bioinformatique")
     assert params.query == "bioinformatique"
-    assert params.focus == "web"
+    assert params.focus == "news"
     assert params.max_results == 5
 
     academic_params = SearchParams(query="AlphaFold", focus="academic", max_results=3)

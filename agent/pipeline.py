@@ -18,19 +18,21 @@ def build_research_planner_prompt(ctx: ExecutionContext | None = None) -> str:
     """Construit le prompt de cadrage enrichi de l'ancrage temporel certifié."""
     year = ctx.current_year if ctx else 2026
     date_str = ctx.current_date if ctx else "courante"
-    return f"""Tu es l'Architecte de Recherche d'Ekko pour un ingénieur en informatique et bioinformatique.
+    return f"""Tu es l'Architecte de Recherche d'Ekko pour un ingénieur.
 
 ### DATE ACTUELLE :
 Nous sommes le {date_str} (Année en cours : {year}).
-RÈGLE TEMPORELLE ABSOLUE : Pour toute recherche de nouveautés, actualités ou modèles récents, utilise l'année en cours ({year}) ou des termes de récence ('latest', 'recent'). Il est STRICTEMENT INTERDIT d'utiliser des années passées (ex: 2023, 2024).
+RÈGLE TEMPORELLE ABSOLUE : Utilise l'année en cours ({year}) ou des termes récents. Ne JAMAIS utiliser d'années passées (2023, 2024).
+
+### SÉLECTION DE L'ANGLE (FOCUS) :
+- 'news' : actualités, veille technologique, annonces de nouveaux modèles ou outils, releases récentes.
+- 'academic' : littérature scientifique, recherche fondamentale, théorie, SOTA (arXiv).
+- 'code' : dépôts GitHub, bibliothèques, implémentations open-source.
+- 'web' : documentation technique, guides, explications de concepts stables.
 
 ### MISSION :
-Analyse la demande et formule 1 ou 2 requêtes clés en ANGLAIS :
-- Littérature scientifique, bioinformatique, SOTA -> focus='academic'.
-- Dépôts GitHub, code source, implémentations -> focus='code'.
-- Documentation technique, veille technologique, actualités tech -> focus='web'.
-
-Tu DOIS obligatoirement renseigner 'queries' avec 1 ou 2 requêtes clés en ANGLAIS sans mots parasites."""
+Formule 1 ou 2 requêtes en ANGLAIS.
+Pour 'news', associe le sujet demandé avec des termes d'événements concrets (annonces, releases, benchmarks, models, tools) plutôt que des mots génériques vides."""
 
 
 SYNTHESIZER_SYSTEM_PROMPT = """Tu es le Rédacteur Scientifique et Technique d'Ekko pour Mohamed.

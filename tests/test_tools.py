@@ -164,6 +164,33 @@ async def test_search_tool_code_focus(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_search_tool_news_focus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie l'exécution de la recherche d'actualités récentes (focus news)."""
+    fake_news = [
+        {
+            "title": "Mistral Large 4 Le Chonk Release",
+            "url": "https://example.com/mistral-large-4",
+            "source": "TechDaily",
+            "date": "2026-10-06T12:00:00+00:00",
+            "body": "Mistral launches new flagship model with 1T parameters.",
+        }
+    ]
+
+    def mock_news(query: str, max_results: int, region: str) -> list[dict[str, object]]:
+        return fake_news
+
+    monkeypatch.setattr("tools.search.tool._perform_ddgs_news", mock_news)
+    tool = SearchTool()
+    res = await tool.execute(query="mistral", focus="news", max_results=1)
+
+    assert "Articles et annonces d'actualité récentes" in res
+    assert "Mistral Large 4 Le Chonk Release" in res
+    assert "https://example.com/mistral-large-4" in res
+    assert "TechDaily" in res
+    assert "2026-10-06" in res
+
+
+@pytest.mark.asyncio
 async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     """Vérifie le téléchargement et le nettoyage HTML par ReaderTool."""
     html_content = "<html><body><h1>Titre</h1><p>Paragraphe intéressant</p></body></html>"

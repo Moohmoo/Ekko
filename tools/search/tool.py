@@ -23,9 +23,9 @@ class SearchParams(BaseModel):
     query: str = Field(
         description="Mots-clés ou question à rechercher (ex: 'diffusion models protein folding', 'vLLM', 'transformers').",
     )
-    focus: Literal["academic", "code", "web"] = Field(
-        default="web",
-        description="Angle de recherche : 'academic' pour les papiers de recherche et abstracts (arXiv), 'code' pour les dépôts GitHub et modèles, 'web' pour les documentations et annonces tech.",
+    focus: Literal["academic", "code", "news", "web"] = Field(
+        default="news",
+        description="Angle de recherche : 'news' pour les articles de presse et annonces récentes, 'academic' pour les papiers de recherche (arXiv), 'code' pour les dépôts GitHub, 'web' pour les documentations et pages web.",
     )
     max_results: int = Field(default=5, description="Nombre maximum de résultats souhaités (1 à 10).")
     region: str | None = Field(
@@ -121,6 +121,16 @@ def _perform_ddgs_web(query: str, max_results: int, region: str) -> list[dict[st
         return list(client.text(query.strip(), region=region, max_results=max_results))
 
 
+def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[dict[str, Any]]:
+    """Exécute la recherche DuckDuckGo News d'articles d'actualité récents horodatés."""
+    with DDGS() as client:
+        try:
+            results = list(client.news(query.strip(), region=region, timelimit="w", max_results=max_results))
+            return results if results else list(client.news(query.strip(), region=region, max_results=max_results))
+        except Exception:
+            return list(client.news(query.strip(), region=region, max_results=max_results))
+
+
 def _format_academic_results(results: list[dict[str, Any]], query: str) -> str:
     """Met en forme les abstracts scientifiques arXiv pour la restitution à l'agent."""
     if not results:
@@ -158,22 +168,39 @@ def _format_web_results(results: list[dict[str, Any]], query: str) -> str:
     return "\n\n".join(blocks)
 
 
+def _format_news_results(results: list[dict[str, Any]], query: str) -> str:
+    """Met en forme les articles de presse et annonces d'actualité horodatées."""
+    if not results:
+        return f"Aucun article d'actualité trouvé pour '{query}'."
+    blocks = [f"Articles et annonces d'actualité récentes pour '{query}' :\n"]
+    for idx, item in enumerate(results, start=1):
+        title = item.get("title", "Sans titre")
+        url = item.get("url", "")
+        source = item.get("source", "Média")
+        date_str = (item.get("date") or "")[:10]
+        meta = f" ({source}, {date_str})" if date_str else f" ({source})"
+        body = item.get("body", "").strip()
+        blocks.append(f"{idx}. **[{title}]({url})**{meta}\n   {body}")
+    return "\n\n".join(blocks)
+
+
 class SearchTool(BaseTool):
-    """Outil universel permettant de rechercher sur la science, le code ou le web."""
+    """Outil universel permettant de rechercher sur les actualités, la science, le code ou le web."""
 
     name = "search"
     description = (
         "Recherche universelle d'informations avec sélecteur 'focus' : "
+        "'news' pour les articles de presse et annonces récentes horodatées, "
         "'academic' pour les papiers de recherche et abstracts (arXiv), "
         "'code' pour les dépôts GitHub et modèles SOTA, "
-        "'web' pour la documentation générale et les annonces tech."
+        "'web' pour la documentation générale et pages web."
     )
     parameters_schema = SearchParams
 
     async def execute(
         self,
         query: str = "",
-        focus: Literal["academic", "code", "web"] = "web",
+        focus: Literal["academic", "code", "news", "web"] = "news",
         max_results: int = 5,
         region: str | None = None,
     ) -> str:
@@ -189,6 +216,10 @@ class SearchTool(BaseTool):
                 return _format_code_results(results, clean_query)
 
             effective_region = region or get_region_for_language(get_settings().default_language)
+            if focus == "news":
+                news_results = await asyncio.to_thread(_perform_ddgs_news, clean_query, limit, effective_region)
+                return _format_news_results(news_results, clean_query)
+
             web_results = await asyncio.to_thread(_perform_ddgs_web, clean_query, limit, effective_region)
             return _format_web_results(web_results, clean_query)
         except Exception as exc:

@@ -47,9 +47,9 @@ class SearchPlan(BaseModel):
         default=True,
         description="True si la question nécessite une recherche externe, False pour salutation, conversation ou théorie pure.",
     )
-    focus: Literal["academic", "code", "web"] = Field(
-        default="academic",
-        description="Angle de recherche ('academic' pour arXiv, 'code' pour GitHub, 'web' pour le web technique).",
+    focus: Literal["academic", "code", "news", "web"] = Field(
+        default="news",
+        description="Angle de recherche ('news' pour actualités et annonces, 'academic' pour arXiv, 'code' pour GitHub, 'web' pour doc technique).",
     )
     queries: list[str] = Field(
         default_factory=list,
@@ -81,8 +81,10 @@ class SearchPlan(BaseModel):
         if isinstance(value, dict) and "default" in value:
             value = value["default"]
         if not isinstance(value, str):
-            return "web"
+            return "news"
         val = value.lower().strip()
+        if val in {"news", "actualite", "actualites", "veille", "breaking"}:
+            return "news"
         if val in {"academic", "science", "arxiv", "paper", "papers", "bio", "research"}:
             return "academic"
         if val in {"code", "github", "git", "repo", "repository"}:
