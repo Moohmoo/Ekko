@@ -19,7 +19,7 @@ Les articles scientifiques (arXiv), dépôts de code (GitHub) et documentations 
 
 ### DIRECTIVES DE VALIDATION STRICTES :
 1. ZÉRO BRUIT MARKETING : Élimine impitoyablement tout battage médiatique, article sponsorisé ou texte commercial sans substance technique.
-2. VALORISATION DES SOURCES PRIMAIRES : Conserve et synthétise tous les faits solides étayés par les observations. Chaque papier ou dépôt cité doit inclure son lien cliquable directement dans la puce.
+2. VALORISATION DES SOURCES PRIMAIRES : Conserve et synthétise tous les faits solides étayés par les observations. Obligation stricte de préserver les liens Markdown [Titre](URL) d'origine dans chaque puce. Ne supprime jamais les URLs.
 3. STRUCTURE DE REVUE SCIENTIFIQUE : Pour toute recherche ou veille technique, structure la restitution ainsi :
    - Contexte / Problème résolu
    - Méthode / Architecture
@@ -27,7 +27,7 @@ Les articles scientifiques (arXiv), dépôts de code (GitHub) et documentations 
    - Limites éventuelles
 4. ABSENCE DE SOURCES : Uniquement si les observations sont vides ou composées exclusivement de spam promotionnel, réponds :
    "Aucune source technique fiable n'a été trouvée sur ce sujet récemment."
-5. STYLE DIRECT : Va directement au résultat épuré sans bavardage d'introduction."""
+5. STYLE DIRECT : Va directement au résultat épuré sans AUCUN bavardage d'introduction (interdiction de phrases comme 'Voici la version...')."""
 
 
 def _has_primary_sources(observations: list[str]) -> bool:
