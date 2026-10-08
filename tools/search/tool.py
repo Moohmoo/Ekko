@@ -125,9 +125,14 @@ def _perform_ddgs_web(query: str, max_results: int, region: str) -> list[dict[st
 def _build_news_search_query(query: str) -> str:
     """Nettoie et affine la requête d'actualités en éliminant les termes parasites."""
     tokens = [w.strip() for w in query.strip().split() if w.strip()]
-    stop_news = {"news", "latest", "recent", "actualites", "actualite", "nouvelles"}
+    stop_news = {"news", "latest", "recent", "actualites", "actualite", "nouvelles", "in", "of", "the", "for"}
     clean_tokens = [w for w in tokens if w.lower() not in stop_news]
-    cleaned = " ".join(clean_tokens) if clean_tokens else query.strip()
+    if len(clean_tokens) >= 2:
+        cleaned = " ".join(clean_tokens)
+    elif clean_tokens:
+        cleaned = " ".join([w for w in tokens if w.lower() not in {"news", "actualites", "actualite"}])
+    else:
+        cleaned = query.strip()
     return re.sub(r"\b[Aa][Ii]\b", '"AI"', cleaned)
 
 

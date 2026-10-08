@@ -43,6 +43,10 @@ class SearchPlan(BaseModel):
 
     model_config = {"extra": "ignore"}
 
+    thought: str = Field(
+        default="",
+        description="Courte réflexion identifiant le sujet technique clé et l'intention de recherche.",
+    )
     is_search_needed: bool = Field(
         default=True,
         description="True si la question nécessite une recherche externe, False pour salutation, conversation ou théorie pure.",
@@ -79,7 +83,7 @@ class SearchPlan(BaseModel):
         if not isinstance(value, str):
             return "news"
         val = value.lower().strip()
-        if val in {"news", "actualite", "actualites", "veille", "breaking"}:
+        if val in {"news", "actualite", "actualites", "veille", "breaking", "model release", "announcement"}:
             return "news"
         if val in {"academic", "science", "arxiv", "paper", "papers", "bio", "research"}:
             return "academic"

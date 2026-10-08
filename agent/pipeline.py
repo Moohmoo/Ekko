@@ -30,11 +30,10 @@ RÈGLE TEMPORELLE ABSOLUE : Utilise l'année en cours ({year}) ou des termes ré
 - 'code' : dépôts GitHub, bibliothèques, implémentations open-source.
 - 'web' : documentation technique, guides, explications de concepts stables.
 
-### MISSION :
-Formule 1 ou 2 requêtes en ANGLAIS.
-Pour 'news', ne jamais utiliser le mot 'news'. Formule obligatoirement 2 requêtes complémentaires :
-1. Modèles et annonces majeures : [sujet] model release announcement
-2. Outils et frameworks : [sujet] tools frameworks benchmark"""
+### RÈGLES STRICTES POUR LES REQUÊTES :
+1. Formule 1 ou 2 requêtes en ANGLAIS.
+2. Chaque requête DOIT impérativement inclure le sujet technique principal extrait de la demande (ex: 'AI', 'LLM', ou le nom précis de la technologie). Ne JAMAIS formuler de requête sans mentionner expressément le sujet.
+3. Pour le focus 'news' : proscris le mot 'news' et cible des termes techniques d'actualité comme 'model release announcement', 'framework', 'benchmark'."""
 
 
 SYNTHESIZER_SYSTEM_PROMPT = """Tu es le Rédacteur Scientifique et Technique d'Ekko pour Mohamed.
