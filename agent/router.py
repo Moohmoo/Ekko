@@ -44,13 +44,26 @@ def is_fast_greeting(query: str) -> bool:
     return normalized in FAST_GREETINGS or query.lower().strip() in FAST_GREETINGS
 
 
+def is_contextual_recall(query: str, ctx: ExecutionContext | None = None) -> bool:
+    """Détecte les demandes explicites de rappel conversationnel quand un historique existe."""
+    if not ctx or not ctx.history_block:
+        return False
+    q = query.lower().strip()
+    recall_prefixes = (
+        "rappelle", "rappelles", "résume-moi", "resume-moi",
+        "tu te souviens", "de quoi on parlait", "peux-tu me rappeler",
+        "redonne-moi", "redonnes-moi", "qu'est-ce qu'on disait",
+    )
+    return any(q.startswith(p) or f" {p}" in q for p in recall_prefixes)
+
+
 async def classify_intent(
     provider: LLMProvider,
     query: str,
     ctx: ExecutionContext | None = None,
 ) -> str:
     """Classifie l'intention utilisateur via détection rapide ou appel structuré conscient du contexte."""
-    if is_fast_greeting(query):
+    if is_fast_greeting(query) or is_contextual_recall(query, ctx):
         return "chat"
 
     prompt = build_intent_user_prompt(query, ctx)

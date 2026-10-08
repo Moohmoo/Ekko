@@ -136,15 +136,30 @@ def _build_news_search_query(query: str) -> str:
     return re.sub(r"\b[Aa][Ii]\b", '"AI"', cleaned)
 
 
+def _fetch_web_fallback(client: DDGS, query: str, region: str, limit: int) -> list[dict[str, Any]]:
+    """Complète la recherche d'actualités avec le web récent pour les sujets techniques."""
+    try:
+        hits = list(client.text(f"{query} 2026", region=region, max_results=limit))
+        return [
+            {"title": h.get("title", ""), "url": h.get("href", ""), "date": "2026", "source": "Web", "body": h.get("body", "")}
+            for h in hits
+        ]
+    except Exception:
+        return []
+
+
 def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[dict[str, Any]]:
-    """Exécute la recherche DuckDuckGo News d'articles d'actualité récents horodatés."""
-    refined_query = _build_news_search_query(query)
+    """Exécute la recherche DuckDuckGo News avec repli web sur les domaines spécialisés."""
+    refined = _build_news_search_query(query)
     with DDGS() as client:
-        try:
-            results = list(client.news(refined_query, region=region, timelimit="w", max_results=max_results))
-            return results if results else list(client.news(refined_query, region=region, max_results=max_results))
-        except Exception:
-            return list(client.news(refined_query, region=region, max_results=max_results))
+        for limit in ("w", None):
+            try:
+                hits = list(client.news(refined, region=region, timelimit=limit, max_results=max_results))
+                if len(hits) >= 2:
+                    return hits
+            except Exception:
+                pass
+        return _fetch_web_fallback(client, refined, region, max_results)
 
 
 def _format_academic_results(results: list[dict[str, Any]], query: str) -> str:

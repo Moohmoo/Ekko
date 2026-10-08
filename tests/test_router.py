@@ -93,10 +93,10 @@ def test_build_intent_user_prompt_with_history() -> None:
         ),
         history_block="[user]: news IA\n[assistant]: résumé des news",
     )
-    prompt = build_intent_user_prompt("Rappelle moi les news", ctx)
+    prompt = build_intent_user_prompt("Et pour le modèle cité plus haut ?", ctx)
     assert "Historique de la conversation :" in prompt
     assert "[user]: news IA" in prompt
-    assert "Demande utilisateur :\n\"Rappelle moi les news\"" in prompt
+    assert "Demande utilisateur :\n\"Et pour le modèle cité plus haut ?\"" in prompt
 
 
 @pytest.mark.asyncio
@@ -113,9 +113,29 @@ async def test_classify_intent_passes_history_context() -> None:
         history_block="[user]: news IA\n[assistant]: résumé des news",
     )
     provider = MockRouterLLM(intent="chat")
-    intent = await classify_intent(provider, "Rappelle moi les news", ctx=ctx)
+    intent = await classify_intent(provider, "Et pour le modèle cité plus haut ?", ctx=ctx)
 
     assert intent == "chat"
     assert provider.call_count == 1
     assert "Historique de la conversation :" in provider.captured_prompt
+
+
+@pytest.mark.asyncio
+async def test_classify_intent_fast_contextual_recall() -> None:
+    """Vérifie que les demandes de rappel explicite court-circuitent sans appel LLM."""
+    ctx = ExecutionContext(
+        env=EnvironmentContext(
+            current_date="8 octobre 2026",
+            current_year=2026,
+            current_time="16:00",
+            os_name="linux",
+            cwd="",
+        ),
+        history_block="[user]: news IA\n[assistant]: résumé des news",
+    )
+    provider = MockRouterLLM(intent="chat")
+    intent = await classify_intent(provider, "Rappelle moi les news", ctx=ctx)
+
+    assert intent == "chat"
+    assert provider.call_count == 0
 

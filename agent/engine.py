@@ -140,6 +140,13 @@ class EkkoEngine:
         self.memory.record_task_run("search", "success", sources[:150])
         yield RetrievalEvent(source=plan.focus, count=count, elapsed=el_retrieval)
 
+        if count == 0 or not sources.strip() or sources.startswith("Aucune source"):
+            msg = f"Aucune source vérifiée récente n'a été trouvée pour '{req.query}'."
+            yield StreamChunkEvent(delta=msg)
+            self._save_final_turn(req.session_id, req.query, msg)
+            yield DoneEvent(response=AgentResponse(content=msg, tools_used=["search"], thought="Aucune source."))
+            return
+
         t_synth = time.perf_counter()
         chunks: list[str] = []
         async for chunk in synthesize_findings_stream(self.provider, req.query, sources, self.user_profile):
