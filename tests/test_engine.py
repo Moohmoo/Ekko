@@ -13,6 +13,8 @@ from agent.schemas import (
     AgentEvent,
     AgentResponse,
     DoneEvent,
+    PlanEvent,
+    StreamChunkEvent,
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
@@ -224,3 +226,17 @@ async def test_engine_redundant_action_intercepted(tmp_path: Path) -> None:
     assert len(tool_results) == 2
     assert "antigravity" in tool_results[0].result
     assert "Action redondante" in tool_results[1].result
+
+
+@pytest.mark.asyncio
+async def test_engine_chat_dispatch(tmp_path: Path) -> None:
+    """Vérifie que 'yoh' est routé vers _handle_chat sans aucun outil ni plan."""
+    engine, memory = setup_engine(tmp_path, [])
+    engine.use_pipeline = True
+    events = [ev async for ev in engine.run_stream("yoh")]
+
+    assert any(isinstance(ev, StreamChunkEvent) for ev in events)
+    assert any(isinstance(ev, DoneEvent) for ev in events)
+    assert not any(isinstance(ev, ToolCallEvent) for ev in events)
+    assert not any(isinstance(ev, PlanEvent) for ev in events)
+

@@ -9,6 +9,16 @@ from pydantic import BaseModel, Field, field_validator
 from providers.base import LLMProvider
 
 
+class UserIntent(BaseModel):
+    """Classification de l'intention utilisateur en amont de l'orchestration."""
+
+    intent: Literal["chat", "research", "action"] = Field(
+        default="chat",
+        description="Type d'intention : 'chat' (discussion directe, salutation), "
+        "'research' (veille, SOTA, articles, code), 'action' (todo, fichiers, commandes).",
+    )
+
+
 class SearchPlan(BaseModel):
     """Plan de recherche formulé lors du cadrage de la demande."""
 

@@ -14,6 +14,7 @@ from agent.schemas import (
     RetrievalEvent,
     SearchPlan,
     StreamChunkEvent,
+    UserIntent,
     ValidationEvent,
 )
 from config import Settings
@@ -34,6 +35,8 @@ class MockPipelineProvider(LLMProvider):
     async def generate_structured(
         self, prompt: str, schema: type[T], system_instruction: str = ""
     ) -> T:
+        if schema == UserIntent:
+            return UserIntent(intent="research")  # type: ignore[return-value]
         return self.plan  # type: ignore[return-value]
 
     async def generate_text(self, prompt: str, system_instruction: str = "") -> str:

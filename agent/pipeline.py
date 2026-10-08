@@ -80,7 +80,10 @@ async def collect_sources(
 ) -> tuple[str, int, float]:
     """Interroge les moteurs de recherche en parallèle et dédoublonne les observations."""
     t0 = time.perf_counter()
-    queries = plan.queries[:2] if plan.queries else [plan.focus]
+    queries = [q.strip() for q in plan.queries[:2] if q.strip()]
+    if not queries:
+        return "Aucune source trouvée.", 0, 0.0
+
     tasks = [
         search_tool.execute(query=q, focus=plan.focus, max_results=4)
         for q in queries

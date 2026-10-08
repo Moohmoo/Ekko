@@ -15,6 +15,7 @@ from tools.registry import ToolRegistry
 from .memory import SQLiteMemory
 from .pipeline import collect_sources, plan_research, synthesize_findings_stream
 from .prompts import build_system_prompt, format_history_block, format_step_prompt
+from .router import classify_intent
 from .schemas import (
     AgentAction,
     AgentEvent,
@@ -89,6 +90,31 @@ class EkkoEngine:
         )
         return validated, time.perf_counter() - t0
 
+    async def _handle_chat(
+        self,
+        req: AgentRequest,
+        history_block: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Traite une interaction conversationnelle directe en streaming continu."""
+        sys_prompt = (
+            "Tu es Ekko, l'assistant personnel d'ingénierie et de recherche de Mohamed.\n"
+            f"Profil utilisateur :\n{self.user_profile}\n\n"
+            "Consignes :\n"
+            "- Sois naturel, direct, sobre et précis.\n"
+            "- Réponds amicalement aux salutations familières ou simples (ex: 'salut', 'yo', 'yoh', 'bonjour').\n"
+            "- Utilise l'historique récent pour assurer la continuité du dialogue.\n"
+            "- Ne mentionne aucune contrainte technique interne."
+        )
+        prompt = f"{history_block}\n\nUtilisateur : {req.query}" if history_block else req.query
+        chunks: list[str] = []
+        async for chunk in self.provider.stream_text(prompt=prompt, system_instruction=sys_prompt):
+            chunks.append(chunk)
+            yield StreamChunkEvent(delta=chunk)
+
+        final_ans = "".join(chunks).strip()
+        self._save_final_turn(req.session_id, req.query, final_ans)
+        yield DoneEvent(response=AgentResponse(content=final_ans, thought="Échange conversationnel direct."))
+
     async def _run_pipeline_stream(
         self,
         req: AgentRequest,
@@ -101,11 +127,6 @@ class EkkoEngine:
         plan = await plan_research(self.provider, req.query, history_ctx)
         el_plan = max(0.1, time.perf_counter() - t0)
         yield PlanEvent(focus=plan.focus, queries=plan.queries, elapsed=el_plan)
-
-        if not plan.is_search_needed and plan.direct_answer:
-            self._save_final_turn(req.session_id, req.query, plan.direct_answer)
-            yield DoneEvent(response=AgentResponse(content=plan.direct_answer, thought="Réponse directe formulée."))
-            return
 
         search_tool = self.registry.get_tool("search")
         sources, count, el_retrieval = await collect_sources(search_tool, plan)
@@ -124,20 +145,12 @@ class EkkoEngine:
         self._save_final_turn(req.session_id, req.query, final_ans)
         yield DoneEvent(response=AgentResponse(content=final_ans, tools_used=["search"], thought="Synthèse de recherche certifiée."))
 
-    async def run_stream(
+    async def _run_react_loop(
         self,
-        request: AgentRequest | str,
-        session_id: str = "default",
+        req: AgentRequest,
+        history_block: str,
     ) -> AsyncIterator[AgentEvent]:
-        """Exécute la requête soit via le pipeline déterministe, soit via la boucle ReAct."""
-        req = normalize_request(request, session_id)
-        history_block = format_history_block(self.memory.get_recent_messages(req.session_id, limit=4))
-
-        if self.use_pipeline:
-            async for ev in self._run_pipeline_stream(req, history_block):
-                yield ev
-            return
-
+        """Boucle ReAct standard pour l'orchestration des outils d'action."""
         sys_prompt = build_system_prompt(self.user_profile, self.registry.get_prompt_catalog())
         observations: list[str] = []
         tools_used: list[str] = []
@@ -190,3 +203,28 @@ class EkkoEngine:
         limit_msg = "Limite maximale d'étapes de raisonnement atteinte sans conclusion."
         final_text, _ = await self._validate_and_finalize(req.query, limit_msg, observations)
         yield DoneEvent(response=AgentResponse(content=final_text, tools_used=tools_used, thought=last_thought))
+
+    async def run_stream(
+        self,
+        request: AgentRequest | str,
+        session_id: str = "default",
+    ) -> AsyncIterator[AgentEvent]:
+        """Exécute la requête en routant vers le handler adapté via le Dispatcher."""
+        req = normalize_request(request, session_id)
+        history_block = format_history_block(self.memory.get_recent_messages(req.session_id, limit=4))
+
+        if not self.use_pipeline:
+            async for ev in self._run_react_loop(req, history_block):
+                yield ev
+            return
+
+        intent = await classify_intent(self.provider, req.query)
+        if intent == "chat":
+            async for ev in self._handle_chat(req, history_block):
+                yield ev
+        elif intent == "research":
+            async for ev in self._run_pipeline_stream(req, history_block):
+                yield ev
+        else:
+            async for ev in self._run_react_loop(req, history_block):
+                yield ev
