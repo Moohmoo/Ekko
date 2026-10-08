@@ -130,17 +130,20 @@ async def _fetch_github_repos(query: str, max_results: int) -> list[SearchItem]:
 
 def _perform_ddgs_web(query: str, max_results: int, region: str) -> list[SearchItem]:
     """Exécute la recherche DuckDuckGo texte de façon synchrone pour le thread worker."""
-    with DDGS() as client:
-        hits = list(client.text(query.strip(), region=region, max_results=max_results))
-        return [
-            SearchItem(
-                title=h.get("title", "Sans titre"),
-                url=h.get("href", ""),
-                snippet=h.get("body", "").strip(),
-                source="Web",
-            )
-            for h in hits
-        ]
+    try:
+        with DDGS() as client:
+            hits = list(client.text(query.strip(), region=region, max_results=max_results))
+            return [
+                SearchItem(
+                    title=h.get("title", "Sans titre"),
+                    url=h.get("href", ""),
+                    snippet=h.get("body", "").strip(),
+                    source="Web",
+                )
+                for h in hits
+            ]
+    except Exception:
+        return []
 
 
 def _fetch_web_fallback(client: DDGS, query: str, region: str, limit: int) -> list[SearchItem]:
@@ -165,24 +168,27 @@ def _fetch_web_fallback(client: DDGS, query: str, region: str, limit: int) -> li
 def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[SearchItem]:
     """Exécute la recherche DuckDuckGo News avec repli web si aucun résultat n'est retourné."""
     clean_q = query.strip()
-    with DDGS() as client:
-        for limit in ("w", None):
-            try:
-                hits = list(client.news(clean_q, region=region, timelimit=limit, max_results=max_results))
-                if len(hits) >= 2:
-                    return [
-                        SearchItem(
-                            title=h.get("title", "Sans titre"),
-                            url=h.get("url", ""),
-                            snippet=h.get("body", "").strip(),
-                            source=h.get("source", "Média"),
-                            date=(h.get("date") or "")[:10],
-                        )
-                        for h in hits
-                    ]
-            except Exception:
-                pass
-        return _fetch_web_fallback(client, clean_q, region, max_results)
+    try:
+        with DDGS() as client:
+            for limit in ("w", None):
+                try:
+                    hits = list(client.news(clean_q, region=region, timelimit=limit, max_results=max_results))
+                    if len(hits) >= 2:
+                        return [
+                            SearchItem(
+                                title=h.get("title", "Sans titre"),
+                                url=h.get("url", ""),
+                                snippet=h.get("body", "").strip(),
+                                source=h.get("source", "Média"),
+                                date=(h.get("date") or "")[:10],
+                            )
+                            for h in hits
+                        ]
+                except Exception:
+                    pass
+            return _fetch_web_fallback(client, clean_q, region, max_results)
+    except Exception:
+        return []
 
 
 def _format_academic_results(items: list[SearchItem], query: str) -> str:

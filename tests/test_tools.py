@@ -222,6 +222,21 @@ async def test_search_tool_search_returns_typed_items(monkeypatch: pytest.Monkey
     assert items[0].snippet == "Snippet 1"
 
 
+def test_perform_ddgs_web_handles_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le repli gracieux de _perform_ddgs_web en cas d'incident réseau DDGS."""
+    from tools.search.tool import _perform_ddgs_web
+
+    class MockFailingDDGS:
+        def __enter__(self):
+            raise ConnectionError("DNS resolution failed")
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr("tools.search.tool.DDGS", MockFailingDDGS)
+    res = _perform_ddgs_web("test", 5, "fr-fr")
+    assert res == []
+
+
 def test_build_arxiv_search_query() -> None:
     """Vérifie la construction propre des requêtes booléennes arXiv."""
     from tools.search.tool import _build_arxiv_search_query

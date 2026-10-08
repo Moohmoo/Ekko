@@ -58,7 +58,16 @@ async def collect_sources(
 ) -> tuple[str, int, float]:
     """Interroge les moteurs de recherche en parallèle et dédoublonne les observations."""
     t0 = time.perf_counter()
-    queries = [q.strip() for q in plan.queries[:2] if q.strip()]
+    seen_q: set[str] = set()
+    queries: list[str] = []
+    for q in plan.queries:
+        clean_q = q.strip()
+        if clean_q and clean_q.lower() not in seen_q:
+            seen_q.add(clean_q.lower())
+            queries.append(clean_q)
+        if len(queries) >= 2:
+            break
+
     if not queries:
         return "Aucune source trouvée.", 0, 0.0
 

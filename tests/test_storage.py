@@ -44,3 +44,19 @@ def test_session_storage_purge_old_history(tmp_path: Path) -> None:
     res = storage.purge_old_history(retention_days=0)
     assert res["messages"] >= 1
 
+
+def test_session_storage_wal_mode_and_closed_connections(tmp_path: Path) -> None:
+    """Vérifie que SQLite est en mode WAL et que les connexions se ferment proprement."""
+    db_file = tmp_path / "test_wal.db"
+    storage = SessionStorage(db_file)
+
+    with storage._connection() as conn:
+        journal_mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        assert journal_mode.lower() == "wal"
+
+    # Vérifie qu'après le bloc, la connexion sous-jacente est bien fermée
+    import sqlite3
+    import pytest
+    with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
+        conn.execute("SELECT 1")
+

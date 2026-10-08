@@ -71,8 +71,9 @@ def format_history_block(history: list[dict[str, str]]) -> str:
         return ""
     lines: list[str] = []
     for msg in history:
-        role = "Utilisateur" if msg["role"] == "user" else "Ekko"
-        content = " ".join(msg["content"].strip().split())
+        role = "Utilisateur" if msg.get("role") == "user" else "Ekko"
+        raw_content = str(msg.get("content") or "")
+        content = " ".join(raw_content.strip().split())
         short_content = content[:250] + "..." if len(content) > 250 else content
         lines.append(f"- {role} : {short_content}")
     return "### HISTORIQUE CONVERSATIONNEL RÉCENT :\n" + "\n".join(lines)

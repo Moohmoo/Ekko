@@ -3,6 +3,7 @@
 Fournit des métriques sur le système d'exploitation et la carte graphique NVIDIA.
 """
 
+import asyncio
 import platform
 import shutil
 import subprocess
@@ -40,5 +41,5 @@ class SystemInfoTool(BaseTool):
     async def execute(self) -> str:
         """Collecte et synthétise les métriques de la machine locale."""
         os_info = f"{platform.system()} {platform.release()}"
-        gpu_info = get_gpu_brief()
+        gpu_info = await asyncio.to_thread(get_gpu_brief)
         return f"État machine :\n- OS : {os_info}\n- Accélération matérielle : {gpu_info}"

@@ -104,13 +104,11 @@ def render_tool_result_panel(tool_name: str, result: str) -> None:
 
 
 def format_markdown_output(text: str) -> str:
-    """Aère et normalise la syntaxe Markdown (titres, puces) avant restitution."""
+    """Aère les titres Markdown principaux avant restitution."""
     import re
 
     cleaned = text.strip()
-    cleaned = re.sub(r"(?<!\n)\s*###\s+", "\n\n### ", cleaned)
-    cleaned = re.sub(r"(?<=[^\n])\s+-\s+(?=\*?[A-Za-z])", "\n- ", cleaned)
-    return cleaned
+    return re.sub(r"(?<!\n)\s*###\s+", "\n\n### ", cleaned)
 
 
 def render_final_answer(answer: AgentResponse | str) -> None:
