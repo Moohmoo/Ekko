@@ -1,5 +1,6 @@
 """Prompts de classification d'intention pour le routeur."""
 
+from datetime import datetime
 from typing import Any
 
 ROUTER_SYSTEM_TEMPLATE = """Tu es le Routeur d'Ekko. Tu classifies la dernière demande de l'utilisateur.{date_info}
@@ -11,15 +12,16 @@ RÈGLES STRICTES :
 
 def build_intent_prompt(
     ctx_or_date: Any = "",
-    current_year: int = 2026,
+    current_year: int | None = None,
 ) -> str:
     """Construit le prompt de classification enrichi de l'ancrage temporel."""
+    default_year = current_year or datetime.now().year
     if hasattr(ctx_or_date, "current_date"):
         date_str = getattr(ctx_or_date, "current_date", "")
-        year_val = getattr(ctx_or_date, "current_year", current_year)
+        year_val = getattr(ctx_or_date, "current_year", default_year)
     else:
         date_str = str(ctx_or_date)
-        year_val = current_year
+        year_val = default_year
 
     date_info = f"\nDate du jour : {date_str} (Année : {year_val})." if date_str else ""
     return ROUTER_SYSTEM_TEMPLATE.format(date_info=date_info)

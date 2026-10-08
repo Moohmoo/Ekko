@@ -5,6 +5,7 @@ et la recherche web générale (DuckDuckGo) via un sélecteur d'angle (focus).
 """
 
 import asyncio
+from datetime import datetime
 import re
 from typing import Literal
 import xml.etree.ElementTree as ET
@@ -48,22 +49,14 @@ class SearchParams(BaseModel):
     )
 
 
-ARXIV_STOP_WORDS = {
-    "a", "an", "the", "in", "on", "at", "for", "to", "of", "with", "by", "from",
-    "and", "or", "as", "is", "are", "was", "were", "be", "been", "being",
-    "recent", "advances", "advance", "advancements", "latest", "new", "novel",
-    "research", "studies", "study", "methods", "method", "approach", "approaches",
-    "paper", "papers", "survey", "review", "overview",
-    "dernier", "derniers", "derniere", "dernieres", "avancees", "avances", "actualites", "progres",
-}
-
-
 def _build_arxiv_search_query(query: str) -> str:
-    """Construit une requête booléenne optimisée en ne conservant que les termes pivots."""
+    """Construit une requête booléenne pour l'API arXiv à partir des termes clés."""
     tokens = [w.strip() for w in query.strip().split() if len(w.strip()) > 1]
-    filtered = [w for w in tokens if w.lower() not in ARXIV_STOP_WORDS]
-    target_words = filtered if filtered else tokens
-    return " AND ".join(f"all:{w}" for w in target_words[:4]) if target_words else "all:ai"
+    if not tokens:
+        return "all:technology"
+    clean_terms = [t for t in tokens if t.isalnum() or "-" in t]
+    target = clean_terms[:5] if clean_terms else tokens[:5]
+    return " AND ".join(f"all:{term}" for term in target)
 
 
 async def _fetch_arxiv_entries(query: str, max_results: int) -> list[SearchItem]:
@@ -160,15 +153,16 @@ def _build_news_search_query(query: str) -> str:
 
 def _fetch_web_fallback(client: DDGS, query: str, region: str, limit: int) -> list[SearchItem]:
     """Complète la recherche d'actualités avec le web récent pour les sujets techniques."""
+    current_year = str(datetime.now().year)
     try:
-        hits = list(client.text(f"{query} 2026", region=region, max_results=limit))
+        hits = list(client.text(f"{query} {current_year}", region=region, max_results=limit))
         return [
             SearchItem(
                 title=h.get("title", "Sans titre"),
                 url=h.get("href", ""),
                 snippet=h.get("body", "").strip(),
                 source="Web",
-                date="2026",
+                date=current_year,
             )
             for h in hits
         ]

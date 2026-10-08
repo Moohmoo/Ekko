@@ -47,7 +47,7 @@ class ActionHandler(BaseHandler):
         user_profile: str,
     ) -> tuple[str, float]:
         """Critique et épure la réponse finale via l'Agent Validateur."""
-        if not observations and len(answer.strip().split()) < 25:
+        if not observations:
             return answer, 0.0
         t0 = time.perf_counter()
         validated = await validate_draft(

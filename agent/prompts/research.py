@@ -40,23 +40,25 @@ Rédige une synthèse technique directe et sobre à partir des sources documenta
 - Sois concis, direct et technique. Zéro bavardage d'introduction ou de conclusion générale."""
 
 
+from datetime import datetime
 from typing import Any
 
 
 def build_research_planner_prompt(
     ctx_or_date: Any = "courante",
-    year: int = 2026,
+    year: int | None = None,
 ) -> str:
     """Construit le prompt de cadrage enrichi de l'ancrage temporel."""
+    default_year = year or datetime.now().year
     if hasattr(ctx_or_date, "current_date"):
         date_str = getattr(ctx_or_date, "current_date", "courante")
-        year_val = getattr(ctx_or_date, "current_year", year)
+        year_val = getattr(ctx_or_date, "current_year", default_year)
     elif ctx_or_date is None:
         date_str = "courante"
-        year_val = year
+        year_val = default_year
     else:
         date_str = str(ctx_or_date)
-        year_val = year
+        year_val = default_year
     return RESEARCH_PLANNER_TEMPLATE.format(date_str=date_str, year=year_val)
 
 

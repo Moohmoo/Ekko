@@ -1,7 +1,7 @@
 """Package des outils d'action pour l'agent Ekko."""
 
 from .base import BaseTool, EmptyParams
-from .reader import FetchPageParams, FetchPageTool, ReaderParams, ReaderTool
+from .reader import ReaderParams, ReaderTool
 from .registry import ToolRegistry, default_registry
 from .search import SearchItem, SearchParams, SearchTool
 from .system import SystemInfoTool
@@ -21,7 +21,5 @@ __all__ = [
     "SearchParams",
     "ReaderTool",
     "ReaderParams",
-    "FetchPageTool",
-    "FetchPageParams",
     "SystemInfoTool",
 ]

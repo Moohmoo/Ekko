@@ -19,10 +19,6 @@ class ReaderParams(BaseModel):
     max_chars: int = Field(default=4000, description="Nombre maximum de caractères à extraire (défaut: 4000).")
 
 
-# Alias de rétrocompatibilité
-FetchPageParams = ReaderParams
-
-
 def _clean_html_to_text(html_content: str) -> str:
     """Élimine balises, scripts et styles pour extraire le texte brut épuré."""
     no_script = re.sub(r"<(script|style|nav|footer|header)[^>]*>[\s\S]*?</\1>", " ", html_content, flags=re.I)
@@ -52,9 +48,3 @@ class ReaderTool(BaseTool):
                 return f"Contenu extrait de `{url}` :\n\n{truncated}"
         except Exception as exc:
             return f"Impossible de charger la page `{url}` : {exc}"
-
-
-class FetchPageTool(ReaderTool):
-    """Alias rétrocompatible pour l'ancien nom d'outil fetch_page."""
-
-    name = "fetch_page"

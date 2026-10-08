@@ -1,5 +1,5 @@
-"""Package de l'outil universel de lecture web pour Ekko."""
+"""Outil de lecture et extraction web pour l'agent Ekko."""
 
-from .tool import FetchPageParams, FetchPageTool, ReaderParams, ReaderTool
+from .tool import ReaderParams, ReaderTool
 
-__all__ = ["ReaderTool", "ReaderParams", "FetchPageTool", "FetchPageParams"]
+__all__ = ["ReaderTool", "ReaderParams"]

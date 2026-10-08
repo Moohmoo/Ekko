@@ -9,7 +9,7 @@ from agent.schemas import (
     SearchPlan,
     UserIntent,
 )
-from tools.reader.tool import FetchPageParams, ReaderParams
+from tools.reader.tool import ReaderParams
 from tools.search.tool import SearchItem, SearchParams
 
 
@@ -68,10 +68,6 @@ def test_reader_params() -> None:
     params = ReaderParams(url="https://example.com")
     assert params.url == "https://example.com"
     assert params.max_chars == 4000
-
-    legacy_params = FetchPageParams(url="https://example.com", max_chars=1500)
-    assert legacy_params.url == "https://example.com"
-    assert legacy_params.max_chars == 1500
 
 
 def test_user_intent_with_thought_and_normalization() -> None:

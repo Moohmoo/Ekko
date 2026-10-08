@@ -4,7 +4,7 @@ from typing import Type
 import pytest
 from pydantic import BaseModel, Field
 from tools.base import BaseTool
-from tools.reader import FetchPageTool, ReaderTool
+from tools.reader import ReaderTool
 from tools.registry import ToolRegistry
 from tools.search import SearchItem, SearchTool
 from tools.system import SystemInfoTool
