@@ -55,10 +55,6 @@ class SearchPlan(BaseModel):
         default_factory=list,
         description="1 à 2 requêtes clés en anglais pour les moteurs de recherche académiques ou de code.",
     )
-    direct_answer: str | None = Field(
-        default=None,
-        description="Réponse directe si is_search_needed est False.",
-    )
 
     @field_validator("is_search_needed", mode="before")
     @classmethod

@@ -67,3 +67,9 @@ def test_clean_json_payload_unwraps_properties_and_defaults() -> None:
     cleaned3 = clean_json_payload(raw3)
     assert json.loads(cleaned3) == {"thought": "ok", "intent": "action"}
 
+    # Cas 4 : Propriété avec anyOf et default: null
+    raw4 = '{"focus": "news", "direct_answer": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Direct Answer"}}'
+    cleaned4 = clean_json_payload(raw4)
+    assert json.loads(cleaned4) == {"focus": "news", "direct_answer": None}
+
+

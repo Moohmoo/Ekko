@@ -21,7 +21,9 @@ def _unwrap_schema_fragments(obj: Any) -> Any:
     if isinstance(obj, dict):
         if "properties" in obj and isinstance(obj["properties"], dict):
             return _unwrap_schema_fragments(obj["properties"])
-        if "default" in obj and ("type" in obj or len(obj) <= 3):
+        if ("anyOf" in obj or "type" in obj) and "default" in obj:
+            return _unwrap_schema_fragments(obj["default"])
+        if "default" in obj and len(obj) <= 4:
             return _unwrap_schema_fragments(obj["default"])
         if "value" in obj and len(obj) <= 3:
             return _unwrap_schema_fragments(obj["value"])

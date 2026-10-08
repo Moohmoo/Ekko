@@ -85,3 +85,14 @@ def test_search_plan_schema_mimicry_tolerance() -> None:
     assert plan.focus == "academic"
     assert plan.queries == ["RNA folding"]
 
+    # Vérifie que tout champ direct_answer ou parasite est ignoré sans erreur
+    extra_payload = {
+        "focus": "news",
+        "queries": ["models"],
+        "direct_answer": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": None},
+    }
+    plan2 = SearchPlan.model_validate(extra_payload)
+    assert plan2.focus == "news"
+    assert plan2.queries == ["models"]
+
+
