@@ -100,10 +100,11 @@ class EkkoEngine:
         ctx = ctx_or_history if isinstance(ctx_or_history, ExecutionContext) else None
         history_block = ctx.history_block if ctx else (ctx_or_history if isinstance(ctx_or_history, str) else "")
         date_str = ctx.current_date if ctx else "courante"
+        user_prof = ctx.user_profile if ctx else self.user_profile
         sys_prompt = (
             "Tu es Ekko, l'assistant personnel d'ingénierie et de recherche de Mohamed.\n"
             f"Date actuelle : {date_str}.\n"
-            f"Profil utilisateur :\n{self.user_profile}\n\n"
+            f"Profil utilisateur :\n{user_prof}\n\n"
             "Consignes :\n"
             "- Sois naturel, direct, sobre et précis.\n"
             "- Réponds amicalement aux salutations familières ou simples (ex: 'salut', 'yo', 'yoh', 'bonjour').\n"
@@ -149,7 +150,8 @@ class EkkoEngine:
 
         t_synth = time.perf_counter()
         chunks: list[str] = []
-        async for chunk in synthesize_findings_stream(self.provider, req.query, sources, self.user_profile):
+        profile_str = ctx.user_profile if ctx else self.user_profile
+        async for chunk in synthesize_findings_stream(self.provider, req.query, sources, profile_str):
             chunks.append(chunk)
             yield StreamChunkEvent(delta=chunk)
         final_ans = "".join(chunks).strip() or sources
@@ -162,10 +164,13 @@ class EkkoEngine:
     async def _run_react_loop(
         self,
         req: AgentRequest,
-        history_block: str,
+        ctx_or_history: ExecutionContext | str = "",
     ) -> AsyncIterator[AgentEvent]:
         """Boucle ReAct standard pour l'orchestration des outils d'action."""
-        sys_prompt = build_system_prompt(self.user_profile, self.registry.get_prompt_catalog())
+        ctx = ctx_or_history if isinstance(ctx_or_history, ExecutionContext) else None
+        history_block = ctx.history_block if ctx else (ctx_or_history if isinstance(ctx_or_history, str) else "")
+        user_prof = ctx.user_profile if ctx else self.user_profile
+        sys_prompt = build_system_prompt(user_prof, self.registry.get_prompt_catalog())
         observations: list[str] = []
         tools_used: list[str] = []
         executed_actions: set[tuple[str, str]] = set()
@@ -228,7 +233,7 @@ class EkkoEngine:
         ctx = build_execution_context(self.memory, req.session_id, self.user_profile)
 
         if not self.use_pipeline:
-            async for ev in self._run_react_loop(req, ctx.history_block):
+            async for ev in self._run_react_loop(req, ctx):
                 yield ev
             return
 
@@ -240,5 +245,5 @@ class EkkoEngine:
             async for ev in self._run_pipeline_stream(req, ctx):
                 yield ev
         else:
-            async for ev in self._run_react_loop(req, ctx.history_block):
+            async for ev in self._run_react_loop(req, ctx):
                 yield ev
