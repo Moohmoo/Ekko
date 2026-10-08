@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator
 import time
 from typing import Any
 from providers.base import LLMProvider
-from tools.search.tool import SearchTool
+from tools.search.tool import SearchItem, SearchTool
 from .context import ExecutionContext
 from .schemas import SearchPlan
 
@@ -38,6 +38,20 @@ async def plan_research(
     return plan
 
 
+def _deduplicate_items(raw_results: list[object]) -> list[SearchItem]:
+    """Extrait et dédoublonne les items de recherche par URL unique."""
+    unique: list[SearchItem] = []
+    seen: set[str] = set()
+    for res in raw_results:
+        if not isinstance(res, list):
+            continue
+        for item in res:
+            if isinstance(item, SearchItem) and item.url and item.url not in seen:
+                seen.add(item.url)
+                unique.append(item)
+    return unique
+
+
 async def collect_sources(
     search_tool: SearchTool,
     plan: SearchPlan,
@@ -50,28 +64,17 @@ async def collect_sources(
 
     limit = 6 if plan.focus == "news" else 4
     tasks = [
-        search_tool.execute(query=q, focus=plan.focus, max_results=limit)
+        search_tool.search(query=q, focus=plan.focus, max_results=limit)
         for q in queries
     ]
-    raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+    raw = await asyncio.gather(*tasks, return_exceptions=True)
+    items = _deduplicate_items(list(raw))
 
-    valid_blocks: list[str] = []
-    seen_snippets: set[str] = set()
-    total_items = 0
+    if not items:
+        return "Aucune source trouvée.", 0, time.perf_counter() - t0
 
-    for res in raw_results:
-        if isinstance(res, str) and res.strip():
-            lines = res.strip().split("\n\n")
-            for block in lines:
-                key = block[:60]
-                if key not in seen_snippets and not block.startswith("Aucun"):
-                    seen_snippets.add(key)
-                    valid_blocks.append(block)
-                    if block.startswith(("1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.")):
-                        total_items += 1
-
-    consolidated = "\n\n".join(valid_blocks) if valid_blocks else "Aucune source trouvée."
-    return consolidated, total_items, time.perf_counter() - t0
+    consolidated = search_tool.format_results(items, query=" ".join(queries), focus=plan.focus)
+    return consolidated, len(items), time.perf_counter() - t0
 
 
 async def synthesize_findings(

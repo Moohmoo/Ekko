@@ -48,16 +48,29 @@ class MockPipelineProvider(LLMProvider):
         yield self.synthesis_text
 
 
-class MockSearchTool(BaseTool):
+from typing import Literal
+from tools.search import SearchItem, SearchTool
+
+
+class MockSearchTool(SearchTool):
     """Outil de recherche simulé pour tester la collecte et dédoublonnage."""
 
-    name = "search"
-    description = "Mock search"
-    parameters_schema = EmptyParams
-
-    async def execute(self, **kwargs: object) -> str:
-        q = kwargs.get("query", "")
-        return f"1. **[Paper {q}](http://arxiv.org/{q})** - Authors (2026)\n   Abstract content."
+    async def search(
+        self,
+        query: str = "",
+        focus: Literal["academic", "code", "news", "web"] = "news",
+        max_results: int = 5,
+        region: str | None = None,
+    ) -> list[SearchItem]:
+        return [
+            SearchItem(
+                title=f"Paper {query}",
+                url=f"http://arxiv.org/{query}",
+                snippet="Abstract content.",
+                source="arXiv",
+                date="2026",
+            )
+        ]
 
 
 @pytest.mark.asyncio

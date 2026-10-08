@@ -3,7 +3,7 @@
 from .base import BaseTool, EmptyParams
 from .reader import FetchPageParams, FetchPageTool, ReaderParams, ReaderTool
 from .registry import ToolRegistry, default_registry
-from .search import SearchParams, SearchTool, WebSearchParams, WebSearchTool
+from .search import SearchItem, SearchParams, SearchTool
 from .system import SystemInfoTool
 
 # Enregistrement des outils universels par défaut
@@ -16,10 +16,9 @@ __all__ = [
     "EmptyParams",
     "ToolRegistry",
     "default_registry",
+    "SearchItem",
     "SearchTool",
     "SearchParams",
-    "WebSearchTool",
-    "WebSearchParams",
     "ReaderTool",
     "ReaderParams",
     "FetchPageTool",

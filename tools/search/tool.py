@@ -6,7 +6,7 @@ et la recherche web générale (DuckDuckGo) via un sélecteur d'angle (focus).
 
 import asyncio
 import re
-from typing import Any, Literal
+from typing import Literal
 import xml.etree.ElementTree as ET
 from ddgs import DDGS
 import httpx
@@ -16,6 +16,19 @@ from config import get_region_for_language, get_settings
 from tools.base import BaseTool
 
 USER_AGENT = "Ekko/1.0 (Engineering Assistant; Linux)"
+
+
+class SearchItem(BaseModel):
+    """Représentation structurée d'un résultat de recherche unitaire."""
+
+    title: str = Field(description="Titre du document, article ou dépôt.")
+    url: str = Field(description="URL source directe et pérenne.")
+    snippet: str = Field(default="", description="Extrait, résumé ou description du contenu.")
+    source: str = Field(default="", description="Source ou plateforme d'origine (ex: arXiv, GitHub, Média, Web).")
+    date: str = Field(default="", description="Date de publication au format AAAA-MM-JJ ou année.")
+    authors: list[str] = Field(default_factory=list, description="Liste des auteurs principaux.")
+    stars: int = Field(default=0, description="Nombre d'étoiles GitHub si applicable.")
+    language: str = Field(default="", description="Langage principal du dépôt si applicable.")
 
 
 class SearchParams(BaseModel):
@@ -33,10 +46,6 @@ class SearchParams(BaseModel):
         default=None,
         description="Code région optionnel pour la recherche web (ex: 'fr-fr', 'en-us').",
     )
-
-
-# Alias de rétrocompatibilité
-WebSearchParams = SearchParams
 
 
 ARXIV_STOP_WORDS = {
@@ -57,7 +66,7 @@ def _build_arxiv_search_query(query: str) -> str:
     return " AND ".join(f"all:{w}" for w in target_words[:4]) if target_words else "all:ai"
 
 
-async def _fetch_arxiv_entries(query: str, max_results: int) -> list[dict[str, Any]]:
+async def _fetch_arxiv_entries(query: str, max_results: int) -> list[SearchItem]:
     """Interroge l'API officielle d'arXiv pour extraire des articles et abstracts récents."""
     url = "https://export.arxiv.org/api/query"
     params = {
@@ -74,24 +83,27 @@ async def _fetch_arxiv_entries(query: str, max_results: int) -> list[dict[str, A
 
     root = ET.fromstring(resp.text)
     ns = {"atom": "http://www.w3.org/2005/Atom"}
-    results: list[dict[str, Any]] = []
+    items: list[SearchItem] = []
     for entry in root.findall("atom:entry", ns):
         title_el = entry.find("atom:title", ns)
         summary_el = entry.find("atom:summary", ns)
         id_el = entry.find("atom:id", ns)
         pub_el = entry.find("atom:published", ns)
         authors = [a.find("atom:name", ns).text or "" for a in entry.findall("atom:author", ns)]
-        results.append({
-            "title": " ".join((title_el.text or "Sans titre").split()),
-            "abstract": " ".join((summary_el.text or "").split()),
-            "url": (id_el.text or "").strip(),
-            "date": (pub_el.text or "")[:10],
-            "authors": [a for a in authors if a][:3],
-        })
-    return results
+        items.append(
+            SearchItem(
+                title=" ".join((title_el.text or "Sans titre").split()),
+                url=(id_el.text or "").strip(),
+                snippet=" ".join((summary_el.text or "").split()),
+                source="arXiv",
+                date=(pub_el.text or "")[:10],
+                authors=[a for a in authors if a][:3],
+            )
+        )
+    return items
 
 
-async def _fetch_github_repos(query: str, max_results: int) -> list[dict[str, Any]]:
+async def _fetch_github_repos(query: str, max_results: int) -> list[SearchItem]:
     """Recherche des dépôts open-source sur l'API publique de GitHub."""
     url = "https://api.github.com/search/repositories"
     params = {"q": query.strip(), "sort": "stars", "order": "desc", "per_page": max_results}
@@ -102,13 +114,14 @@ async def _fetch_github_repos(query: str, max_results: int) -> list[dict[str, An
             if resp.status_code == 200:
                 data = resp.json()
                 return [
-                    {
-                        "name": item.get("full_name", ""),
-                        "url": item.get("html_url", ""),
-                        "description": item.get("description") or "Aucune description",
-                        "stars": item.get("stargazers_count", 0),
-                        "language": item.get("language") or "N/A",
-                    }
+                    SearchItem(
+                        title=item.get("full_name", ""),
+                        url=item.get("html_url", ""),
+                        snippet=item.get("description") or "Aucune description",
+                        source="GitHub",
+                        stars=item.get("stargazers_count", 0),
+                        language=item.get("language") or "N/A",
+                    )
                     for item in data.get("items", [])[:max_results]
                 ]
     except Exception:
@@ -116,10 +129,19 @@ async def _fetch_github_repos(query: str, max_results: int) -> list[dict[str, An
     return []
 
 
-def _perform_ddgs_web(query: str, max_results: int, region: str) -> list[dict[str, Any]]:
+def _perform_ddgs_web(query: str, max_results: int, region: str) -> list[SearchItem]:
     """Exécute la recherche DuckDuckGo texte de façon synchrone pour le thread worker."""
     with DDGS() as client:
-        return list(client.text(query.strip(), region=region, max_results=max_results))
+        hits = list(client.text(query.strip(), region=region, max_results=max_results))
+        return [
+            SearchItem(
+                title=h.get("title", "Sans titre"),
+                url=h.get("href", ""),
+                snippet=h.get("body", "").strip(),
+                source="Web",
+            )
+            for h in hits
+        ]
 
 
 def _build_news_search_query(query: str) -> str:
@@ -136,19 +158,25 @@ def _build_news_search_query(query: str) -> str:
     return re.sub(r"\b[Aa][Ii]\b", '"AI"', cleaned)
 
 
-def _fetch_web_fallback(client: DDGS, query: str, region: str, limit: int) -> list[dict[str, Any]]:
+def _fetch_web_fallback(client: DDGS, query: str, region: str, limit: int) -> list[SearchItem]:
     """Complète la recherche d'actualités avec le web récent pour les sujets techniques."""
     try:
         hits = list(client.text(f"{query} 2026", region=region, max_results=limit))
         return [
-            {"title": h.get("title", ""), "url": h.get("href", ""), "date": "2026", "source": "Web", "body": h.get("body", "")}
+            SearchItem(
+                title=h.get("title", "Sans titre"),
+                url=h.get("href", ""),
+                snippet=h.get("body", "").strip(),
+                source="Web",
+                date="2026",
+            )
             for h in hits
         ]
     except Exception:
         return []
 
 
-def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[dict[str, Any]]:
+def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[SearchItem]:
     """Exécute la recherche DuckDuckGo News avec repli web sur les domaines spécialisés."""
     refined = _build_news_search_query(query)
     with DDGS() as client:
@@ -156,63 +184,82 @@ def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[dict[s
             try:
                 hits = list(client.news(refined, region=region, timelimit=limit, max_results=max_results))
                 if len(hits) >= 2:
-                    return hits
+                    return [
+                        SearchItem(
+                            title=h.get("title", "Sans titre"),
+                            url=h.get("url", ""),
+                            snippet=h.get("body", "").strip(),
+                            source=h.get("source", "Média"),
+                            date=(h.get("date") or "")[:10],
+                        )
+                        for h in hits
+                    ]
             except Exception:
                 pass
         return _fetch_web_fallback(client, refined, region, max_results)
 
 
-def _format_academic_results(results: list[dict[str, Any]], query: str) -> str:
+def _format_academic_results(items: list[SearchItem], query: str) -> str:
     """Met en forme les abstracts scientifiques arXiv pour la restitution à l'agent."""
-    if not results:
+    if not items:
         return f"Aucun article scientifique trouvé sur arXiv pour '{query}'."
     blocks = [f"Articles scientifiques arXiv pour '{query}' :\n"]
-    for idx, item in enumerate(results, start=1):
-        authors_str = ", ".join(item["authors"]) if item["authors"] else "Auteurs non spécifiés"
-        meta = f" - *{authors_str}* ({item['date']})"
-        abstract = item["abstract"][:350] + ("..." if len(item["abstract"]) > 350 else "")
-        blocks.append(f"{idx}. **[{item['title']}]({item['url']})**{meta}\n   {abstract}")
+    for idx, item in enumerate(items, start=1):
+        authors_str = ", ".join(item.authors) if item.authors else "Auteurs non spécifiés"
+        meta = f" - *{authors_str}* ({item.date})" if item.date else f" - *{authors_str}*"
+        abstract = item.snippet[:350] + ("..." if len(item.snippet) > 350 else "")
+        blocks.append(f"{idx}. **[{item.title}]({item.url})**{meta}\n   {abstract}")
     return "\n\n".join(blocks)
 
 
-def _format_code_results(results: list[dict[str, Any]], query: str) -> str:
+def _format_code_results(items: list[SearchItem], query: str) -> str:
     """Met en forme les dépôts GitHub identifiés avec métadonnées."""
-    if not results:
+    if not items:
         return f"Aucun dépôt de code trouvé sur GitHub pour '{query}'."
     blocks = [f"Dépôts de code GitHub pour '{query}' :\n"]
-    for idx, item in enumerate(results, start=1):
-        meta = f" (⭐ {item['stars']} | {item['language']})"
-        blocks.append(f"{idx}. **[{item['name']}]({item['url']})**{meta}\n   {item['description']}")
+    for idx, item in enumerate(items, start=1):
+        meta = f" (⭐ {item.stars} | {item.language})"
+        blocks.append(f"{idx}. **[{item.title}]({item.url})**{meta}\n   {item.snippet}")
     return "\n\n".join(blocks)
 
 
-def _format_web_results(results: list[dict[str, Any]], query: str) -> str:
+def _format_web_results(items: list[SearchItem], query: str) -> str:
     """Met en forme les résultats de recherche web générale DuckDuckGo."""
-    if not results:
+    if not items:
         return f"Aucun résultat web trouvé pour '{query}'."
     blocks = [f"Résultats de recherche web pour '{query}' :\n"]
-    for idx, item in enumerate(results, start=1):
-        title = item.get("title", "Sans titre")
-        href = item.get("href", "")
-        body = item.get("body", "").strip()
-        blocks.append(f"{idx}. **[{title}]({href})**\n   {body}")
+    for idx, item in enumerate(items, start=1):
+        blocks.append(f"{idx}. **[{item.title}]({item.url})**\n   {item.snippet}")
     return "\n\n".join(blocks)
 
 
-def _format_news_results(results: list[dict[str, Any]], query: str) -> str:
+def _format_news_results(items: list[SearchItem], query: str) -> str:
     """Met en forme les articles de presse et annonces d'actualité horodatées."""
-    if not results:
+    if not items:
         return f"Aucun article d'actualité trouvé pour '{query}'."
     blocks = [f"Articles et annonces d'actualité récentes pour '{query}' :\n"]
-    for idx, item in enumerate(results, start=1):
-        title = item.get("title", "Sans titre")
-        url = item.get("url", "")
-        source = item.get("source", "Média")
-        date_str = (item.get("date") or "")[:10]
-        meta = f" ({source}, {date_str})" if date_str else f" ({source})"
-        body = item.get("body", "").strip()
-        blocks.append(f"{idx}. **[{title}]({url})**{meta}\n   {body}")
+    for idx, item in enumerate(items, start=1):
+        meta = f" ({item.source}, {item.date})" if item.date else f" ({item.source})"
+        blocks.append(f"{idx}. **[{item.title}]({item.url})**{meta}\n   {item.snippet}")
     return "\n\n".join(blocks)
+
+
+def _normalize_item(raw: Any, default_source: str = "") -> SearchItem:
+    """Normalise un item brut (dict ou SearchItem) en SearchItem canonique."""
+    if isinstance(raw, SearchItem):
+        return raw
+    if isinstance(raw, dict):
+        return SearchItem(
+            title=raw.get("title") or raw.get("name") or "Sans titre",
+            url=raw.get("url") or raw.get("href") or raw.get("html_url") or "",
+            snippet=raw.get("snippet") or raw.get("abstract") or raw.get("description") or raw.get("body") or "",
+            source=raw.get("source") or default_source,
+            date=str(raw.get("date") or "")[:10],
+            authors=raw.get("authors") if isinstance(raw.get("authors"), list) else [],
+            stars=int(raw.get("stars", 0)) if str(raw.get("stars", "")).isdigit() else 0,
+            language=str(raw.get("language") or ""),
+        )
+    return SearchItem(title=str(raw), url="")
 
 
 class SearchTool(BaseTool):
@@ -228,6 +275,46 @@ class SearchTool(BaseTool):
     )
     parameters_schema = SearchParams
 
+    async def search(
+        self,
+        query: str = "",
+        focus: Literal["academic", "code", "news", "web"] = "news",
+        max_results: int = 5,
+        region: str | None = None,
+    ) -> list[SearchItem]:
+        """Effectue la recherche structurée et retourne la liste des items typés."""
+        clean_query = query.strip() or "actualités documentations"
+        limit = max(1, min(max_results, 10))
+        if focus == "academic":
+            raw = await _fetch_arxiv_entries(clean_query, limit)
+            return [_normalize_item(it, "arXiv") for it in raw]
+        if focus == "code":
+            raw = await _fetch_github_repos(clean_query, limit)
+            return [_normalize_item(it, "GitHub") for it in raw]
+
+        effective_region = region or get_region_for_language(get_settings().default_language)
+        if focus == "news":
+            raw_news = await asyncio.to_thread(_perform_ddgs_news, clean_query, limit, effective_region)
+            return [_normalize_item(it, "Média") for it in raw_news]
+
+        raw_web = await asyncio.to_thread(_perform_ddgs_web, clean_query, limit, effective_region)
+        return [_normalize_item(it, "Web") for it in raw_web]
+
+    def format_results(
+        self,
+        items: list[SearchItem],
+        query: str,
+        focus: Literal["academic", "code", "news", "web"] = "news",
+    ) -> str:
+        """Formate une liste d'items typés en observation textuelle pour l'agent."""
+        if focus == "academic":
+            return _format_academic_results(items, query)
+        if focus == "code":
+            return _format_code_results(items, query)
+        if focus == "news":
+            return _format_news_results(items, query)
+        return _format_web_results(items, query)
+
     async def execute(
         self,
         query: str = "",
@@ -237,27 +324,13 @@ class SearchTool(BaseTool):
     ) -> str:
         """Exécute la recherche selon le focus sélectionné et formate l'observation."""
         clean_query = query.strip() or "actualités documentations"
-        limit = max(1, min(max_results, 10))
         try:
-            if focus == "academic":
-                results = await _fetch_arxiv_entries(clean_query, limit)
-                return _format_academic_results(results, clean_query)
-            if focus == "code":
-                results = await _fetch_github_repos(clean_query, limit)
-                return _format_code_results(results, clean_query)
-
-            effective_region = region or get_region_for_language(get_settings().default_language)
-            if focus == "news":
-                news_results = await asyncio.to_thread(_perform_ddgs_news, clean_query, limit, effective_region)
-                return _format_news_results(news_results, clean_query)
-
-            web_results = await asyncio.to_thread(_perform_ddgs_web, clean_query, limit, effective_region)
-            return _format_web_results(web_results, clean_query)
+            items = await self.search(
+                query=clean_query,
+                focus=focus,
+                max_results=max_results,
+                region=region,
+            )
+            return self.format_results(items, query=clean_query, focus=focus)
         except Exception as exc:
             return f"Erreur lors de la recherche ({focus}) pour '{query}' : {exc}"
-
-
-class WebSearchTool(SearchTool):
-    """Alias rétrocompatible pour l'ancien nom d'outil web_search."""
-
-    name = "web_search"

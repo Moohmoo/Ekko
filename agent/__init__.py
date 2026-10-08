@@ -24,7 +24,9 @@ from .schemas import (
     ToolResultEvent,
     ValidationEvent,
 )
-from .storage import DEFAULT_PROFILE_CONTENT, SessionStorage, load_user_profile
+from .profile import load_user_profile
+from .prompts import DEFAULT_PROFILE_CONTENT
+from .storage import SessionStorage
 
 __all__ = [
     "EnvironmentContext",

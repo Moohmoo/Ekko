@@ -1,131 +1,27 @@
-"""Handlers spécialisés pour l'exécution des intentions utilisateur (Pattern Command/Handler).
-
-Chaque handler encapsule un cycle d'exécution unique et autonome (SRP) :
-- ChatHandler : échange conversationnel direct et rappels avec mémoire de travail.
-- ResearchHandler : cadrage d'angle, collecte résiliente et synthèse technique en streaming.
-- ActionHandler : exécution d'actions et inspection d'outils système.
-"""
+"""Handler pour l'exécution d'actions outillées via un cycle ReAct structuré."""
 
 import json
 import time
-from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
-from typing import Any
 
-from core import Logger
-from providers import LLMProvider
-from tools.base import BaseTool
-from tools.registry import ToolRegistry
-from .context import ExecutionContext
-from .pipeline import collect_sources, plan_research, synthesize_findings_stream
-from .prompts import build_chat_prompt, build_system_prompt, format_step_prompt
-from .schemas import (
+from agent.context import ExecutionContext
+from agent.prompts import build_system_prompt, format_step_prompt
+from agent.schemas import (
     AgentAction,
     AgentEvent,
     AgentRequest,
     AgentResponse,
     DoneEvent,
-    PlanEvent,
-    RetrievalEvent,
-    StreamChunkEvent,
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
     ValidationEvent,
 )
-from .storage import SessionStorage
-from .validator import validate_draft
-
-logger = Logger("ekko.agent.handlers")
-
-
-class BaseHandler(ABC):
-    """Interface abstraite commune pour tous les gestionnaires d'intention."""
-
-    @abstractmethod
-    def handle_stream(
-        self,
-        req: AgentRequest,
-        ctx: ExecutionContext,
-    ) -> AsyncIterator[AgentEvent]:
-        """Traite la requête et émet un flux asynchrone d'événements pour le présentateur."""
-
-
-class ChatHandler(BaseHandler):
-    """Gère les échanges conversationnels directs et les rappels d'historique."""
-
-    def __init__(self, provider: LLMProvider, storage: SessionStorage) -> None:
-        self.provider = provider
-        self.storage = storage
-
-    async def handle_stream(
-        self,
-        req: AgentRequest,
-        ctx: ExecutionContext,
-    ) -> AsyncIterator[AgentEvent]:
-        sys_prompt = build_chat_prompt(ctx.current_date, ctx.user_profile)
-        prompt = f"{ctx.history_block}\n\nUtilisateur : {req.query}" if ctx.history_block else req.query
-        chunks: list[str] = []
-        async for chunk in self.provider.stream_text(prompt=prompt, system_instruction=sys_prompt):
-            chunks.append(chunk)
-            yield StreamChunkEvent(delta=chunk)
-
-        final_ans = "".join(chunks).strip()
-        self.storage.record_message(req.session_id, "user", req.query)
-        self.storage.record_message(req.session_id, "assistant", final_ans)
-        yield DoneEvent(response=AgentResponse(content=final_ans, thought="Échange conversationnel direct."))
-
-
-class ResearchHandler(BaseHandler):
-    """Gère le workflow structuré de veille et recherche technique (Plan -> Collecte -> Synthèse)."""
-
-    def __init__(
-        self,
-        provider: LLMProvider,
-        storage: SessionStorage,
-        search_tool: BaseTool,
-    ) -> None:
-        self.provider = provider
-        self.storage = storage
-        self.search_tool = search_tool
-
-    async def handle_stream(
-        self,
-        req: AgentRequest,
-        ctx: ExecutionContext,
-    ) -> AsyncIterator[AgentEvent]:
-        # 1. Cadrage
-        t0 = time.perf_counter()
-        plan = await plan_research(self.provider, req.query, ctx=ctx)
-        el_plan = max(0.1, time.perf_counter() - t0)
-        yield PlanEvent(focus=plan.focus, queries=plan.queries, elapsed=el_plan)
-
-        # 2. Collecte
-        sources, count, el_retrieval = await collect_sources(self.search_tool, plan)
-        yield RetrievalEvent(source=plan.focus, count=count, elapsed=el_retrieval)
-
-        if count == 0 or not sources.strip() or sources.startswith("Aucune source"):
-            msg = f"Aucune source vérifiée récente n'a été trouvée pour '{req.query}'."
-            yield StreamChunkEvent(delta=msg)
-            self.storage.record_message(req.session_id, "user", req.query)
-            self.storage.record_message(req.session_id, "assistant", msg)
-            yield DoneEvent(response=AgentResponse(content=msg, tools_used=["search"], thought="Aucune source."))
-            return
-
-        # 3. Synthèse streaming
-        t_synth = time.perf_counter()
-        chunks: list[str] = []
-        async for chunk in synthesize_findings_stream(self.provider, req.query, sources, ctx.user_profile):
-            chunks.append(chunk)
-            yield StreamChunkEvent(delta=chunk)
-
-        final_ans = "".join(chunks).strip() or sources
-        el_synth = max(0.1, time.perf_counter() - t_synth)
-        yield ValidationEvent(content=final_ans, elapsed=el_synth)
-
-        self.storage.record_message(req.session_id, "user", req.query)
-        self.storage.record_message(req.session_id, "assistant", final_ans)
-        yield DoneEvent(response=AgentResponse(content=final_ans, tools_used=["search"], thought="Synthèse certifiée."))
+from agent.storage import SessionStorage
+from agent.validator import validate_draft
+from providers import LLMProvider
+from tools.registry import ToolRegistry
+from .base import BaseHandler
 
 
 class ActionHandler(BaseHandler):

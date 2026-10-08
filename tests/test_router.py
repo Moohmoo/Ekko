@@ -5,7 +5,7 @@ from typing import TypeVar
 import pytest
 from pydantic import BaseModel
 from agent.context import EnvironmentContext, ExecutionContext
-from agent.router import build_intent_user_prompt, classify_intent, is_fast_greeting
+from agent.router import build_intent_user_prompt, classify_intent
 from agent.schemas import UserIntent
 from providers.base import LLMProvider
 
@@ -39,35 +39,23 @@ class MockRouterLLM(LLMProvider):
         yield ""
 
 
-def test_is_fast_greeting_detection() -> None:
-    """Vérifie la détection instantanée des salutations courtes et courantes."""
-    assert is_fast_greeting("yoh") is True
-    assert is_fast_greeting("Yoh !") is True
-    assert is_fast_greeting("salut") is True
-    assert is_fast_greeting("Bonjour") is True
-    assert is_fast_greeting("merci") is True
-    assert is_fast_greeting("comment vas-tu ?") is True
-    assert is_fast_greeting("Quelles sont les avancées sur l'ARN ?") is False
-    assert is_fast_greeting("ajoute un item dans la todo list") is False
-
-
-@pytest.mark.asyncio
-async def test_classify_intent_skips_llm_on_fast_greeting() -> None:
-    """Vérifie que les salutations directes ne consomment aucun appel LLM."""
-    provider = MockRouterLLM(intent="research")
-    intent = await classify_intent(provider, "yoh")
-
-    assert intent == "chat"
-    assert provider.call_count == 0
-
-
 @pytest.mark.asyncio
 async def test_classify_intent_delegates_to_llm() -> None:
-    """Vérifie la classification via LLM pour les requêtes complexes."""
+    """Vérifie la classification sémantique via LLM pour les requêtes complexes."""
     provider = MockRouterLLM(intent="research")
     intent = await classify_intent(provider, "Avancées sur le repliement d'ARN")
 
     assert intent == "research"
+    assert provider.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_classify_intent_chat_intent() -> None:
+    """Vérifie le routage correct vers chat lorsque le modèle classe en chat."""
+    provider = MockRouterLLM(intent="chat")
+    intent = await classify_intent(provider, "Salut Mohamed !")
+
+    assert intent == "chat"
     assert provider.call_count == 1
 
 
@@ -118,24 +106,4 @@ async def test_classify_intent_passes_history_context() -> None:
     assert intent == "chat"
     assert provider.call_count == 1
     assert "Historique de la conversation :" in provider.captured_prompt
-
-
-@pytest.mark.asyncio
-async def test_classify_intent_fast_contextual_recall() -> None:
-    """Vérifie que les demandes de rappel explicite court-circuitent sans appel LLM."""
-    ctx = ExecutionContext(
-        env=EnvironmentContext(
-            current_date="8 octobre 2026",
-            current_year=2026,
-            current_time="16:00",
-            os_name="linux",
-            cwd="",
-        ),
-        history_block="[user]: news IA\n[assistant]: résumé des news",
-    )
-    provider = MockRouterLLM(intent="chat")
-    intent = await classify_intent(provider, "Rappelle moi les news", ctx=ctx)
-
-    assert intent == "chat"
-    assert provider.call_count == 0
 

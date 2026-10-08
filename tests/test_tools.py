@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from tools.base import BaseTool
 from tools.reader import FetchPageTool, ReaderTool
 from tools.registry import ToolRegistry
-from tools.search import SearchTool, WebSearchTool
+from tools.search import SearchItem, SearchTool
 from tools.system import SystemInfoTool
 
 
@@ -188,6 +188,23 @@ async def test_search_tool_news_focus(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "https://example.com/mistral-large-4" in res
     assert "TechDaily" in res
     assert "2026-10-06" in res
+
+
+@pytest.mark.asyncio
+async def test_search_tool_search_returns_typed_items(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie que search() retourne des instances typées de SearchItem."""
+    fake_items = [
+        {"title": "Paper 1", "url": "https://example.com/1", "body": "Snippet 1"},
+    ]
+    monkeypatch.setattr("tools.search.tool._perform_ddgs_web", lambda q, m, r: fake_items)
+    tool = SearchTool()
+    items = await tool.search(query="test", focus="web")
+
+    assert len(items) == 1
+    assert isinstance(items[0], SearchItem)
+    assert items[0].title == "Paper 1"
+    assert items[0].url == "https://example.com/1"
+    assert items[0].snippet == "Snippet 1"
 
 
 def test_build_news_search_query() -> None:

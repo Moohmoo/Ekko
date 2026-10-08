@@ -10,7 +10,7 @@ from agent.schemas import (
     UserIntent,
 )
 from tools.reader.tool import FetchPageParams, ReaderParams
-from tools.search.tool import SearchParams, WebSearchParams
+from tools.search.tool import SearchItem, SearchParams
 
 
 def test_agent_request_and_response() -> None:
@@ -50,6 +50,17 @@ def test_search_params() -> None:
 
     with pytest.raises(ValidationError):
         SearchParams()  # type: ignore[call-arg]
+
+
+def test_search_item() -> None:
+    """Vérifie la création et validation du modèle typé SearchItem."""
+    item = SearchItem(title="Test Paper", url="https://arxiv.org/abs/1234.5678", snippet="Test abstract")
+    assert item.title == "Test Paper"
+    assert item.url == "https://arxiv.org/abs/1234.5678"
+    assert item.snippet == "Test abstract"
+    assert item.source == ""
+    assert item.date == ""
+    assert item.authors == []
 
 
 def test_reader_params() -> None:
