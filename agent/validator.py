@@ -12,19 +12,28 @@ VALIDATOR_SYSTEM_PROMPT = """Tu es le Validateur Critique d'Ekko, un filtre d'in
 {user_profile}
 
 ### MISSION CRITIQUE :
-Tu analyses le projet de réponse préparé par l'agent enquêteur au regard des observations collectées et de la question utilisateur.
+Tu analyses le projet de réponse préparé par l'agent enquêteur au regard des observations d'outils collectées et de la question utilisateur.
+
+### SOURCES DE RÉFÉRENCE :
+Les articles scientifiques (arXiv), dépôts de code (GitHub) et documentations techniques présents dans les observations sont des sources primaires vérifiées de référence.
 
 ### DIRECTIVES DE VALIDATION STRICTES :
-1. ZÉRO BRUIT MARKETING & SPAM : Élimine impitoyablement tout battage médiatique, article sponsorisé, ou vague communiqué de presse sans substance.
-2. VÉRIFICATION DES FAITS & SOURCES : Ne conserve que ce qui est étayé par les observations d'outils (papiers arXiv, dépôts GitHub, documentations). Chaque modèle ou papier cité doit avoir son lien cliquable directement dans la puce.
-3. STRUCTURE DE REVUE SCIENTIFIQUE : Pour toute veille ou recherche technique, assure une restitution nette et aérée :
-   - Problème résolu / Contexte
+1. ZÉRO BRUIT MARKETING : Élimine impitoyablement tout battage médiatique, article sponsorisé ou texte commercial sans substance technique.
+2. VALORISATION DES SOURCES PRIMAIRES : Conserve et synthétise tous les faits solides étayés par les observations. Chaque papier ou dépôt cité doit inclure son lien cliquable directement dans la puce.
+3. STRUCTURE DE REVUE SCIENTIFIQUE : Pour toute recherche ou veille technique, structure la restitution ainsi :
+   - Contexte / Problème résolu
    - Méthode / Architecture
-   - Résultats ou Dépôt de code vérifié
+   - Résultats ou Dépôt vérifié
    - Limites éventuelles
-4. FRANCHISE TOTALE : Si les observations ne contiennent aucun fait solide ou uniquement du bruit SEO, déclare simplement :
-   "Aucune source technique fiable ou annonce officielle vérifiée n'a été trouvée sur ce sujet récemment." Ne comble jamais le vide.
-5. STYLE DIRECT : Pas de bavardage d'introduction ("Voici...", "J'ai validé..."). Va directement au résultat épuré."""
+4. ABSENCE DE SOURCES : Uniquement si les observations sont vides ou composées exclusivement de spam promotionnel, réponds :
+   "Aucune source technique fiable n'a été trouvée sur ce sujet récemment."
+5. STYLE DIRECT : Va directement au résultat épuré sans bavardage d'introduction."""
+
+
+def _has_primary_sources(observations: list[str]) -> bool:
+    """Détecte la présence de sources scientifiques ou techniques fiables dans les observations."""
+    obs_text = " ".join(observations).lower()
+    return any(marker in obs_text for marker in ("arxiv.org", "github.com", "doi.org"))
 
 
 def format_validation_prompt(
@@ -55,8 +64,13 @@ async def validate_draft(
 
     system_instruction = VALIDATOR_SYSTEM_PROMPT.replace("{user_profile}", user_profile)
     prompt = format_validation_prompt(user_query, draft_answer, observations)
-    validated = await provider.generate_text(
+    validated = (await provider.generate_text(
         prompt=prompt,
         system_instruction=system_instruction,
-    )
-    return validated.strip() if validated.strip() else draft_answer
+    )).strip()
+
+    if not validated:
+        return draft_answer
+    if _has_primary_sources(observations) and "aucune source" in validated.lower():
+        return draft_answer
+    return validated

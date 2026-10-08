@@ -70,3 +70,23 @@ def test_format_validation_prompt() -> None:
     assert "Observation 1" in prompt
     assert "Observation 2" in prompt
     assert "Projet de réponse à critiquer et valider :\nProjet de réponse" in prompt
+
+
+@pytest.mark.asyncio
+async def test_validator_prevents_false_negative_when_primary_sources_present() -> None:
+    """Vérifie que la présence de sources arXiv préserve le brouillon si le validateur hallucine un refus."""
+    provider = MockValidatorProvider(
+        response_text="Aucune source technique fiable ou annonce officielle vérifiée n'a été trouvée sur ce sujet récemment."
+    )
+    draft = "Synthèse étayée : [Paper](https://arxiv.org/abs/2602.16548v2)."
+    observations = ["- Résultat search : [Paper](https://arxiv.org/abs/2602.16548v2)"]
+
+    res = await validate_draft(
+        provider=provider,
+        user_query="Avancées sur l'ARN ?",
+        draft_answer=draft,
+        observations=observations,
+        user_profile="Profil ingénieur",
+    )
+    assert res == draft
+    assert provider.call_count == 1
