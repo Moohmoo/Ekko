@@ -8,7 +8,7 @@ from datetime import datetime
 import os
 from pathlib import Path
 from pydantic import BaseModel, Field
-from .memory import SQLiteMemory
+from .storage import SessionStorage
 from .prompts import format_history_block
 
 
@@ -80,7 +80,7 @@ class ExecutionContext(BaseModel):
 
 
 def build_execution_context(
-    memory: SQLiteMemory,
+    storage: SessionStorage,
     session_id: str,
     user_profile: str,
     history_limit: int = 4,
@@ -94,7 +94,7 @@ def build_execution_context(
         os_name=os.name,
         cwd=str(Path.cwd()),
     )
-    recent_messages = memory.get_recent_messages(session_id, limit=history_limit)
+    recent_messages = storage.get_recent_messages(session_id, limit=history_limit)
     history_str = format_history_block(recent_messages)
 
     user_ctx = UserProfileContext(raw_content=user_profile)

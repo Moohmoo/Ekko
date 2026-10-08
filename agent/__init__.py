@@ -24,7 +24,7 @@ from .schemas import (
     ToolResultEvent,
     ValidationEvent,
 )
-from .storage import DEFAULT_PROFILE_CONTENT, SQLiteMemory, SessionStorage, load_user_profile
+from .storage import DEFAULT_PROFILE_CONTENT, SessionStorage, load_user_profile
 
 __all__ = [
     "EnvironmentContext",
@@ -38,7 +38,6 @@ __all__ = [
     "ResearchHandler",
     "ActionHandler",
     "SessionStorage",
-    "SQLiteMemory",
     "load_user_profile",
     "DEFAULT_PROFILE_CONTENT",
     "classify_intent",

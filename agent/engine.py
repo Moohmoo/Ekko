@@ -33,7 +33,7 @@ class EkkoEngine:
         settings: Settings,
         provider: LLMProvider,
         registry: ToolRegistry,
-        memory: SessionStorage,
+        storage: SessionStorage,
         user_profile: str = "",
         max_steps: int = 5,
         use_pipeline: bool = False,
@@ -42,8 +42,7 @@ class EkkoEngine:
         self.settings = settings
         self.provider = provider
         self.registry = registry
-        self.memory = memory
-        self.storage = memory
+        self.storage = storage
         self.user_profile = user_profile
         self.max_steps = max_steps
         self.use_pipeline = use_pipeline

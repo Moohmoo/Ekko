@@ -14,48 +14,7 @@ from .context import ExecutionContext
 from .schemas import SearchPlan
 
 
-def build_research_planner_prompt(ctx: ExecutionContext | None = None) -> str:
-    """Construit le prompt de cadrage enrichi de l'ancrage temporel certifié."""
-    year = ctx.current_year if ctx else 2026
-    date_str = ctx.current_date if ctx else "courante"
-    return f"""Tu es l'Architecte de Recherche d'Ekko pour un ingénieur.
-
-### DATE ACTUELLE :
-Nous sommes le {date_str} (Année en cours : {year}).
-RÈGLE TEMPORELLE ABSOLUE : Utilise l'année en cours ({year}) ou des termes récents. Ne JAMAIS utiliser d'années passées (2023, 2024).
-
-### SÉLECTION DE L'ANGLE (FOCUS) :
-- 'news' : actualités, veille technologique, annonces de nouveaux modèles ou outils, releases récentes.
-- 'academic' : littérature scientifique, recherche fondamentale, théorie, SOTA (arXiv).
-- 'code' : dépôts GitHub, bibliothèques, implémentations open-source.
-- 'web' : documentation technique, guides, explications de concepts stables.
-
-### RÈGLES STRICTES POUR LES REQUÊTES :
-1. Formule 1 ou 2 requêtes en ANGLAIS.
-2. Chaque requête DOIT impérativement inclure le sujet technique principal extrait de la demande (ex: 'AI', 'LLM', ou le nom précis de la technologie). Ne JAMAIS formuler de requête sans mentionner expressément le sujet.
-3. Pour le focus 'news' : proscris le mot 'news' et cible des termes techniques d'actualité comme 'model release announcement', 'framework', 'benchmark'."""
-
-
-SYNTHESIZER_SYSTEM_PROMPT = """Tu es le Rédacteur Scientifique et Technique d'Ekko pour Mohamed.
-
-### PROFIL UTILISATEUR :
-{user_profile}
-
-### MISSION :
-Rédige une synthèse technique directe et sobre à partir des sources documentaires.
-
-### STRUCTURE STRICTE (SANS RÉPÉTITIONS) :
-1. **Contexte & Enjeux :** Résumé global du sujet en 2-3 phrases claires.
-2. **Avancées & Modèles Clés :**
-   Présente chaque article ou projet pertinent de manière sobre et unitaire :
-   - **[Titre ou Nom](URL)** (Auteurs ou Média, Date) : apport concret, architecture ou benchmark.
-3. **Limites & Perspectives :** Verrous techniques ouverts et points de vigilance.
-
-### RÈGLES DE RESTITUTION :
-- Ne répète JAMAIS de sous-titres à l'intérieur des articles.
-- Chaque article cité DOIT impérativement comporter son lien Markdown vérifié : **[Titre](URL)**.
-- FILTRE ANTI-BRUIT : Ignore rigoureusement les sources parasites ou hors-sujet (faits divers, météo, rapports financiers généraux) qui ne concernent pas directement l'avancée technique ou scientifique demandée.
-- Sois concis, direct et technique. Zéro bavardage d'introduction ou de conclusion générale."""
+from .prompts import build_research_planner_prompt, build_synthesis_prompt
 
 
 async def plan_research(
@@ -122,7 +81,7 @@ async def synthesize_findings(
     user_profile: str,
 ) -> str:
     """Formule une synthèse scientifique et technique avec liens cliquables vérifiés."""
-    sys_instruction = SYNTHESIZER_SYSTEM_PROMPT.replace("{user_profile}", user_profile)
+    sys_instruction = build_synthesis_prompt(user_profile)
     prompt = (
         f"Demande initiale : {query}\n\n"
         f"Sources documentaires collectées :\n{sources_text}\n\n"
@@ -139,7 +98,7 @@ async def synthesize_findings_stream(
     user_profile: str,
 ) -> AsyncIterator[str]:
     """Formule une synthèse scientifique et technique en flux continu (streaming)."""
-    sys_instruction = SYNTHESIZER_SYSTEM_PROMPT.replace("{user_profile}", user_profile)
+    sys_instruction = build_synthesis_prompt(user_profile)
     prompt = (
         f"Demande initiale : {query}\n\n"
         f"Sources documentaires collectées :\n{sources_text}\n\n"

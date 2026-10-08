@@ -6,7 +6,7 @@ from typing import TypeVar
 import pytest
 from pydantic import BaseModel
 from agent.engine import EkkoEngine
-from agent.memory import SQLiteMemory
+from agent.storage import SessionStorage
 from agent.pipeline import collect_sources, plan_research, synthesize_findings
 from agent.schemas import (
     DoneEvent,
@@ -109,12 +109,12 @@ async def test_engine_pipeline_stream(tmp_path: Path) -> None:
     provider = MockPipelineProvider(plan, synthesis_text="Synthèse certifiée avec lien.")
     registry = ToolRegistry()
     registry.register(MockSearchTool())
-    memory = SQLiteMemory(tmp_path / "test_pipe.db")
+    storage = SessionStorage(tmp_path / "test_pipe.db")
     engine = EkkoEngine(
         settings=Settings(),
         provider=provider,
         registry=registry,
-        memory=memory,
+        storage=storage,
         user_profile="Profil",
         use_pipeline=True,
     )

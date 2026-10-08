@@ -1,8 +1,4 @@
-"""Catalogue et constructeur de prompts pour l'agent Ekko.
-
-Centralise les gabarits de prompts système, les directives de raisonnement
-ReAct orientées recherche scientifique et les micro-exemples de décision (Few-Shot).
-"""
+"""Prompts et formateurs pour la boucle ReAct outillée (ActionHandler)."""
 
 SYSTEM_PROMPT_TEMPLATE = """Tu es Ekko, un assistant personnel d'ingénierie et de recherche autonome opérant sur la machine locale.
 
@@ -57,22 +53,6 @@ Décision :
 - thought : "Recherche du dépôt officiel avec focus code."
 - tool_name : "search"
 - tool_arguments_json : "{\"query\": \"alpha project framework\", \"focus\": \"code\"}"
-- final_answer : null
-
-Exemple 4 (Lecture approfondie d'un repo ou d'un lien) :
-Demande : "Peux-tu analyser cette documentation : https://example.org/docs"
-Décision :
-- thought : "Lecture approfondie de la page via reader."
-- tool_name : "reader"
-- tool_arguments_json : "{\"url\": \"https://example.org/docs\"}"
-- final_answer : null
-
-Exemple 5 (Inspection système locale) :
-Demande : "État du GPU et de la machine"
-Décision :
-- thought : "Inspection matérielle locale via get_system_info."
-- tool_name : "get_system_info"
-- tool_arguments_json : "{}"
 - final_answer : null"""
 
 

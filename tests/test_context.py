@@ -3,7 +3,7 @@
 from datetime import datetime
 from pathlib import Path
 from agent.context import EnvironmentContext, ExecutionContext, build_execution_context
-from agent.memory import SQLiteMemory
+from agent.storage import SessionStorage
 
 
 def test_environment_context_defaults() -> None:
@@ -23,12 +23,12 @@ def test_environment_context_defaults() -> None:
 
 def test_build_execution_context_aggregation(tmp_path: Path) -> None:
     """Vérifie la construction instantanée du contexte global avec historique et profil."""
-    memory = SQLiteMemory(tmp_path / "test_ctx.db")
-    memory.record_message("s1", "user", "Bonjour")
-    memory.record_message("s1", "assistant", "Salut Mohamed")
+    storage = SessionStorage(tmp_path / "test_ctx.db")
+    storage.record_message("s1", "user", "Bonjour")
+    storage.record_message("s1", "assistant", "Salut Mohamed")
 
     ctx = build_execution_context(
-        memory=memory,
+        storage=storage,
         session_id="s1",
         user_profile="Profil test Mohamed",
         history_limit=2,

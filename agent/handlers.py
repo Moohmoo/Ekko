@@ -18,7 +18,7 @@ from tools.base import BaseTool
 from tools.registry import ToolRegistry
 from .context import ExecutionContext
 from .pipeline import collect_sources, plan_research, synthesize_findings_stream
-from .prompts import build_system_prompt, format_step_prompt
+from .prompts import build_chat_prompt, build_system_prompt, format_step_prompt
 from .schemas import (
     AgentAction,
     AgentEvent,
@@ -63,15 +63,7 @@ class ChatHandler(BaseHandler):
         req: AgentRequest,
         ctx: ExecutionContext,
     ) -> AsyncIterator[AgentEvent]:
-        sys_prompt = (
-            "Tu es Ekko, l'assistant personnel d'ingénierie et de recherche de Mohamed.\n"
-            f"Date actuelle : {ctx.current_date}.\n"
-            f"Profil utilisateur :\n{ctx.user_profile}\n\n"
-            "Consignes :\n"
-            "- Sois naturel, direct, sobre et précis.\n"
-            "- Réponds amicalement aux salutations familières (ex: 'salut', 'bonjour').\n"
-            "- Utilise fidèlement l'historique récent pour assurer la continuité du dialogue."
-        )
+        sys_prompt = build_chat_prompt(ctx.current_date, ctx.user_profile)
         prompt = f"{ctx.history_block}\n\nUtilisateur : {req.query}" if ctx.history_block else req.query
         chunks: list[str] = []
         async for chunk in self.provider.stream_text(prompt=prompt, system_instruction=sys_prompt):

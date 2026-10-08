@@ -7,7 +7,7 @@ import pytest
 from pydantic import BaseModel
 from config import Settings
 from agent.engine import EkkoEngine
-from agent.memory import SQLiteMemory
+from agent.storage import SessionStorage
 from agent.schemas import (
     AgentAction,
     AgentEvent,
@@ -73,10 +73,10 @@ class MockTool(BaseTool):
         return f"Trouvé: {kwargs.get('query')}"
 
 
-def setup_engine(tmp_path: Path, actions: list[AgentAction]) -> tuple[EkkoEngine, SQLiteMemory]:
+def setup_engine(tmp_path: Path, actions: list[AgentAction]) -> tuple[EkkoEngine, SessionStorage]:
     """Prépare un moteur et sa mémoire temporaire pour les tests."""
     settings = Settings()
-    memory = SQLiteMemory(tmp_path / "test_engine.db")
+    storage = SessionStorage(tmp_path / "test_engine.db")
     registry = ToolRegistry()
     registry.register(MockTool())
     provider = MockLLMProvider(actions)
@@ -84,11 +84,11 @@ def setup_engine(tmp_path: Path, actions: list[AgentAction]) -> tuple[EkkoEngine
         settings=settings,
         provider=provider,
         registry=registry,
-        memory=memory,
+        storage=storage,
         user_profile="Profil de test",
         max_steps=3,
     )
-    return engine, memory
+    return engine, storage
 
 
 async def consume_engine(

@@ -8,18 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import sqlite3
 
-DEFAULT_PROFILE_CONTENT = """# Profil Utilisateur - Mohamed
-
-- **Rôle :** Ingénieur informatique & Bioinformatique
-- **Préférences de communication :**
-  - Réponses directes, synthétiques et factuelles.
-  - Zéro bavardage inutile, style direct et sobre.
-  - Précision technique et rigueur d'ingénierie logicielle.
-- **Environnement technique :**
-  - OS : Ubuntu Linux
-  - Matériel : AMD Ryzen 7, NVIDIA GeForce RTX 5050 (8 Go VRAM), 16 Go RAM
-  - Gestionnaire de paquets : uv
-"""
+from .prompts import DEFAULT_PROFILE_CONTENT
 
 
 def load_user_profile(memory_dir: Path) -> str:
@@ -94,5 +83,4 @@ class SessionStorage:
         return {"messages": count}
 
 
-# Alias canonique de compatibilité
-SQLiteMemory = SessionStorage
+

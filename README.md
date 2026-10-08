@@ -19,12 +19,11 @@ Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. C
    └──────┬─────────────────────┬─────────────────────┬──────┘
           │                     │                     │
           ▼                     ▼                     ▼
-   ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
-   │ LLM Providers │     │ SQLiteMemory  │     │ ToolRegistry  │
-   │  - Local 7B   │     │  - Messages   │     │ (Lego Primitives)
-   │  - Gemini     │     │  - Task Runs  │     └───────┬───────┘
-   └───────────────┘     │  - TTL Purge  │             │
-                         └───────────────┘             ▼
+   ┌───────────────┐     ┌────────────────┐     ┌───────────────┐
+   │ LLM Providers │     │ SessionStorage │     │ ToolRegistry  │
+   │  - Local 7B   │     │  - Messages    │     │ (Lego Primitives)
+   │  - Gemini     │     │  - TTL Purge   │     └───────┬───────┘
+   └───────────────┘     └────────────────┘             │
                                          ┌───────────────────────────┐
                                          │ Outils Universels         │
                                          │ - search (academic/code/  │

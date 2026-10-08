@@ -6,7 +6,7 @@ Lance directement la session interactive avec option de débogage (-d / --debug)
 import argparse
 import asyncio
 import uuid
-from agent import AgentRequest, EkkoEngine, SQLiteMemory, load_user_profile
+from agent import AgentRequest, EkkoEngine, SessionStorage, load_user_profile
 from config import Settings, get_settings
 from core import format_error_for_display, setup_logging
 from providers import create_llm_provider
@@ -36,15 +36,15 @@ def initialize_engine(settings: Settings | None = None) -> EkkoEngine:
     """Initialise et configure le moteur ReAct avec la mémoire et les outils."""
     cfg = settings or get_settings()
     provider = create_llm_provider(cfg)
-    memory = SQLiteMemory(cfg.db_path)
-    memory.purge_old_history(cfg.history_retention_days)
+    storage = SessionStorage(cfg.db_path)
+    storage.purge_old_history(cfg.history_retention_days)
     user_profile = load_user_profile(cfg.memory_dir_path)
 
     return EkkoEngine(
         settings=cfg,
         provider=provider,
         registry=default_registry,
-        memory=memory,
+        storage=storage,
         user_profile=user_profile,
         use_pipeline=True,
     )
