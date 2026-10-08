@@ -2,9 +2,11 @@ import pytest
 from agent.schemas import (
     AgentResponse,
     DoneEvent,
+    StreamChunkEvent,
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
+    ValidationEvent,
 )
 from ui.console import (
     AgentUI,
@@ -126,3 +128,19 @@ def test_format_markdown_output_decompression() -> None:
     assert "\n- C'est quoi : X" in result
     assert "\n- Pourquoi : Y" in result
     assert "\n- Detail : Z" in result
+
+
+@pytest.mark.asyncio
+async def test_console_presenter_streaming() -> None:
+    """Vérifie l'affichage en continu des StreamChunkEvent sans duplication."""
+    async def sample_stream():
+        yield StreamChunkEvent(delta="Première ")
+        yield StreamChunkEvent(delta="partie.")
+        yield ValidationEvent(content="Première partie.", elapsed=0.5)
+        yield DoneEvent(response=AgentResponse(content="Première partie."))
+
+    presenter = ConsolePresenter(debug=False)
+    resp = await presenter.render_stream(sample_stream())
+    assert resp is not None
+    assert resp.content == "Première partie."
+

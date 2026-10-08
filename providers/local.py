@@ -4,6 +4,7 @@ Permet d'utiliser des modèles hébergés sur Ollama, vLLM ou LM Studio
 sans dépendre d'une connexion internet ni de quotas d'API tiers.
 """
 
+from collections.abc import AsyncIterator
 import json
 import re
 from typing import Any, TypeVar
@@ -90,3 +91,32 @@ class LocalProvider(LLMProvider):
             "temperature": 0.3,
         }
         return (await self._post_chat(payload)).strip()
+
+    async def stream_text(
+        self,
+        prompt: str,
+        system_instruction: str = "",
+    ) -> AsyncIterator[str]:
+        """Génère du texte en flux continu (SSE) depuis le serveur local Ollama/vLLM."""
+        payload = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.3,
+            "stream": True,
+        }
+        url = f"{self.base_url}/chat/completions"
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream("POST", url, json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line.startswith("data: ") and not line.strip().endswith("[DONE]"):
+                        try:
+                            data = json.loads(line[6:].strip())
+                            delta = data["choices"][0]["delta"].get("content", "")
+                            if delta:
+                                yield delta
+                        except Exception:
+                            continue

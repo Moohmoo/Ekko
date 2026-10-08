@@ -158,6 +158,12 @@ class ValidationEvent(BaseModel):
     elapsed: float = 0.0
 
 
+class StreamChunkEvent(BaseModel):
+    """Événement émis lors du streaming continu d'un fragment de texte."""
+
+    delta: str
+
+
 class DoneEvent(BaseModel):
     """Événement terminal signalant l'achèvement de la tâche."""
 
@@ -171,6 +177,7 @@ AgentEvent = (
     | ToolCallEvent
     | ToolResultEvent
     | ValidationEvent
+    | StreamChunkEvent
     | DoneEvent
 )
 

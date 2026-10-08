@@ -1,5 +1,6 @@
 """Tests unitaires et d'intégration pour le pipeline de recherche déterministe."""
 
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TypeVar
 import pytest
@@ -7,7 +8,14 @@ from pydantic import BaseModel
 from agent.engine import EkkoEngine
 from agent.memory import SQLiteMemory
 from agent.pipeline import collect_sources, plan_research, synthesize_findings
-from agent.schemas import DoneEvent, PlanEvent, RetrievalEvent, SearchPlan, ValidationEvent
+from agent.schemas import (
+    DoneEvent,
+    PlanEvent,
+    RetrievalEvent,
+    SearchPlan,
+    StreamChunkEvent,
+    ValidationEvent,
+)
 from config import Settings
 from providers.base import LLMProvider
 from tools.base import BaseTool, EmptyParams
@@ -30,6 +38,11 @@ class MockPipelineProvider(LLMProvider):
 
     async def generate_text(self, prompt: str, system_instruction: str = "") -> str:
         return self.synthesis_text
+
+    async def stream_text(
+        self, prompt: str, system_instruction: str = ""
+    ) -> AsyncIterator[str]:
+        yield self.synthesis_text
 
 
 class MockSearchTool(BaseTool):
@@ -105,11 +118,13 @@ async def test_engine_pipeline_stream(tmp_path: Path) -> None:
 
     events = [ev async for ev in engine.run_stream("Repliement ARN")]
 
-    assert len(events) == 4
+    assert len(events) == 5
     assert isinstance(events[0], PlanEvent)
     assert events[0].focus == "academic"
     assert isinstance(events[1], RetrievalEvent)
     assert events[1].count == 1
-    assert isinstance(events[2], ValidationEvent)
-    assert isinstance(events[3], DoneEvent)
-    assert "Synthèse certifiée avec lien." in events[3].response.content
+    assert isinstance(events[2], StreamChunkEvent)
+    assert events[2].delta == "Synthèse certifiée avec lien."
+    assert isinstance(events[3], ValidationEvent)
+    assert isinstance(events[4], DoneEvent)
+    assert "Synthèse certifiée avec lien." in events[4].response.content

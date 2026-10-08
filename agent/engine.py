@@ -13,7 +13,7 @@ from core import Logger
 from providers import LLMProvider
 from tools.registry import ToolRegistry
 from .memory import SQLiteMemory
-from .pipeline import collect_sources, plan_research, synthesize_findings
+from .pipeline import collect_sources, plan_research, synthesize_findings_stream
 from .prompts import build_system_prompt, format_history_block, format_step_prompt
 from .schemas import (
     AgentAction,
@@ -23,6 +23,7 @@ from .schemas import (
     DoneEvent,
     PlanEvent,
     RetrievalEvent,
+    StreamChunkEvent,
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
@@ -112,7 +113,11 @@ class EkkoEngine:
         yield RetrievalEvent(source=plan.focus, count=count, elapsed=el_retrieval)
 
         t_synth = time.perf_counter()
-        final_ans = await synthesize_findings(self.provider, req.query, sources, self.user_profile)
+        chunks: list[str] = []
+        async for chunk in synthesize_findings_stream(self.provider, req.query, sources, self.user_profile):
+            chunks.append(chunk)
+            yield StreamChunkEvent(delta=chunk)
+        final_ans = "".join(chunks).strip() or sources
         el_synth = max(0.1, time.perf_counter() - t_synth)
         yield ValidationEvent(content=final_ans, elapsed=el_synth)
 

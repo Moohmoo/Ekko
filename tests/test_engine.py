@@ -1,5 +1,6 @@
 """Tests d'intégration pour le moteur ReAct EkkoEngine (Brique 2)."""
 
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Type, TypeVar
 import pytest
@@ -44,6 +45,12 @@ class MockLLMProvider(LLMProvider):
             if len(parts) > 1:
                 return parts[1].split("\n\nConsigne")[0].strip()
         return "mock text"
+
+    async def stream_text(
+        self, prompt: str, system_instruction: str = ""
+    ) -> AsyncIterator[str]:
+        text = await self.generate_text(prompt, system_instruction)
+        yield text
 
 
 class MockToolParams(BaseModel):

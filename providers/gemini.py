@@ -5,6 +5,7 @@ options HTTP explicites (X-Server-Timeout), retry automatique et logs de diagnos
 """
 
 import asyncio
+from collections.abc import AsyncIterator
 import time
 from typing import Any, TypeVar
 from google import genai
@@ -116,3 +117,23 @@ class GeminiProvider(LLMProvider):
         )
         response = await self._call_api_with_retry(prompt, config)
         return (response.text or "").strip()
+
+    async def stream_text(
+        self,
+        prompt: str,
+        system_instruction: str = "",
+    ) -> AsyncIterator[str]:
+        """Produit une réponse textuelle en streaming continu."""
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction or None,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+            temperature=0.3,
+        )
+        stream = await self.client.aio.models.generate_content_stream(
+            model=self.model_name,
+            contents=prompt,
+            config=config,
+        )
+        async for chunk in stream:
+            if chunk.text:
+                yield chunk.text

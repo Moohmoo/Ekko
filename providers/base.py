@@ -5,6 +5,7 @@ selon le principe de responsabilité unique et l'inversion de dépendance (SOLID
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from typing import TypeVar
 from pydantic import BaseModel
 
@@ -31,4 +32,13 @@ class LLMProvider(ABC):
         system_instruction: str = "",
     ) -> str:
         """Génère une réponse textuelle brute (par exemple du Markdown)."""
+        pass
+
+    @abstractmethod
+    async def stream_text(
+        self,
+        prompt: str,
+        system_instruction: str = "",
+    ) -> AsyncIterator[str]:
+        """Génère une réponse textuelle en flux continu (streaming de tokens)."""
         pass

@@ -1,5 +1,6 @@
 """Tests unitaires pour l'Agent Validateur / Critique (Evaluator)."""
 
+from collections.abc import AsyncIterator
 from typing import TypeVar
 import pytest
 from pydantic import BaseModel
@@ -24,6 +25,11 @@ class MockValidatorProvider(LLMProvider):
     async def generate_text(self, prompt: str, system_instruction: str = "") -> str:
         self.call_count += 1
         return self.response_text
+
+    async def stream_text(
+        self, prompt: str, system_instruction: str = ""
+    ) -> AsyncIterator[str]:
+        yield self.response_text
 
 
 @pytest.mark.asyncio

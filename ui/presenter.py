@@ -11,6 +11,7 @@ from agent.schemas import (
     DoneEvent,
     PlanEvent,
     RetrievalEvent,
+    StreamChunkEvent,
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
@@ -31,6 +32,7 @@ class ConsolePresenter:
     def __init__(self, debug: bool = False) -> None:
         self.debug = debug
         self.ui = AgentUI(debug=debug)
+        self._has_streamed = False
 
     def render_event(self, event: AgentEvent) -> None:
         """Traite et affiche un événement unitaire du moteur."""
@@ -48,11 +50,25 @@ class ConsolePresenter:
             self.ui.on_tool_call(event.tool_name, event.arguments)
         elif isinstance(event, ToolResultEvent):
             self.ui.on_tool_result(event.tool_name, event.result)
+        elif isinstance(event, StreamChunkEvent):
+            if not self._has_streamed:
+                self.ui.stop_spinner()
+                self._has_streamed = True
+                console.print()
+            console.print(event.delta, end="", markup=False)
         elif isinstance(event, ValidationEvent):
-            self.ui.on_validation(event.elapsed)
+            if not self._has_streamed:
+                self.ui.on_validation(event.elapsed)
+            else:
+                console.print()
+                console.print(f"[dim magenta]⚡ [3/3] Synthèse certifiée ({event.elapsed:.1f}s)[/dim magenta]")
         elif isinstance(event, DoneEvent):
             self.ui.stop_spinner()
-            render_final_answer(event.response)
+            if not self._has_streamed:
+                render_final_answer(event.response)
+            else:
+                console.print()
+                self._has_streamed = False
 
     async def render_stream(self, stream: AsyncIterator[AgentEvent]) -> AgentResponse | None:
         """Consomme le flux asynchrone d'événements et pilote le rendu en temps réel."""

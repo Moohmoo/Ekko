@@ -5,6 +5,7 @@ Cadrage & Expansion de requêtes -> Collecte & Dédoublonnage -> Synthèse certi
 """
 
 import asyncio
+from collections.abc import AsyncIterator
 import time
 from typing import Any
 from providers.base import LLMProvider
@@ -50,9 +51,8 @@ Rédige une synthèse technique rigoureuse à partir des sources documentaires f
    Chaque article ou dépôt cité DOIT comporter son lien cliquable :
    - **[Nom ou Titre](URL)** (Auteurs/Date) : faits concrets.
    Interdiction formelle de supprimer les URLs présentes dans les sources.
-3. STYLE DIRECT : Va immédiatement au résultat épuré sans bavardage d'introduction.
-4. ABSENCE DE SOURCES : Si les sources sont vides, réponds :
-   'Aucune source technique fiable n'a été trouvée sur ce sujet récemment.'"""
+3. STYLE DIRECT : Va immédiatement au résultat épuré sans bavardage d'introduction ni récitation de règles en conclusion.
+4. ABSENCE DE SOURCES : Uniquement si les sources fournies sont totalement vides, indique qu'aucune source technique n'a été trouvée."""
 
 
 async def plan_research(
@@ -121,3 +121,20 @@ async def synthesize_findings(
     )
     res = await provider.generate_text(prompt=prompt, system_instruction=sys_instruction)
     return res.strip() if res.strip() else sources_text
+
+
+async def synthesize_findings_stream(
+    provider: LLMProvider,
+    query: str,
+    sources_text: str,
+    user_profile: str,
+) -> AsyncIterator[str]:
+    """Formule une synthèse scientifique et technique en flux continu (streaming)."""
+    sys_instruction = SYNTHESIZER_SYSTEM_PROMPT.replace("{user_profile}", user_profile)
+    prompt = (
+        f"Demande initiale : {query}\n\n"
+        f"Sources documentaires collectées :\n{sources_text}\n\n"
+        "Consigne : Formule la synthèse technique structurée avec les liens cliquables."
+    )
+    async for chunk in provider.stream_text(prompt=prompt, system_instruction=sys_instruction):
+        yield chunk
