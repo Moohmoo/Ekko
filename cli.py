@@ -50,6 +50,20 @@ def initialize_engine(settings: Settings | None = None) -> EkkoEngine:
     )
 
 
+def _handle_command(query: str, model: str, provider: str, debug: bool) -> tuple[str | None, str | None]:
+    """Interprète les commandes spéciales du terminal (/reset, exit)."""
+    clean_q = query.strip().lower()
+    if clean_q in {"exit", "quit", "q"}:
+        console.print("[dim]Au revoir ![/dim]")
+        return "exit", None
+    if clean_q in {"/reset", "/clear"}:
+        console.clear()
+        print_banner(model, provider, debug=debug)
+        console.print("[dim]Session réinitialisée.[/dim]\n")
+        return "reset", f"sess_{uuid.uuid4().hex[:8]}"
+    return None, None
+
+
 async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
     """Exécute la boucle interactive principale de l'assistant."""
     settings = get_settings()
@@ -61,22 +75,25 @@ async def run_interactive_repl(engine: EkkoEngine, debug: bool = False) -> None:
     while True:
         try:
             query = prompt_user_input()
-            if not query:
-                continue
-            if query.lower() in {"exit", "quit", "q"}:
-                console.print("[dim]Au revoir ![/dim]")
-                break
-            if query.lower() in {"/reset", "/clear"}:
-                console.clear()
-                print_banner(model, settings.llm_provider, debug=debug)
-                session_id = f"sess_{uuid.uuid4().hex[:8]}"
-                console.print("[dim]Session réinitialisée.[/dim]\n")
-                continue
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[dim]Au revoir ![/dim]")
+            break
+
+        if not query:
+            continue
+
+        cmd_action, new_session = _handle_command(query, model, settings.llm_provider, debug)
+        if cmd_action == "exit":
+            break
+        if cmd_action == "reset" and new_session:
+            session_id = new_session
+            continue
+
+        try:
             request = AgentRequest(query=query, session_id=session_id)
             await presenter.render_stream(engine.run_stream(request))
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[dim]Session interrompue. Au revoir ![/dim]")
-            break
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            console.print("\n[dim]Génération interrompue par l'utilisateur.[/dim]")
         except Exception as exc:
             render_error(format_error_for_display(exc, debug=debug))
         finally:

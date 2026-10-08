@@ -249,15 +249,19 @@ def test_build_arxiv_search_query() -> None:
 @pytest.mark.asyncio
 async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     """Vérifie le téléchargement et le nettoyage HTML par ReaderTool."""
+    from contextlib import asynccontextmanager
     html_content = "<html><body><h1>Titre</h1><p>Paragraphe intéressant</p></body></html>"
 
     class MockResponse:
         text = html_content
-        content = html_content.encode("utf-8")
         headers = {"content-type": "text/html"}
+        encoding = "utf-8"
 
         def raise_for_status(self) -> None:
             pass
+
+        async def aiter_bytes(self):
+            yield html_content.encode("utf-8")
 
     class MockAsyncClient:
         def __init__(self, *args: object, **kwargs: object) -> None:
@@ -269,8 +273,9 @@ async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
         async def __aexit__(self, *args: object):
             pass
 
-        async def get(self, *args: object, **kwargs: object):
-            return MockResponse()
+        @asynccontextmanager
+        async def stream(self, *args: object, **kwargs: object):
+            yield MockResponse()
 
     monkeypatch.setattr("httpx.AsyncClient", MockAsyncClient)
     tool = ReaderTool()
@@ -287,22 +292,31 @@ async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.asyncio
 async def test_reader_tool_binary_and_oversize(monkeypatch: pytest.MonkeyPatch) -> None:
     """Vérifie le rejet sécurisé des formats binaires et fichiers trop volumineux."""
+    from contextlib import asynccontextmanager
+
     class MockBinaryResponse:
-        content = b"x" * 100
-        text = ""
         headers = {"content-type": "application/octet-stream"}
+        encoding = "utf-8"
+
         def raise_for_status(self) -> None:
             pass
+
+        async def aiter_bytes(self):
+            yield b"x" * 100
 
     class MockAsyncClient:
         def __init__(self, *args: object, **kwargs: object) -> None:
             pass
+
         async def __aenter__(self):
             return self
+
         async def __aexit__(self, *args: object):
             pass
-        async def get(self, *args: object, **kwargs: object):
-            return MockBinaryResponse()
+
+        @asynccontextmanager
+        async def stream(self, *args: object, **kwargs: object):
+            yield MockBinaryResponse()
 
     monkeypatch.setattr("httpx.AsyncClient", MockAsyncClient)
     tool = ReaderTool()
@@ -318,3 +332,81 @@ def test_get_region_for_language_mapping() -> None:
     assert get_region_for_language("en") == "en-us"
     assert get_region_for_language("de") == "de-de"
     assert get_region_for_language("unknown") == "wt-wt"
+
+
+@pytest.mark.asyncio
+async def test_fetch_arxiv_entries_handles_malformed_author(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie que les balises author sans balise name ne font pas échouer l'ensemble du flux arXiv."""
+    from tools.search.tool import _fetch_arxiv_entries
+
+    xml_data = """<feed xmlns="http://www.w3.org/2005/Atom">
+      <entry>
+        <title>Valid Paper</title>
+        <id>http://arxiv.org/abs/2601.0001</id>
+        <summary>A good abstract.</summary>
+        <published>2026-01-01T00:00:00Z</published>
+        <author><email>no-name@arxiv.org</email></author>
+        <author><name>Alice Smith</name></author>
+      </entry>
+    </feed>"""
+
+    class MockResp:
+        status_code = 200
+        text = xml_data
+
+    class MockClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args: object):
+            pass
+
+        async def get(self, *args: object, **kwargs: object):
+            return MockResp()
+
+    monkeypatch.setattr("httpx.AsyncClient", MockClient)
+    entries = await _fetch_arxiv_entries("quantum", max_results=5)
+    assert len(entries) == 1
+    assert entries[0].title == "Valid Paper"
+    assert entries[0].authors == ["Alice Smith"]
+
+
+@pytest.mark.asyncio
+async def test_reader_tool_oversized_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie que les documents dépassant 2 Mo sont stoppés sans saturer la mémoire."""
+    from contextlib import asynccontextmanager
+
+    class MockOversizedResponse:
+        headers = {
+            "content-type": "text/html",
+            "content-length": str(5 * 1024 * 1024),
+        }
+        encoding = "utf-8"
+
+        def raise_for_status(self) -> None:
+            pass
+
+        async def aiter_bytes(self):
+            yield b"x" * 100
+
+    class MockClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args: object):
+            pass
+
+        @asynccontextmanager
+        async def stream(self, *args: object, **kwargs: object):
+            yield MockOversizedResponse()
+
+    monkeypatch.setattr("httpx.AsyncClient", MockClient)
+    tool = ReaderTool()
+    res = await tool.execute(url="https://example.com/large.html")
+    assert "dépasse la taille maximale autorisée" in res

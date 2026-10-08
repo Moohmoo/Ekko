@@ -40,10 +40,16 @@ def clean_json_payload(text: str) -> str:
     cleaned = match.group(1).strip() if match else text.strip()
     try:
         data = json.loads(cleaned)
-        unwrapped = _unwrap_schema_fragments(data)
-        return json.dumps(unwrapped)
+        return json.dumps(_unwrap_schema_fragments(data))
     except Exception:
         pass
+    start, end = cleaned.find("{"), cleaned.rfind("}")
+    if start != -1 and end > start:
+        candidate = cleaned[start : end + 1]
+        try:
+            return json.dumps(_unwrap_schema_fragments(json.loads(candidate)))
+        except Exception:
+            return candidate
     return cleaned
 
 

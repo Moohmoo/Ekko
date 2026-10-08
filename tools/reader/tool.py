@@ -26,6 +26,22 @@ def _clean_html_to_text(html_content: str) -> str:
     return " ".join(no_tags.split())
 
 
+async def _stream_safe_content(resp: httpx.Response, max_bytes: int = 2 * 1024 * 1024) -> str | None:
+    """Lit les octets en flux continu et interrompt si le plafond est dépassé."""
+    clength = resp.headers.get("content-length")
+    if clength and clength.isdigit() and int(clength) > max_bytes:
+        return None
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in resp.aiter_bytes():
+        total += len(chunk)
+        if total > max_bytes:
+            return None
+        chunks.append(chunk)
+    encoding = resp.encoding or "utf-8"
+    return b"".join(chunks).decode(encoding, errors="replace")
+
+
 class ReaderTool(BaseTool):
     """Outil universel permettant d'extraire et lire le contenu textuel d'une URL."""
 
@@ -37,22 +53,23 @@ class ReaderTool(BaseTool):
     parameters_schema = ReaderParams
 
     async def execute(self, url: str, max_chars: int = 4000) -> str:
-        """Télécharge la page de manière asynchrone et extrait le texte utile."""
+        """Télécharge la page en streaming avec garde-fous de taille et type."""
         clean_url = url.strip()
         if not clean_url.startswith(("http://", "https://")):
             clean_url = f"https://{clean_url}"
         headers = {"User-Agent": USER_AGENT}
         try:
             async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-                resp = await client.get(clean_url, headers=headers)
-                resp.raise_for_status()
-                ctype = resp.headers.get("content-type", "").lower()
-                if ctype and not any(t in ctype for t in ("text", "html", "json", "xml", "markdown")):
-                    return f"Le document `{clean_url}` n'est pas un format textuel lisible ({ctype})."
-                if len(resp.content) > 2 * 1024 * 1024:
-                    return f"Le document `{clean_url}` dépasse la taille maximale autorisée (2 Mo)."
-                text = _clean_html_to_text(resp.text)
-                truncated = text[:max_chars] + ("..." if len(text) > max_chars else "")
-                return f"Contenu extrait de `{clean_url}` :\n\n{truncated}"
+                async with client.stream("GET", clean_url, headers=headers) as resp:
+                    resp.raise_for_status()
+                    ctype = resp.headers.get("content-type", "").lower()
+                    if ctype and not any(t in ctype for t in ("text", "html", "json", "xml", "markdown")):
+                        return f"Le document `{clean_url}` n'est pas un format textuel lisible ({ctype})."
+                    raw_text = await _stream_safe_content(resp)
+                    if raw_text is None:
+                        return f"Le document `{clean_url}` dépasse la taille maximale autorisée (2 Mo)."
+                    text = _clean_html_to_text(raw_text)
+                    truncated = text[:max_chars] + ("..." if len(text) > max_chars else "")
+                    return f"Contenu extrait de `{clean_url}` :\n\n{truncated}"
         except Exception as exc:
             return f"Impossible de charger la page `{clean_url}` : {exc}"

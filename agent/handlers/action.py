@@ -93,7 +93,7 @@ class ActionHandler(BaseHandler):
         """Exécute ou intercepte l'appel d'outil unitaire."""
         val_args = self.registry.validate_arguments(action.tool_name, action.tool_arguments)
         clean_args = {k: v for k, v in val_args.items() if v is not None}
-        key = (action.tool_name or "", json.dumps(clean_args, sort_keys=True))
+        key = (action.tool_name or "", json.dumps(clean_args, sort_keys=True, default=str))
         if key in executed_actions:
             obs = (
                 f"Action redondante : `{action.tool_name}` a déjà été exécuté avec ces arguments identiques. "
@@ -163,6 +163,10 @@ class ActionHandler(BaseHandler):
             if action.tool_name:
                 async for ev in self._step_tool(action, observations, tools_used, executed_actions):
                     yield ev
+            elif not action.final_answer:
+                obs = "Format invalide : Spécifie soit un 'tool_name' à appeler, soit ta conclusion dans 'final_answer'."
+                observations.append(obs)
+                yield ToolResultEvent(tool_name="system", result=obs)
 
         async for ev in self._finalize_max_steps(req, ctx, observations, tools_used, last_thought):
             yield ev

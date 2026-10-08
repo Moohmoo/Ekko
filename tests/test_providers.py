@@ -103,4 +103,24 @@ def test_translate_local_error_types() -> None:
     assert isinstance(typed_status, ProviderError)
 
 
+def test_clean_json_payload_extracts_outer_braces() -> None:
+    """Vérifie l'extraction du JSON entre accolades lorsque le texte n'a pas de backticks."""
+    import json
+    from providers.local import clean_json_payload
+
+    raw = 'Voici la réponse structurée :\n{"thought": "test", "intent": "research"}\nBonne journée !'
+    cleaned = clean_json_payload(raw)
+    assert json.loads(cleaned) == {"thought": "test", "intent": "research"}
+
+
+def test_create_llm_provider_validates_provider_name() -> None:
+    """Vérifie que create_llm_provider rejette les fournisseurs inconnus."""
+    from config import Settings
+    from providers import create_llm_provider
+
+    cfg = Settings(llm_provider="unsupported_provider")
+    with pytest.raises(ValueError, match="Fournisseur LLM non supporté"):
+        create_llm_provider(cfg)
+
+
 

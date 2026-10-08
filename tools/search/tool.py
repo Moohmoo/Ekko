@@ -86,15 +86,23 @@ async def _fetch_arxiv_entries(query: str, max_results: int) -> list[SearchItem]
             summary_el = entry.find("atom:summary", ns)
             id_el = entry.find("atom:id", ns)
             pub_el = entry.find("atom:published", ns)
-            authors = [a.find("atom:name", ns).text or "" for a in entry.findall("atom:author", ns)]
+            authors = [
+                a.find("atom:name", ns).text.strip()
+                for a in entry.findall("atom:author", ns)
+                if a.find("atom:name", ns) is not None and a.find("atom:name", ns).text
+            ]
+            title_text = title_el.text if title_el is not None and title_el.text else "Sans titre"
+            url_text = id_el.text.strip() if id_el is not None and id_el.text else ""
+            summary_text = summary_el.text if summary_el is not None and summary_el.text else ""
+            date_text = (pub_el.text or "")[:10] if pub_el is not None else ""
             items.append(
                 SearchItem(
-                    title=" ".join((title_el.text or "Sans titre").split()),
-                    url=(id_el.text or "").strip(),
-                    snippet=" ".join((summary_el.text or "").split()),
+                    title=" ".join(title_text.split()),
+                    url=url_text,
+                    snippet=" ".join(summary_text.split()),
                     source="arXiv",
-                    date=(pub_el.text or "")[:10],
-                    authors=[a for a in authors if a][:3],
+                    date=date_text,
+                    authors=authors[:3],
                 )
             )
         return items

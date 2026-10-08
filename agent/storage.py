@@ -22,7 +22,7 @@ class SessionStorage:
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
         """Ouvre une connexion SQLite avec fermeture et validation garanties."""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=15.0)
         conn.row_factory = sqlite3.Row
         try:
             with conn:
@@ -35,6 +35,7 @@ class SessionStorage:
         with self._connection() as conn:
             conn.execute("PRAGMA journal_mode = WAL")
             conn.execute("PRAGMA synchronous = NORMAL")
+            conn.execute("PRAGMA busy_timeout = 10000")
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

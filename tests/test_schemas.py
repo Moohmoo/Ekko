@@ -103,3 +103,21 @@ def test_search_plan_schema_mimicry_tolerance() -> None:
     assert plan2.queries == ["models"]
 
 
+def test_schemas_null_thought_and_sentinel_final_answer() -> None:
+    """Vérifie la robustesse face aux valeurs nulles et sentinelles retournées par les SLMs."""
+    ui = UserIntent.model_validate({"thought": None, "intent": "chat"})
+    assert ui.thought == ""
+
+    sp = SearchPlan.model_validate({"thought": None, "queries": []})
+    assert sp.thought == ""
+
+    action = AgentAction.model_validate({
+        "thought": None,
+        "tool_name": "null",
+        "final_answer": "null",
+    })
+    assert action.thought == ""
+    assert action.tool_name is None
+    assert action.final_answer is None
+
+

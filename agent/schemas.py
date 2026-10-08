@@ -9,6 +9,17 @@ from pydantic import BaseModel, Field, field_validator
 from providers.base import LLMProvider
 
 
+def _clean_thought_value(value: Any) -> str:
+    """Coerce thought values to clean string, handling None and schema objects."""
+    if value is None:
+        return ""
+    if isinstance(value, dict) and "default" in value:
+        value = value["default"]
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
 class UserIntent(BaseModel):
     """Classification de l'intention utilisateur en amont de l'orchestration."""
 
@@ -21,6 +32,12 @@ class UserIntent(BaseModel):
         description="Type d'intention : 'chat' (discussion directe, salutation, rappel), "
         "'research' (veille, SOTA, articles, code), 'action' (todo, fichiers, commandes).",
     )
+
+    @field_validator("thought", mode="before")
+    @classmethod
+    def sanitize_thought(cls, value: Any) -> str:
+        """Assure que la réflexion est toujours une chaîne propre."""
+        return _clean_thought_value(value)
 
     @field_validator("intent", mode="before")
     @classmethod
@@ -59,6 +76,12 @@ class SearchPlan(BaseModel):
         default_factory=list,
         description="1 à 2 requêtes clés en anglais pour les moteurs de recherche académiques ou de code.",
     )
+
+    @field_validator("thought", mode="before")
+    @classmethod
+    def sanitize_thought(cls, value: Any) -> str:
+        """Assure que la réflexion est toujours une chaîne propre."""
+        return _clean_thought_value(value)
 
     @field_validator("is_search_needed", mode="before")
     @classmethod
@@ -115,6 +138,7 @@ class AgentAction(BaseModel):
     """Structure de décision émise par le modèle à chaque étape de la boucle ReAct."""
 
     thought: str = Field(
+        default="",
         description="Réflexion technique, analyse de la situation et stratégie de résolution.",
     )
     tool_name: str | None = Field(
@@ -129,6 +153,12 @@ class AgentAction(BaseModel):
         default=None,
         description="Message final clair et direct à l'utilisateur lorsque la tâche est achevée.",
     )
+
+    @field_validator("thought", mode="before")
+    @classmethod
+    def sanitize_thought(cls, value: Any) -> str:
+        """Assure que la réflexion est toujours une chaîne propre."""
+        return _clean_thought_value(value)
 
     @field_validator("tool_arguments_json", mode="before")
     @classmethod
@@ -147,6 +177,14 @@ class AgentAction(BaseModel):
     @field_validator("tool_name", mode="after")
     @classmethod
     def sanitize_tool_name(cls, value: str | None) -> str | None:
+        """Nettoie les chaînes sentinelles 'null' ou 'none' générées par les LLMs."""
+        if not value or value.strip().lower() in {"none", "null", "false", "undefined", ""}:
+            return None
+        return value.strip()
+
+    @field_validator("final_answer", mode="after")
+    @classmethod
+    def sanitize_final_answer(cls, value: str | None) -> str | None:
         """Nettoie les chaînes sentinelles 'null' ou 'none' générées par les LLMs."""
         if not value or value.strip().lower() in {"none", "null", "false", "undefined", ""}:
             return None

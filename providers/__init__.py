@@ -8,14 +8,20 @@ from .local import LocalProvider
 
 def create_llm_provider(settings: Settings) -> LLMProvider:
     """Instancie le provider LLM configuré (Gemini officiel ou local)."""
-    if settings.llm_provider.lower() == "local":
+    provider = settings.llm_provider.strip().lower()
+    if provider == "local":
         return LocalProvider(
             base_url=settings.local_llm_url,
             model_name=settings.local_llm_model,
         )
-    return GeminiProvider(
-        api_key=settings.gemini_api_key,
-        model_name=settings.gemini_model,
+    if provider == "gemini":
+        return GeminiProvider(
+            api_key=settings.gemini_api_key,
+            model_name=settings.gemini_model,
+        )
+    raise ValueError(
+        f"Fournisseur LLM non supporté : '{settings.llm_provider}'. "
+        "Valeurs autorisées : 'local', 'gemini'."
     )
 
 
