@@ -103,11 +103,11 @@ def render_tool_result_panel(tool_name: str, result: str) -> None:
     )
 
 
-def format_markdown_output(text: str) -> str:
+def format_markdown_output(text: str | None) -> str:
     """Aère les titres Markdown principaux avant restitution."""
     import re
 
-    cleaned = text.strip()
+    cleaned = (text or "").strip()
     return re.sub(r"(?<!\n)\s*###\s+", "\n\n### ", cleaned)
 
 

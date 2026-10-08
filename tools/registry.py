@@ -25,8 +25,8 @@ class ToolRegistry:
         self._tools[tool.name] = tool
 
     def get_tool(self, name: str) -> BaseTool | None:
-        """Récupère un outil par son nom identifiant ou via ses alias."""
-        clean_name = name.strip() if name else ""
+        """Récupère un outil par son nom identifiant ou via ses alias (insensible à la casse)."""
+        clean_name = name.strip().lower() if name else ""
         if clean_name in self._tools:
             return self._tools[clean_name]
         alias_target = TOOL_ALIASES.get(clean_name)

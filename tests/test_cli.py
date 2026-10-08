@@ -68,3 +68,11 @@ async def test_run_interactive_repl_handles_reset() -> None:
     inputs = ["/reset", "exit"]
     with patch("cli.prompt_user_input", side_effect=inputs):
         await run_interactive_repl(engine, debug=False)
+
+
+def test_settings_retention_and_language_validators() -> None:
+    """Vérifie le borning de rétention et la normalisation de langue dans Settings."""
+    cfg = Settings(history_retention_days=-10, default_language=" FR ", llm_provider=" LOCAL ")
+    assert cfg.history_retention_days == 1
+    assert cfg.default_language == "fr"
+    assert cfg.llm_provider == "local"

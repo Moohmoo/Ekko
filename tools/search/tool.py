@@ -51,7 +51,8 @@ class SearchParams(BaseModel):
 
 def _build_arxiv_search_query(query: str) -> str:
     """Construit une requête booléenne pour l'API arXiv à partir des termes clés."""
-    tokens = [w.strip() for w in query.strip().split() if len(w.strip()) > 1]
+    raw_tokens = [re.sub(r"[^\w\-]", "", w).strip() for w in query.strip().split()]
+    tokens = [t for t in raw_tokens if len(t) > 1]
     if not tokens:
         return ""
     clean_terms = [t for t in tokens if t.isalnum() or "-" in t]

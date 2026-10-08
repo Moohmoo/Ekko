@@ -54,6 +54,19 @@ async def test_registry_tool_aliases() -> None:
 
 
 @pytest.mark.asyncio
+async def test_registry_case_insensitive_lookup() -> None:
+    """Vérifie la résolution insensible à la casse des outils et alias."""
+    registry = ToolRegistry()
+    registry.register(SearchTool())
+    registry.register(ReaderTool())
+
+    assert registry.get_tool("SEARCH") is not None
+    assert registry.get_tool("Search") is not None
+    assert registry.get_tool("WEB_SEARCH") is not None
+    assert registry.get_tool("Reader") is not None
+
+
+@pytest.mark.asyncio
 async def test_registry_unknown_tool_handling() -> None:
     """Vérifie le message d'erreur explicite pour un outil inconnu."""
     registry = ToolRegistry()

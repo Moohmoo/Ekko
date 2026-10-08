@@ -62,6 +62,25 @@ class Settings(BaseSettings):
         description="Dossier de stockage des journaux techniques",
     )
 
+    @field_validator("history_retention_days", mode="after")
+    @classmethod
+    def validate_retention_days(cls, value: int) -> int:
+        """Assure que le nombre de jours de rétention est strictement positif."""
+        return max(1, value)
+
+    @field_validator("llm_provider", mode="before")
+    @classmethod
+    def sanitize_provider(cls, value: object) -> str:
+        """Nettoie l'identifiant du fournisseur LLM."""
+        return str(value).strip().lower() if value is not None else "local"
+
+    @field_validator("default_language", mode="before")
+    @classmethod
+    def sanitize_language(cls, value: object) -> str:
+        """Normalise le code de langue par défaut."""
+        clean = str(value).strip().lower() if value is not None else "fr"
+        return clean if clean else "fr"
+
     @field_validator(
         "memory_dir_path",
         "db_path",

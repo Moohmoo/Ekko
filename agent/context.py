@@ -80,6 +80,14 @@ class ExecutionContext(BaseModel):
         return self.env.current_date
 
 
+def _get_safe_cwd() -> str:
+    """Résout le répertoire de travail actuel avec repli sûr sur le dossier utilisateur."""
+    try:
+        return str(Path.cwd())
+    except Exception:
+        return str(Path.home())
+
+
 def build_execution_context(
     storage: SessionStorage,
     session_id: str,
@@ -93,7 +101,7 @@ def build_execution_context(
         current_year=now.year,
         current_time=now.strftime("%H:%M"),
         os_name=platform.system(),
-        cwd=str(Path.cwd()),
+        cwd=_get_safe_cwd(),
     )
     recent_messages = storage.get_recent_messages(session_id, limit=history_limit)
     history_str = format_history_block(recent_messages)
