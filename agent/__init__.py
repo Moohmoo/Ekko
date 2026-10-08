@@ -1,5 +1,4 @@
-"""Package agent définissant le domaine cognitif d'Ekko."""
-
+from .context import ExecutionContext, build_execution_context
 from .engine import EkkoEngine
 from .memory import SQLiteMemory, load_user_profile
 from .prompts import build_system_prompt, format_history_block, format_step_prompt
@@ -19,6 +18,8 @@ from .schemas import (
 from .validator import validate_draft
 
 __all__ = [
+    "ExecutionContext",
+    "build_execution_context",
     "EkkoEngine",
     "SQLiteMemory",
     "load_user_profile",

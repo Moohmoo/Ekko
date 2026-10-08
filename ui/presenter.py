@@ -17,6 +17,8 @@ from agent.schemas import (
     ToolResultEvent,
     ValidationEvent,
 )
+from rich.live import Live
+from rich.markdown import Markdown
 from .console import (
     AgentUI,
     console,
@@ -33,6 +35,14 @@ class ConsolePresenter:
         self.debug = debug
         self.ui = AgentUI(debug=debug)
         self._has_streamed = False
+        self._live: Live | None = None
+        self._streamed_text = ""
+
+    def _stop_live(self) -> None:
+        """Arrête proprement la vue dynamique Live."""
+        if self._live is not None:
+            self._live.stop()
+            self._live = None
 
     def render_event(self, event: AgentEvent) -> None:
         """Traite et affiche un événement unitaire du moteur."""
@@ -54,16 +64,26 @@ class ConsolePresenter:
             if not self._has_streamed:
                 self.ui.stop_spinner()
                 self._has_streamed = True
-                console.print()
-            console.print(event.delta, end="", markup=False)
+                self._streamed_text = ""
+                self._live = Live(
+                    Markdown(""),
+                    console=console,
+                    refresh_per_second=12,
+                    vertical_overflow="visible",
+                )
+                self._live.start()
+            self._streamed_text += event.delta
+            if self._live is not None:
+                self._live.update(Markdown(self._streamed_text))
         elif isinstance(event, ValidationEvent):
+            self._stop_live()
             if not self._has_streamed:
                 self.ui.on_validation(event.elapsed)
             else:
-                console.print()
                 console.print(f"[dim magenta]⚡ [3/3] Synthèse certifiée ({event.elapsed:.1f}s)[/dim magenta]")
         elif isinstance(event, DoneEvent):
             self.ui.stop_spinner()
+            self._stop_live()
             if not self._has_streamed:
                 render_final_answer(event.response)
             else:
@@ -80,6 +100,7 @@ class ConsolePresenter:
                 if isinstance(event, DoneEvent):
                     final_response = event.response
         finally:
+            self._stop_live()
             self.ui.stop_spinner()
         return final_response
 

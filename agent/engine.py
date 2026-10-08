@@ -12,6 +12,7 @@ from config import Settings
 from core import Logger
 from providers import LLMProvider
 from tools.registry import ToolRegistry
+from .context import ExecutionContext, build_execution_context
 from .memory import SQLiteMemory
 from .pipeline import collect_sources, plan_research, synthesize_findings_stream
 from .prompts import build_system_prompt, format_history_block, format_step_prompt
@@ -93,11 +94,15 @@ class EkkoEngine:
     async def _handle_chat(
         self,
         req: AgentRequest,
-        history_block: str,
+        ctx_or_history: ExecutionContext | str = "",
     ) -> AsyncIterator[AgentEvent]:
         """Traite une interaction conversationnelle directe en streaming continu."""
+        ctx = ctx_or_history if isinstance(ctx_or_history, ExecutionContext) else None
+        history_block = ctx.history_block if ctx else (ctx_or_history if isinstance(ctx_or_history, str) else "")
+        date_str = ctx.current_date if ctx else "courante"
         sys_prompt = (
             "Tu es Ekko, l'assistant personnel d'ingénierie et de recherche de Mohamed.\n"
+            f"Date actuelle : {date_str}.\n"
             f"Profil utilisateur :\n{self.user_profile}\n\n"
             "Consignes :\n"
             "- Sois naturel, direct, sobre et précis.\n"
@@ -118,13 +123,15 @@ class EkkoEngine:
     async def _run_pipeline_stream(
         self,
         req: AgentRequest,
-        history_block: str,
+        ctx_or_history: ExecutionContext | str = "",
     ) -> AsyncIterator[AgentEvent]:
         """Exécute le workflow déterministe de recherche en 3 étapes avec observabilité."""
+        ctx = ctx_or_history if isinstance(ctx_or_history, ExecutionContext) else None
+        history_block = ctx.history_block if ctx else (ctx_or_history if isinstance(ctx_or_history, str) else "")
         is_followup = any(kw in req.query.lower() for kw in ("et pour", "qui sont", "le premier", "le deuxième", "approfondis", "détaille"))
         history_ctx = history_block if is_followup else ""
         t0 = time.perf_counter()
-        plan = await plan_research(self.provider, req.query, history_ctx)
+        plan = await plan_research(self.provider, req.query, history_ctx, ctx=ctx)
         el_plan = max(0.1, time.perf_counter() - t0)
         yield PlanEvent(focus=plan.focus, queries=plan.queries, elapsed=el_plan)
 
@@ -211,20 +218,20 @@ class EkkoEngine:
     ) -> AsyncIterator[AgentEvent]:
         """Exécute la requête en routant vers le handler adapté via le Dispatcher."""
         req = normalize_request(request, session_id)
-        history_block = format_history_block(self.memory.get_recent_messages(req.session_id, limit=4))
+        ctx = build_execution_context(self.memory, req.session_id, self.user_profile)
 
         if not self.use_pipeline:
-            async for ev in self._run_react_loop(req, history_block):
+            async for ev in self._run_react_loop(req, ctx.history_block):
                 yield ev
             return
 
-        intent = await classify_intent(self.provider, req.query)
+        intent = await classify_intent(self.provider, req.query, ctx=ctx)
         if intent == "chat":
-            async for ev in self._handle_chat(req, history_block):
+            async for ev in self._handle_chat(req, ctx):
                 yield ev
         elif intent == "research":
-            async for ev in self._run_pipeline_stream(req, history_block):
+            async for ev in self._run_pipeline_stream(req, ctx):
                 yield ev
         else:
-            async for ev in self._run_react_loop(req, history_block):
+            async for ev in self._run_react_loop(req, ctx.history_block):
                 yield ev
