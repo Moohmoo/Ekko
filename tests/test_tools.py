@@ -301,6 +301,18 @@ async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     res_no_scheme = await tool.execute(url="example.com/page")
     assert "Contenu extrait de `https://example.com/page`" in res_no_scheme
 
+    # Vérifie le court-circuit sur URL vide
+    res_empty = await tool.execute(url="   ")
+    assert "Aucune URL fournie" in res_empty
+
+
+def test_format_item_link_without_url() -> None:
+    """Vérifie le formatage sans lien mort lorsqu'une URL est absente."""
+    from tools.search.tool import _format_item_link
+
+    assert _format_item_link("Titre", "https://example.com") == "**[Titre](https://example.com)**"
+    assert _format_item_link("Titre", "") == "**Titre**"
+
 
 @pytest.mark.asyncio
 async def test_reader_tool_binary_and_oversize(monkeypatch: pytest.MonkeyPatch) -> None:

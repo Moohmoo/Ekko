@@ -123,4 +123,36 @@ def test_create_llm_provider_validates_provider_name() -> None:
         create_llm_provider(cfg)
 
 
+@pytest.mark.asyncio
+async def test_local_provider_post_chat_handles_empty_choices() -> None:
+    """Vérifie que _post_chat gère sans crash des payloads avec choices vide."""
+    from providers.local import LocalProvider
+
+    provider = LocalProvider(base_url="http://localhost:11434/v1", model_name="test")
+
+    class MockResp:
+        def raise_for_status(self) -> None:
+            pass
+
+        def json(self) -> dict:
+            return {"choices": []}
+
+    class MockClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args: object):
+            pass
+
+        async def post(self, *args: object, **kwargs: object):
+            return MockResp()
+
+    with patch("httpx.AsyncClient", MockClient):
+        result = await provider._post_chat({"test": True})
+        assert result == ""
+
+
 

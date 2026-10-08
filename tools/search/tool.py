@@ -200,6 +200,11 @@ def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[Search
         return []
 
 
+def _format_item_link(title: str, url: str) -> str:
+    """Produit un lien Markdown valide ou du texte en gras si l'URL est absente."""
+    return f"**[{title}]({url})**" if url else f"**{title}**"
+
+
 def _format_academic_results(items: list[SearchItem], query: str) -> str:
     """Met en forme les abstracts scientifiques arXiv pour la restitution à l'agent."""
     if not items:
@@ -209,7 +214,8 @@ def _format_academic_results(items: list[SearchItem], query: str) -> str:
         authors_str = ", ".join(item.authors) if item.authors else "Auteurs non spécifiés"
         meta = f" - *{authors_str}* ({item.date})" if item.date else f" - *{authors_str}*"
         abstract = item.snippet[:350] + ("..." if len(item.snippet) > 350 else "")
-        blocks.append(f"{idx}. **[{item.title}]({item.url})**{meta}\n   {abstract}")
+        link = _format_item_link(item.title, item.url)
+        blocks.append(f"{idx}. {link}{meta}\n   {abstract}")
     return "\n\n".join(blocks)
 
 
@@ -220,7 +226,8 @@ def _format_code_results(items: list[SearchItem], query: str) -> str:
     blocks = [f"Dépôts de code GitHub pour '{query}' :\n"]
     for idx, item in enumerate(items, start=1):
         meta = f" (⭐ {item.stars} | {item.language})"
-        blocks.append(f"{idx}. **[{item.title}]({item.url})**{meta}\n   {item.snippet}")
+        link = _format_item_link(item.title, item.url)
+        blocks.append(f"{idx}. {link}{meta}\n   {item.snippet}")
     return "\n\n".join(blocks)
 
 
@@ -230,7 +237,8 @@ def _format_web_results(items: list[SearchItem], query: str) -> str:
         return f"Aucun résultat web trouvé pour '{query}'."
     blocks = [f"Résultats de recherche web pour '{query}' :\n"]
     for idx, item in enumerate(items, start=1):
-        blocks.append(f"{idx}. **[{item.title}]({item.url})**\n   {item.snippet}")
+        link = _format_item_link(item.title, item.url)
+        blocks.append(f"{idx}. {link}\n   {item.snippet}")
     return "\n\n".join(blocks)
 
 
@@ -241,7 +249,8 @@ def _format_news_results(items: list[SearchItem], query: str) -> str:
     blocks = [f"Articles et annonces d'actualité récentes pour '{query}' :\n"]
     for idx, item in enumerate(items, start=1):
         meta = f" ({item.source}, {item.date})" if item.date else f" ({item.source})"
-        blocks.append(f"{idx}. **[{item.title}]({item.url})**{meta}\n   {item.snippet}")
+        link = _format_item_link(item.title, item.url)
+        blocks.append(f"{idx}. {link}{meta}\n   {item.snippet}")
     return "\n\n".join(blocks)
 
 

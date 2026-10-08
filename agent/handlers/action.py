@@ -69,15 +69,17 @@ class ActionHandler(BaseHandler):
         tools_used: list[str],
     ) -> AsyncIterator[AgentEvent]:
         """Finalise et valide la réponse concluante."""
+        raw_answer = action.final_answer or (observations[-1] if observations else "")
         final_text, el_val = await self._validate_and_finalize(
-            req.query, action.final_answer or "", observations, ctx.user_profile
+            req.query, raw_answer, observations, ctx.user_profile
         )
+        safe_answer = final_text.strip() or raw_answer or "Tâche achevée sans conclusion textuelle."
         if el_val > 0.0:
-            yield ValidationEvent(content=final_text, elapsed=el_val)
-        self._save_turn(req.session_id, req.query, final_text)
+            yield ValidationEvent(content=safe_answer, elapsed=el_val)
+        self._save_turn(req.session_id, req.query, safe_answer)
         yield DoneEvent(
             response=AgentResponse(
-                content=final_text,
+                content=safe_answer,
                 tools_used=tools_used,
                 thought=action.thought,
             )
@@ -123,10 +125,11 @@ class ActionHandler(BaseHandler):
         final_text, _ = await self._validate_and_finalize(
             req.query, limit_msg, observations, ctx.user_profile
         )
-        self._save_turn(req.session_id, req.query, final_text)
+        safe_answer = final_text.strip() or limit_msg
+        self._save_turn(req.session_id, req.query, safe_answer)
         yield DoneEvent(
             response=AgentResponse(
-                content=final_text,
+                content=safe_answer,
                 tools_used=tools_used,
                 thought=last_thought,
             )

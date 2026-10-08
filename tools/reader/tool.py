@@ -55,6 +55,8 @@ class ReaderTool(BaseTool):
     async def execute(self, url: str, max_chars: int = 4000) -> str:
         """Télécharge la page en streaming avec garde-fous de taille et type."""
         clean_url = url.strip()
+        if not clean_url:
+            return "Erreur : Aucune URL fournie."
         if not clean_url.startswith(("http://", "https://")):
             clean_url = f"https://{clean_url}"
         headers = {"User-Agent": USER_AGENT}

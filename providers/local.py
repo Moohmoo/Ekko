@@ -96,7 +96,11 @@ class LocalProvider(LLMProvider):
                 res = await client.post(url, json=payload)
                 res.raise_for_status()
                 data = res.json()
-                return str(data["choices"][0]["message"]["content"])
+                choices = data.get("choices") or []
+                if not choices:
+                    return ""
+                msg = choices[0].get("message") or {}
+                return str(msg.get("content") or "")
         except Exception as exc:
             raise _translate_local_error(exc, self.base_url) from exc
 
