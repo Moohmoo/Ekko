@@ -7,7 +7,7 @@ import pytest
 from pydantic import BaseModel
 from agent.engine import EkkoEngine
 from agent.storage import SessionStorage
-from agent.pipeline import collect_sources, plan_research, synthesize_findings
+from agent.research_pipeline import collect_sources, plan_research, synthesize_findings
 from agent.schemas import (
     DoneEvent,
     PlanEvent,
@@ -126,7 +126,7 @@ async def test_engine_pipeline_stream(tmp_path: Path) -> None:
         registry=registry,
         storage=storage,
         user_profile="Profil",
-        use_pipeline=True,
+        enable_intent_routing=True,
     )
 
     events = [ev async for ev in engine.run_stream("Repliement ARN")]

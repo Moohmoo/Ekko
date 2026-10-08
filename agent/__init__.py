@@ -22,7 +22,7 @@ from .schemas import (
     ToolResultEvent,
     ValidationEvent,
 )
-from .profile import load_user_profile
+from .user_profile import load_user_profile
 from .prompts import DEFAULT_PROFILE_CONTENT
 from .storage import SessionStorage
 

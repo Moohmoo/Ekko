@@ -7,7 +7,7 @@ from .action import (
     format_step_prompt,
 )
 from .chat import CHAT_SYSTEM_TEMPLATE, build_chat_prompt
-from .profile import DEFAULT_PROFILE_CONTENT
+from .default_profile import DEFAULT_PROFILE_CONTENT
 from .research import (
     RESEARCH_PLANNER_TEMPLATE,
     SYNTHESIZER_SYSTEM_TEMPLATE,

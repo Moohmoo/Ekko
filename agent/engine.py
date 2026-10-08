@@ -36,7 +36,7 @@ class EkkoEngine:
         storage: SessionStorage,
         user_profile: str = "",
         max_steps: int = 5,
-        use_pipeline: bool = False,
+        enable_intent_routing: bool = False,
         handlers: dict[str, BaseHandler] | None = None,
     ) -> None:
         self.settings = settings
@@ -45,7 +45,7 @@ class EkkoEngine:
         self.storage = storage
         self.user_profile = user_profile
         self.max_steps = max_steps
-        self.use_pipeline = use_pipeline
+        self.enable_intent_routing = enable_intent_routing
         self.handlers = handlers or self._default_handlers()
 
     def _default_handlers(self) -> dict[str, BaseHandler]:
@@ -67,7 +67,7 @@ class EkkoEngine:
         ctx = build_execution_context(self.storage, req.session_id, self.user_profile)
         if not self.handlers:
             raise RuntimeError("Aucun gestionnaire d'intention disponible dans le moteur.")
-        if not self.use_pipeline:
+        if not self.enable_intent_routing:
             handler = self.handlers.get("action") or next(iter(self.handlers.values()))
         else:
             intent = await classify_intent(self.provider, req.query, ctx=ctx)

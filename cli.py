@@ -46,7 +46,7 @@ def initialize_engine(settings: Settings | None = None) -> EkkoEngine:
         registry=default_registry,
         storage=storage,
         user_profile=user_profile,
-        use_pipeline=True,
+        enable_intent_routing=True,
     )
 
 

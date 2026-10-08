@@ -4,7 +4,7 @@ import time
 from collections.abc import AsyncIterator
 
 from agent.context import ExecutionContext
-from agent.pipeline import collect_sources, plan_research, synthesize_findings_stream
+from agent.research_pipeline import collect_sources, plan_research, synthesize_findings_stream
 from agent.schemas import (
     AgentEvent,
     AgentRequest,

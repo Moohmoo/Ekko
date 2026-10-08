@@ -1,7 +1,7 @@
 """Tests unitaires pour le chargement et l'initialisation du profil utilisateur."""
 
 from pathlib import Path
-from agent.profile import load_user_profile
+from agent.user_profile import load_user_profile
 
 
 def test_load_user_profile_creates_default(tmp_path: Path) -> None:

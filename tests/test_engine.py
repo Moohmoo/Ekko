@@ -236,7 +236,7 @@ async def test_engine_redundant_action_intercepted(tmp_path: Path) -> None:
 async def test_engine_chat_dispatch(tmp_path: Path) -> None:
     """Vérifie que 'yoh' est routé vers _handle_chat sans aucun outil ni plan."""
     engine, memory = setup_engine(tmp_path, [])
-    engine.use_pipeline = True
+    engine.enable_intent_routing = True
     events = [ev async for ev in engine.run_stream("yoh")]
 
     assert any(isinstance(ev, StreamChunkEvent) for ev in events)
@@ -249,7 +249,7 @@ async def test_engine_chat_dispatch(tmp_path: Path) -> None:
 async def test_engine_multiturn_recall_routes_to_chat(tmp_path: Path) -> None:
     """Vérifie qu'une question de rappel en cours de session est routée vers chat avec historique."""
     engine, memory = setup_engine(tmp_path, [])
-    engine.use_pipeline = True
+    engine.enable_intent_routing = True
 
     # Simulation d'un tour de recherche précédent enregistré dans la mémoire
     memory.record_message("default", "user", "Dernières news sur l'IA")
@@ -271,8 +271,7 @@ async def test_engine_custom_handler_fallback(tmp_path: Path) -> None:
     engine, _ = setup_engine(tmp_path, [])
     # Injection d'un dictionnaire avec une seule clé 'custom'
     engine.handlers = {"custom": engine.handlers["chat"]}
-    engine.use_pipeline = False
+    engine.enable_intent_routing = False
     events = [ev async for ev in engine.run_stream("Bonjour")]
     assert any(isinstance(ev, DoneEvent) for ev in events)
-
 

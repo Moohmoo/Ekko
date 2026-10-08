@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from .prompts import DEFAULT_PROFILE_CONTENT
+from .prompts.default_profile import DEFAULT_PROFILE_CONTENT
 
 
 def load_user_profile(memory_dir: Path) -> str:
