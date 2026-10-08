@@ -1,6 +1,6 @@
-# Ekko - Assistant Personnel Local d'Ingénierie
+# Ekko - Assistant Personnel Local d'Ingénierie & Recherche
 
-Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. Conçu selon les principes de simplicité radicale et d'architecture modulaire (Rasoir d'Ockham, SOLID), il combine un moteur de raisonnement ReAct interactif en ligne de commande et des outils primitifs universels (recherche web, lecteur de pages, inspection système).
+Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. Conçu selon les principes de simplicité radicale et d'architecture modulaire (Rasoir d'Ockham, SOLID), il combine un workflow de recherche scientifique en deux temps (Enquêteur ReAct + Validateur Critique) et des primitives d'outils universelles (`search`, `reader`, `get_system_info`).
 
 ---
 
@@ -14,37 +14,46 @@ Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. C
                                 │ AgentRequest / Streaming
                                 ▼
    ┌─────────────────────────────────────────────────────────┐
-   │                      EkkoEngine                         │
-   │               Boucle ReAct & Streaming Events           │
-   │        (Thought -> Action -> Observation -> Answer)     │
+   │                1. L'Enquêteur (ReAct Loop)              │
+   │         (Thought -> Tool Call -> Observation)           │
    └──────┬─────────────────────┬─────────────────────┬──────┘
           │                     │                     │
           ▼                     ▼                     ▼
    ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
    │ LLM Providers │     │ SQLiteMemory  │     │ ToolRegistry  │
-   │  - Gemini     │     │  - Messages   │     │  (LEGO Tools) │
-   │  - Ollama/Loc │     │  - Task Runs  │     └───────┬───────┘
+   │  - Local 7B   │     │  - Messages   │     │ (Lego Primitives)
+   │  - Gemini     │     │  - Task Runs  │     └───────┬───────┘
    └───────────────┘     │  - TTL Purge  │             │
                          └───────────────┘             ▼
                                          ┌───────────────────────────┐
-                                         │Outils Primitifs Génériques│
-                                         │ - news_search (Actus/News)│
-                                         │ - web_search (Doc/Web)    │
-                                         │ - fetch_page (Lecteur Web)│
-                                         │ - get_system_info (Matos) │
-                                         └───────────────────────────┘
+                                         │ Outils Universels         │
+                                         │ - search (academic/code/  │
+                                         │           web)            │
+                                         │ - reader (lecteur texte)  │
+                                         │ - system (GPU RTX / VRAM) │
+                                         └─────────────┬─────────────┘
+                                                       │
+                                                       ▼ (Projet de réponse)
+   ┌─────────────────────────────────────────────────────────┐
+   │             2. Le Validateur / Critique                 │
+   │   (Élagage du bruit, certification des sources/faits)   │
+   └────────────────────────────┬────────────────────────────┘
+                                │
+                                ▼
+                         Réponse Finale
 ```
 
-### 1. Moteur ReAct & Streaming
-- **Cycle complet :** Le moteur (`agent/engine.py`) orchestre la réflexion et l'exécution d'outils via un flux d'événements typés (`ThoughtEvent`, `ToolCallEvent`, `ToolResultEvent`, `DoneEvent`).
-- **Présentateurs :** Affichage interactif avec Rich (`ConsolePresenter`) en mode normal ou avec diagnostics détaillés (`-d / --debug`), ou sortie machine (`JsonPresenter`).
-- **Garde-fous :** Interception automatique des actions redondantes et limitation stricte du nombre d'itérations.
+### 1. Workflow en deux temps (Enquêteur + Validateur)
+- **L'Enquêteur (ReAct) :** Orchestre la réflexion et l'exécution d'outils via un flux d'événements typés (`ThoughtEvent`, `ToolCallEvent`, `ToolResultEvent`).
+- **Le Validateur (Checker) :** Évalue le projet de réponse, élimine le marketing creux et les spéculations non sourcées, certifie la présence de sources vérifiables (papiers, dépôts GitHub) et émet un `ValidationEvent`.
 
-### 2. Outils découplés (Tool Registry - Primitives LEGO)
-- **`news_search` :** Recherche d'actualités et dépêches horodatées récentes sur DuckDuckGo News (`ddgs`). Restitue titres, sources de presse, dates de publication et URLs d'articles.
-- **`web_search` :** Recherche universelle sur le web sans clé d'API via DuckDuckGo (`ddgs`). Permet d'extraire la documentation technique, des articles de fond ou des solutions.
-- **`fetch_page` :** Lecteur de page web asynchrone via `httpx`. Extrait le contenu textuel pur d'une URL en supprimant le bruit (scripts, styles, balises HTML).
-- **`get_system_info` :** Inspection matérielle locale de la machine hôte (OS, CPU, mémoire vive disponible, détection GPU Nvidia).
+### 2. Outils Universels (Tool Registry)
+- **`search` :** Moteur universel paramétrable via son sélecteur `focus` :
+  - `focus="academic"` : Interroge arXiv pour extraire des abstracts scientifiques complets, auteurs, dates et liens PDF.
+  - `focus="code"` : Interroge GitHub pour trouver les dépôts officiels, étoiles, langages et licences.
+  - `focus="web"` : Recherche web ouverte via DuckDuckGo pour les documentations et annonces tech.
+- **`reader` :** Lecteur de document asynchrone via `httpx`. Télécharge et extrait le texte pur d'une URL (page web, doc, README GitHub).
+- **`get_system_info` :** Inspection matérielle locale (OS, CPU, VRAM du GPU NVIDIA RTX 5050).
 
 ### 3. Mémoire SQLite & Gestion de sessions
 - **Mémoire court-terme :** Fenêtre glissante conversationnelle isolée par identifiant de session.
@@ -52,7 +61,7 @@ Ekko est un assistant personnel autonome opérant localement sur Ubuntu Linux. C
 - **Rétention automatique (TTL) :** Purge automatique des anciens messages et exécutions d'outils au démarrage selon la configuration (`history_retention_days`).
 
 ### 4. Fournisseurs LLM (Strategy Pattern)
-- **Local (par défaut) :** Compatible Ollama / vLLM / LM Studio via API standard OpenAI (`http://localhost:11434/v1`).
+- **Local (par défaut) :** Compatible Ollama / vLLM via API standard OpenAI (`http://localhost:11434/v1`).
 - **Google GenAI :** Compatible avec les modèles Gemini via le SDK officiel `google-genai`.
 
 ---
@@ -89,7 +98,7 @@ uv run python cli.py
 ```
 
 Options disponibles :
-- `uv run python cli.py -d` : Active le mode débogage (affiche les pensées détaillées et arguments d'outils).
+- `uv run python cli.py -d` : Active le mode débogage (affiche les pensées détaillées, les arguments d'outils et le statut de validation).
 - `/reset` : Dans l'invite de commande, réinitialise la session et efface l'écran.
 - `exit` ou `quit` : Quitte la session.
 

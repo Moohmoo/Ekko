@@ -1,6 +1,6 @@
-"""Outil d'extraction et de lecture du contenu textuel d'une page web.
+"""Outil d'extraction et de lecture du contenu textuel d'une page web (Universal Reader).
 
-Permet à Ekko de consulter un article ou une documentation en profondeur
+Permet à Ekko de consulter un article, une documentation ou un README GitHub en profondeur
 à partir d'une URL trouvée lors d'une recherche.
 """
 
@@ -12,11 +12,15 @@ from tools.base import BaseTool
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0"
 
 
-class FetchPageParams(BaseModel):
-    """Paramètres pour la lecture d'une page web."""
+class ReaderParams(BaseModel):
+    """Paramètres pour la lecture d'une page web ou d'un document en ligne."""
 
-    url: str = Field(description="URL complète de la page web ou de l'article à lire.")
-    max_chars: int = Field(default=3000, description="Nombre maximum de caractères à extraire (défaut: 3000).")
+    url: str = Field(description="URL complète de la page web, de l'article ou du README à lire.")
+    max_chars: int = Field(default=4000, description="Nombre maximum de caractères à extraire (défaut: 4000).")
+
+
+# Alias de rétrocompatibilité
+FetchPageParams = ReaderParams
 
 
 def _clean_html_to_text(html_content: str) -> str:
@@ -26,17 +30,17 @@ def _clean_html_to_text(html_content: str) -> str:
     return " ".join(no_tags.split())
 
 
-class FetchPageTool(BaseTool):
-    """Outil permettant d'extraire et lire le contenu textuel d'une page web."""
+class ReaderTool(BaseTool):
+    """Outil universel permettant d'extraire et lire le contenu textuel d'une URL."""
 
-    name = "fetch_page"
+    name = "reader"
     description = (
-        "Télécharge et extrait le contenu textuel d'une page web ou d'un article à partir de son URL. "
-        "À utiliser pour analyser en détail une source ou un article trouvé sur le web."
+        "Télécharge et extrait le texte pur d'une URL (page web, article, documentation, README GitHub). "
+        "À utiliser pour analyser en détail une source découverte lors d'une recherche."
     )
-    parameters_schema = FetchPageParams
+    parameters_schema = ReaderParams
 
-    async def execute(self, url: str, max_chars: int = 3000) -> str:
+    async def execute(self, url: str, max_chars: int = 4000) -> str:
         """Télécharge la page de manière asynchrone et extrait le texte utile."""
         headers = {"User-Agent": USER_AGENT}
         try:
@@ -48,3 +52,9 @@ class FetchPageTool(BaseTool):
                 return f"Contenu extrait de `{url}` :\n\n{truncated}"
         except Exception as exc:
             return f"Impossible de charger la page `{url}` : {exc}"
+
+
+class FetchPageTool(ReaderTool):
+    """Alias rétrocompatible pour l'ancien nom d'outil fetch_page."""
+
+    name = "fetch_page"

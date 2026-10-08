@@ -1,7 +1,7 @@
 """Tests d'intégration pour le moteur ReAct EkkoEngine (Brique 2)."""
 
 from pathlib import Path
-from typing import Any, Type, TypeVar
+from typing import Type, TypeVar
 import pytest
 from pydantic import BaseModel
 from config import Settings
@@ -9,10 +9,13 @@ from agent.engine import EkkoEngine
 from agent.memory import SQLiteMemory
 from agent.schemas import (
     AgentAction,
+    AgentEvent,
+    AgentResponse,
     DoneEvent,
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
+    ValidationEvent,
 )
 from providers.base import LLMProvider
 from tools.base import BaseTool
@@ -36,6 +39,10 @@ class MockLLMProvider(LLMProvider):
         return action  # type: ignore[return-value]
 
     async def generate_text(self, prompt: str, system_instruction: str = "") -> str:
+        if "Projet de réponse à critiquer et valider :" in prompt:
+            parts = prompt.split("Projet de réponse à critiquer et valider :\n")
+            if len(parts) > 1:
+                return parts[1].split("\n\nConsigne")[0].strip()
         return "mock text"
 
 
@@ -44,8 +51,8 @@ class MockToolParams(BaseModel):
 
 
 class MockTool(BaseTool):
-    name: str = "mock_search"
-    description: str = "Recherche factice"
+    name = "mock_search"
+    description = "Recherche factice"
     parameters_schema: Type[BaseModel] = MockToolParams
 
     async def execute(self, **kwargs: object) -> str:
@@ -161,7 +168,7 @@ async def test_engine_conversation_history_passed(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_engine_run_stream_events(tmp_path: Path) -> None:
-    """Vérifie l'émission séquentielle des événements typés via run_stream."""
+    """Vérifie l'émission séquentielle des événements typés via run_stream incluant la validation."""
     actions = [
         AgentAction(
             thought="Recherche requise",
@@ -176,7 +183,7 @@ async def test_engine_run_stream_events(tmp_path: Path) -> None:
     engine, _ = setup_engine(tmp_path, actions)
     events = [ev async for ev in engine.run_stream("Cherche ekko")]
 
-    assert len(events) == 5
+    assert len(events) == 6
     assert isinstance(events[0], ThoughtEvent)
     assert events[0].thought == "Recherche requise"
     assert isinstance(events[1], ToolCallEvent)
@@ -185,8 +192,10 @@ async def test_engine_run_stream_events(tmp_path: Path) -> None:
     assert "ekko" in events[2].result
     assert isinstance(events[3], ThoughtEvent)
     assert events[3].thought == "Synthèse"
-    assert isinstance(events[4], DoneEvent)
-    assert events[4].response.content == "Voici ekko."
+    assert isinstance(events[4], ValidationEvent)
+    assert events[4].content == "Voici ekko."
+    assert isinstance(events[5], DoneEvent)
+    assert events[5].response.content == "Voici ekko."
 
 
 @pytest.mark.asyncio
@@ -208,4 +217,3 @@ async def test_engine_redundant_action_intercepted(tmp_path: Path) -> None:
     assert len(tool_results) == 2
     assert "antigravity" in tool_results[0].result
     assert "Action redondante" in tool_results[1].result
-

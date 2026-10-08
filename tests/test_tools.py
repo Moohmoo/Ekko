@@ -1,14 +1,13 @@
-"""Tests unitaires pour le registre d'outils et les adaptateurs natifs."""
+"""Tests unitaires pour le registre d'outils et les adaptateurs universels."""
 
 from typing import Type
 import pytest
 from pydantic import BaseModel, Field
 from tools.base import BaseTool
-from tools.news import NewsSearchTool
+from tools.reader import FetchPageTool, ReaderTool
 from tools.registry import ToolRegistry
-from tools.search import WebSearchTool
+from tools.search import SearchTool, WebSearchTool
 from tools.system import SystemInfoTool
-from tools.web import FetchPageTool
 
 
 class DummyParams(BaseModel):
@@ -20,8 +19,8 @@ class DummyParams(BaseModel):
 class DummyEchoTool(BaseTool):
     """Outil factice pour tester le cycle du registre."""
 
-    name: str = "dummy_echo"
-    description: str = "Répète un message passé en argument."
+    name = "dummy_echo"
+    description = "Répète un message passé en argument."
     parameters_schema: Type[BaseModel] = DummyParams
 
     async def execute(self, **kwargs: object) -> str:
@@ -39,6 +38,19 @@ async def test_registry_registration_and_execution() -> None:
 
     result = await registry.execute_tool("dummy_echo", {"message": "hello"})
     assert result == "Echo: hello"
+
+
+@pytest.mark.asyncio
+async def test_registry_tool_aliases() -> None:
+    """Vérifie la résolution automatique des alias canoniques (web_search -> search, fetch_page -> reader)."""
+    registry = ToolRegistry()
+    registry.register(SearchTool())
+    registry.register(ReaderTool())
+
+    assert registry.get_tool("search") is not None
+    assert registry.get_tool("web_search") is not None
+    assert registry.get_tool("reader") is not None
+    assert registry.get_tool("fetch_page") is not None
 
 
 @pytest.mark.asyncio
@@ -80,8 +92,8 @@ async def test_system_info_tool_execution() -> None:
 
 
 @pytest.mark.asyncio
-async def test_web_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie l'exécution et le formatage des résultats par WebSearchTool."""
+async def test_search_tool_web_focus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie l'exécution de la recherche en mode web."""
     fake_results = [
         {"title": "SFBI Bioinfo", "href": "https://example.com/bioinfo", "body": "Actualités bioinformatique"},
     ]
@@ -89,9 +101,9 @@ async def test_web_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> Non
     def mock_ddgs(query: str, max_results: int, region: str = "fr-fr") -> list[dict[str, str]]:
         return fake_results
 
-    monkeypatch.setattr("tools.search.tool._perform_ddgs_search", mock_ddgs)
-    tool = WebSearchTool()
-    res = await tool.execute(query="bioinfo", max_results=3)
+    monkeypatch.setattr("tools.search.tool._perform_ddgs_web", mock_ddgs)
+    tool = SearchTool()
+    res = await tool.execute(query="bioinfo", focus="web", max_results=3)
 
     assert "SFBI Bioinfo" in res
     assert "https://example.com/bioinfo" in res
@@ -99,20 +111,61 @@ async def test_web_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 @pytest.mark.asyncio
-async def test_web_search_tool_error_handling(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie la capture d'erreur lors d'une défaillance réseau dans WebSearchTool."""
-    def mock_fail(query: str, max_results: int, region: str = "fr-fr") -> list[dict[str, str]]:
-        raise RuntimeError("Réseau indisponible")
+async def test_search_tool_academic_focus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie l'exécution de la recherche scientifique (focus academic / arXiv)."""
+    fake_papers = [
+        {
+            "title": "AlphaFold 3 in Action",
+            "abstract": "We present diffusion-based biomolecular modeling.",
+            "url": "https://arxiv.org/abs/2405.00001",
+            "date": "2024-05-08",
+            "authors": ["John Jumper", "Demis Hassabis"],
+        }
+    ]
 
-    monkeypatch.setattr("tools.search.tool._perform_ddgs_search", mock_fail)
-    tool = WebSearchTool()
-    res = await tool.execute(query="fail")
-    assert "Erreur lors de la recherche" in res
+    async def mock_arxiv(query: str, max_results: int) -> list[dict[str, object]]:
+        return fake_papers
+
+    monkeypatch.setattr("tools.search.tool._fetch_arxiv_entries", mock_arxiv)
+    tool = SearchTool()
+    res = await tool.execute(query="AlphaFold 3", focus="academic", max_results=1)
+
+    assert "Articles scientifiques arXiv" in res
+    assert "AlphaFold 3 in Action" in res
+    assert "John Jumper" in res
+    assert "2024-05-08" in res
+    assert "https://arxiv.org/abs/2405.00001" in res
 
 
 @pytest.mark.asyncio
-async def test_fetch_page_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie le téléchargement et le nettoyage HTML par FetchPageTool."""
+async def test_search_tool_code_focus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie l'exécution de la recherche de dépôts GitHub (focus code)."""
+    fake_repos = [
+        {
+            "name": "google-deepmind/alphafold",
+            "url": "https://github.com/google-deepmind/alphafold",
+            "description": "Open source code for AlphaFold",
+            "stars": 15000,
+            "language": "Python",
+        }
+    ]
+
+    async def mock_github(query: str, max_results: int) -> list[dict[str, object]]:
+        return fake_repos
+
+    monkeypatch.setattr("tools.search.tool._fetch_github_repos", mock_github)
+    tool = SearchTool()
+    res = await tool.execute(query="alphafold", focus="code", max_results=1)
+
+    assert "Dépôts de code GitHub" in res
+    assert "google-deepmind/alphafold" in res
+    assert "15000" in res
+    assert "Python" in res
+
+
+@pytest.mark.asyncio
+async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le téléchargement et le nettoyage HTML par ReaderTool."""
     html_content = "<html><body><h1>Titre</h1><p>Paragraphe intéressant</p></body></html>"
 
     class MockResponse:
@@ -135,76 +188,11 @@ async def test_fetch_page_tool_execution(monkeypatch: pytest.MonkeyPatch) -> Non
             return MockResponse()
 
     monkeypatch.setattr("httpx.AsyncClient", MockAsyncClient)
-    tool = FetchPageTool()
+    tool = ReaderTool()
     res = await tool.execute(url="https://example.com/page")
 
     assert "Titre Paragraphe intéressant" in res
     assert "Contenu extrait" in res
-
-
-@pytest.mark.asyncio
-async def test_news_search_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie l'exécution et le formatage des dépêches par NewsSearchTool."""
-    fake_news = [
-        {
-            "title": "Avancée en bioinformatique",
-            "url": "https://example.com/bio-news",
-            "source": "Le Monde Informatique",
-            "date": "2026-10-06T12:00:00+00:00",
-            "body": "Une nouvelle découverte majeure utilisant l'IA.",
-        }
-    ]
-
-    def mock_ddgs_news(query: str, max_results: int, region: str = "fr-fr") -> list[dict[str, str]]:
-        return fake_news
-
-    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", mock_ddgs_news)
-    tool = NewsSearchTool()
-    res = await tool.execute(query="bioinformatique", max_results=3)
-
-    assert "Avancée en bioinformatique" in res
-    assert "https://example.com/bio-news" in res
-    assert "Le Monde Informatique" in res
-    assert "2026-10-06" in res
-    assert "Une nouvelle découverte majeure" in res
-
-
-@pytest.mark.asyncio
-async def test_news_search_tool_empty_query_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie que la requête vide est remplacée par un fallback sain."""
-    captured: dict[str, str] = {}
-
-    def mock_ddgs_news(query: str, max_results: int, region: str) -> list[dict[str, str]]:
-        captured["query"] = query
-        captured["region"] = region
-        return []
-
-    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", mock_ddgs_news)
-    tool = NewsSearchTool()
-    await tool.execute(query="   ")
-    assert captured["query"] == "actualités récentes"
-    assert captured["region"] == "fr-fr"
-
-
-@pytest.mark.asyncio
-async def test_news_search_tool_empty_results(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie le message quand aucune actualité n'est trouvée."""
-    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", lambda q, m, r: [])
-    tool = NewsSearchTool()
-    res = await tool.execute(query="sujet_inconnu")
-    assert "Aucune actualité récente trouvée" in res
-
-
-@pytest.mark.asyncio
-async def test_news_search_tool_error_handling(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Vérifie la gestion d'erreur réseau pour NewsSearchTool."""
-    def mock_fail(query: str, max_results: int, region: str = "fr-fr") -> list[dict[str, str]]:
-        raise ConnectionError("Service injoignable")
-
-    monkeypatch.setattr("tools.news.tool._perform_ddgs_news", mock_fail)
-    tool = NewsSearchTool()
-    res = await tool.execute(query="fail")
-    assert "Erreur lors de la recherche d'actualités" in res
 
 
 def test_get_region_for_language_mapping() -> None:
@@ -215,4 +203,3 @@ def test_get_region_for_language_mapping() -> None:
     assert get_region_for_language("en") == "en-us"
     assert get_region_for_language("de") == "de-de"
     assert get_region_for_language("unknown") == "wt-wt"
-

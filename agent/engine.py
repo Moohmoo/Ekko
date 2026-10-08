@@ -1,7 +1,7 @@
 """Moteur d'orchestration et boucle centrale ReAct pour Ekko.
 
 Gère le cycle de raisonnement Thought -> Tool Call -> Observation
-avec des garde-fous stricts contre les boucles infinies.
+suivi de la phase de validation critique (Pattern Enquêteur - Critique).
 """
 
 import json
@@ -23,8 +23,10 @@ from .schemas import (
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
+    ValidationEvent,
     decide_action,
 )
+from .validator import validate_draft
 
 logger = Logger("ekko.agent.engine")
 
@@ -66,12 +68,27 @@ class EkkoEngine:
         self.memory.record_message(session_id, "user", query)
         self.memory.record_message(session_id, "assistant", answer)
 
+    async def _validate_and_finalize(
+        self,
+        query: str,
+        answer: str,
+        observations: list[str],
+    ) -> tuple[str, float]:
+        """Critique et épure la réponse finale via l'Agent Validateur."""
+        if not observations and len(answer.strip().split()) < 25:
+            return answer, 0.0
+        t0 = time.perf_counter()
+        validated = await validate_draft(
+            self.provider, query, answer, observations, self.user_profile
+        )
+        return validated, time.perf_counter() - t0
+
     async def run_stream(
         self,
         request: AgentRequest | str,
         session_id: str = "default",
     ) -> AsyncIterator[AgentEvent]:
-        """Exécute la boucle ReAct en émettant un flux d'événements typés."""
+        """Exécute la boucle ReAct puis la validation en émettant un flux d'événements typés."""
         req = normalize_request(request, session_id)
         sys_prompt = build_system_prompt(self.user_profile, self.registry.get_prompt_catalog())
         history_block = format_history_block(self.memory.get_recent_messages(req.session_id, limit=6))
@@ -80,7 +97,7 @@ class EkkoEngine:
         executed_actions: set[tuple[str, str]] = set()
         last_thought: str = ""
 
-        for step in range(self.max_steps):
+        for _ in range(self.max_steps):
             prompt = format_step_prompt(req.query, observations, history_block)
             t_start = time.perf_counter()
             action = await decide_action(self.provider, prompt, sys_prompt)
@@ -88,10 +105,15 @@ class EkkoEngine:
             yield ThoughtEvent(thought=action.thought, elapsed=time.perf_counter() - t_start)
 
             if action.final_answer and not action.tool_name:
-                self._save_final_turn(req.session_id, req.query, action.final_answer)
+                final_text, el_val = await self._validate_and_finalize(
+                    req.query, action.final_answer, observations
+                )
+                if el_val > 0.0:
+                    yield ValidationEvent(content=final_text, elapsed=el_val)
+                self._save_final_turn(req.session_id, req.query, final_text)
                 yield DoneEvent(
                     response=AgentResponse(
-                        content=action.final_answer,
+                        content=final_text,
                         tools_used=tools_used,
                         thought=action.thought,
                     )
@@ -106,8 +128,7 @@ class EkkoEngine:
                     logger.warning("Action redondante interceptée : %s", action_key)
                     obs = (
                         f"Action redondante : `{action.tool_name}` a déjà été exécuté avec ces arguments identiques. "
-                        "Pour relancer, modifie obligatoirement tes mots-clés (ex: termes plus complets). "
-                        "Sinon, formule ta conclusion dans 'final_answer'."
+                        "Modifie tes mots-clés ou formule ta conclusion dans 'final_answer'."
                     )
                     yield ToolResultEvent(tool_name=action.tool_name, result=obs)
                     observations.append(obs)
@@ -120,4 +141,5 @@ class EkkoEngine:
                     observations.append(f"- Résultat de `{action.tool_name}` : {obs}")
 
         limit_msg = "Limite maximale d'étapes de raisonnement atteinte sans conclusion."
-        yield DoneEvent(response=AgentResponse(content=limit_msg, tools_used=tools_used, thought=last_thought))
+        final_text, _ = await self._validate_and_finalize(req.query, limit_msg, observations)
+        yield DoneEvent(response=AgentResponse(content=final_text, tools_used=tools_used, thought=last_thought))

@@ -12,9 +12,11 @@ from agent.schemas import (
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
+    ValidationEvent,
 )
 from .console import (
     AgentUI,
+    console,
     render_final_answer,
     render_thought_line,
     render_thought_panel,
@@ -40,6 +42,10 @@ class ConsolePresenter:
             self.ui.on_tool_call(event.tool_name, event.arguments)
         elif isinstance(event, ToolResultEvent):
             self.ui.on_tool_result(event.tool_name, event.result)
+        elif isinstance(event, ValidationEvent):
+            self.ui.stop_spinner()
+            if self.debug:
+                console.print(f"[dim cyan]  ✓ Validation critique certifiée ({event.elapsed:.2f}s)[/dim cyan]")
         elif isinstance(event, DoneEvent):
             self.ui.stop_spinner()
             render_final_answer(event.response)

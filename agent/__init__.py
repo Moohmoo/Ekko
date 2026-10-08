@@ -12,8 +12,10 @@ from .schemas import (
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
+    ValidationEvent,
     decide_action,
 )
+from .validator import validate_draft
 
 __all__ = [
     "EkkoEngine",
@@ -26,8 +28,10 @@ __all__ = [
     "ThoughtEvent",
     "ToolCallEvent",
     "ToolResultEvent",
+    "ValidationEvent",
     "DoneEvent",
     "decide_action",
+    "validate_draft",
     "build_system_prompt",
     "format_history_block",
     "format_step_prompt",

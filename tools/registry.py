@@ -1,12 +1,17 @@
 """Registre central d'outils (Plugin Registry) pour l'agent Ekko.
 
 Gère l'enregistrement, l'indexation et la fourniture des outils
-au routeur et au moteur de raisonnement d'Ekko.
+au routeur et au moteur de raisonnement d'Ekko avec support d'alias.
 """
 
 import json
 from typing import Any
 from .base import BaseTool
+
+TOOL_ALIASES: dict[str, str] = {
+    "web_search": "search",
+    "fetch_page": "reader",
+}
 
 
 class ToolRegistry:
@@ -20,11 +25,17 @@ class ToolRegistry:
         self._tools[tool.name] = tool
 
     def get_tool(self, name: str) -> BaseTool | None:
-        """Récupère un outil par son nom identifiant."""
-        return self._tools.get(name)
+        """Récupère un outil par son nom identifiant ou via ses alias."""
+        clean_name = name.strip() if name else ""
+        if clean_name in self._tools:
+            return self._tools[clean_name]
+        alias_target = TOOL_ALIASES.get(clean_name)
+        if alias_target and alias_target in self._tools:
+            return self._tools[alias_target]
+        return None
 
     def list_tools(self) -> list[BaseTool]:
-        """Retourne la liste de tous les outils actuellement chargés."""
+        """Retourne la liste de tous les outils canoniques actuellement chargés."""
         return list(self._tools.values())
 
     def get_prompt_catalog(self) -> str:

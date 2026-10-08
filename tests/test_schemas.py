@@ -3,8 +3,8 @@
 import pytest
 from pydantic import ValidationError
 from agent.schemas import AgentAction, AgentRequest, AgentResponse
-from tools.search.tool import WebSearchParams
-from tools.web.tool import FetchPageParams
+from tools.reader.tool import FetchPageParams, ReaderParams
+from tools.search.tool import SearchParams, WebSearchParams
 
 
 def test_agent_request_and_response() -> None:
@@ -13,9 +13,9 @@ def test_agent_request_and_response() -> None:
     assert req.query == "Yoh !"
     assert req.session_id == "test_sess"
 
-    resp = AgentResponse(content="Salut !", tools_used=["web_search"], thought="Penser")
+    resp = AgentResponse(content="Salut !", tools_used=["search"], thought="Penser")
     assert resp.content == "Salut !"
-    assert resp.tools_used == ["web_search"]
+    assert resp.tools_used == ["search"]
     assert resp.thought == "Penser"
 
 
@@ -28,28 +28,30 @@ def test_agent_action_defaults() -> None:
     assert action.final_answer is None
 
 
-def test_web_search_params() -> None:
-    """Vérifie la validation des paramètres de recherche."""
-    params = WebSearchParams(query="bioinformatique")
+def test_search_params() -> None:
+    """Vérifie la validation des paramètres de recherche universelle."""
+    params = SearchParams(query="bioinformatique")
     assert params.query == "bioinformatique"
+    assert params.focus == "web"
     assert params.max_results == 5
 
+    academic_params = SearchParams(query="AlphaFold", focus="academic", max_results=3)
+    assert academic_params.focus == "academic"
+    assert academic_params.max_results == 3
+
+    code_params = SearchParams(query="vLLM", focus="code")
+    assert code_params.focus == "code"
+
     with pytest.raises(ValidationError):
-        WebSearchParams()  # type: ignore[call-arg]
+        SearchParams()  # type: ignore[call-arg]
 
 
-def test_fetch_page_params() -> None:
-    """Vérifie la validation des paramètres d'extraction de page."""
-    params = FetchPageParams(url="https://example.com")
+def test_reader_params() -> None:
+    """Vérifie la validation des paramètres d'extraction de page (Reader)."""
+    params = ReaderParams(url="https://example.com")
     assert params.url == "https://example.com"
-    assert params.max_chars == 3000
+    assert params.max_chars == 4000
 
-
-def test_news_search_params_normalization() -> None:
-    """Vérifie la normalisation automatique des arguments de news_search."""
-    from tools.news.tool import NewsSearchParams
-
-    assert NewsSearchParams().query == "actualités générales"
-    assert NewsSearchParams(query="   ").query == "actualités générales"
-    assert NewsSearchParams(query="bioinfo").query == "bioinfo"
-
+    legacy_params = FetchPageParams(url="https://example.com", max_chars=1500)
+    assert legacy_params.url == "https://example.com"
+    assert legacy_params.max_chars == 1500

@@ -1,5 +1,5 @@
-"""Package de l'outil de recherche web pour Ekko."""
+"""Package de l'outil de recherche universel pour Ekko."""
 
-from .tool import WebSearchTool
+from .tool import SearchParams, SearchTool, WebSearchParams, WebSearchTool
 
-__all__ = ["WebSearchTool"]
+__all__ = ["SearchTool", "SearchParams", "WebSearchTool", "WebSearchParams"]

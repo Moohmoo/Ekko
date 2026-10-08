@@ -99,13 +99,20 @@ class ToolResultEvent(BaseModel):
     result: str
 
 
+class ValidationEvent(BaseModel):
+    """Événement émis lors de la phase de validation critique."""
+
+    content: str
+    elapsed: float = 0.0
+
+
 class DoneEvent(BaseModel):
     """Événement terminal signalant l'achèvement de la tâche."""
 
     response: AgentResponse
 
 
-AgentEvent = ThoughtEvent | ToolCallEvent | ToolResultEvent | DoneEvent
+AgentEvent = ThoughtEvent | ToolCallEvent | ToolResultEvent | ValidationEvent | DoneEvent
 
 
 async def decide_action(
