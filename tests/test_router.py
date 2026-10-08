@@ -4,7 +4,8 @@ from collections.abc import AsyncIterator
 from typing import TypeVar
 import pytest
 from pydantic import BaseModel
-from agent.router import classify_intent, is_fast_greeting
+from agent.context import EnvironmentContext, ExecutionContext
+from agent.router import build_intent_user_prompt, classify_intent, is_fast_greeting
 from agent.schemas import UserIntent
 from providers.base import LLMProvider
 
@@ -18,11 +19,13 @@ class MockRouterLLM(LLMProvider):
         self.intent = intent
         self.should_fail = should_fail
         self.call_count = 0
+        self.captured_prompt = ""
 
     async def generate_structured(
         self, prompt: str, schema: type[T], system_instruction: str = ""
     ) -> T:
         self.call_count += 1
+        self.captured_prompt = prompt
         if self.should_fail:
             raise RuntimeError("Erreur API simulée")
         return UserIntent(intent=self.intent)  # type: ignore[return-value]
@@ -76,3 +79,43 @@ async def test_classify_intent_fallback_on_error() -> None:
 
     assert intent == "chat"
     assert provider.call_count == 1
+
+
+def test_build_intent_user_prompt_with_history() -> None:
+    """Vérifie l'inclusion de l'historique conversationnel dans le prompt de routage."""
+    ctx = ExecutionContext(
+        env=EnvironmentContext(
+            current_date="8 octobre 2026",
+            current_year=2026,
+            current_time="16:00",
+            os_name="linux",
+            cwd="",
+        ),
+        history_block="[user]: news IA\n[assistant]: résumé des news",
+    )
+    prompt = build_intent_user_prompt("Rappelle moi les news", ctx)
+    assert "Historique de la conversation :" in prompt
+    assert "[user]: news IA" in prompt
+    assert "Demande utilisateur :\n\"Rappelle moi les news\"" in prompt
+
+
+@pytest.mark.asyncio
+async def test_classify_intent_passes_history_context() -> None:
+    """Vérifie que classify_intent transmet l'historique de contexte au fournisseur."""
+    ctx = ExecutionContext(
+        env=EnvironmentContext(
+            current_date="8 octobre 2026",
+            current_year=2026,
+            current_time="16:00",
+            os_name="linux",
+            cwd="",
+        ),
+        history_block="[user]: news IA\n[assistant]: résumé des news",
+    )
+    provider = MockRouterLLM(intent="chat")
+    intent = await classify_intent(provider, "Rappelle moi les news", ctx=ctx)
+
+    assert intent == "chat"
+    assert provider.call_count == 1
+    assert "Historique de la conversation :" in provider.captured_prompt
+

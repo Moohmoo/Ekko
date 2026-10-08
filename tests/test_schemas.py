@@ -2,7 +2,13 @@
 
 import pytest
 from pydantic import ValidationError
-from agent.schemas import AgentAction, AgentRequest, AgentResponse
+from agent.schemas import (
+    AgentAction,
+    AgentRequest,
+    AgentResponse,
+    SearchPlan,
+    UserIntent,
+)
 from tools.reader.tool import FetchPageParams, ReaderParams
 from tools.search.tool import SearchParams, WebSearchParams
 
@@ -55,3 +61,27 @@ def test_reader_params() -> None:
     legacy_params = FetchPageParams(url="https://example.com", max_chars=1500)
     assert legacy_params.url == "https://example.com"
     assert legacy_params.max_chars == 1500
+
+
+def test_user_intent_with_thought_and_normalization() -> None:
+    """Vérifie la robustesse de désérialisation de UserIntent avec thought et dicts de schéma."""
+    ui1 = UserIntent.model_validate({"thought": "Analyse de la demande", "intent": "research"})
+    assert ui1.thought == "Analyse de la demande"
+    assert ui1.intent == "research"
+
+    ui2 = UserIntent.model_validate({"intent": {"default": "chat"}})
+    assert ui2.intent == "chat"
+
+
+def test_search_plan_schema_mimicry_tolerance() -> None:
+    """Vérifie que SearchPlan tolère les fragments de schéma JSON émis par les SLMs."""
+    raw_payload = {
+        "is_search_needed": {"default": True, "type": "boolean"},
+        "focus": {"default": "academic", "type": "string"},
+        "queries": {"default": ["RNA folding"], "type": "array"},
+    }
+    plan = SearchPlan.model_validate(raw_payload)
+    assert plan.is_search_needed is True
+    assert plan.focus == "academic"
+    assert plan.queries == ["RNA folding"]
+

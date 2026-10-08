@@ -18,6 +18,7 @@ from agent.schemas import (
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
+    UserIntent,
     ValidationEvent,
 )
 from providers.base import LLMProvider
@@ -37,6 +38,10 @@ class MockLLMProvider(LLMProvider):
     async def generate_structured(
         self, prompt: str, schema: type[T], system_instruction: str = ""
     ) -> T:
+        if schema == UserIntent:
+            if "Historique" in prompt and "Rappelle" in prompt:
+                return UserIntent(thought="Rappel d'historique", intent="chat")  # type: ignore[return-value]
+            return UserIntent(thought="", intent="chat")  # type: ignore[return-value]
         action = self.actions[self.call_count]
         self.call_count += 1
         return action  # type: ignore[return-value]
@@ -239,4 +244,25 @@ async def test_engine_chat_dispatch(tmp_path: Path) -> None:
     assert any(isinstance(ev, DoneEvent) for ev in events)
     assert not any(isinstance(ev, ToolCallEvent) for ev in events)
     assert not any(isinstance(ev, PlanEvent) for ev in events)
+
+
+@pytest.mark.asyncio
+async def test_engine_multiturn_recall_routes_to_chat(tmp_path: Path) -> None:
+    """Vérifie qu'une question de rappel en cours de session est routée vers chat avec historique."""
+    engine, memory = setup_engine(tmp_path, [])
+    engine.use_pipeline = True
+
+    # Simulation d'un tour de recherche précédent enregistré dans la mémoire
+    memory.record_message("default", "user", "Dernières news sur l'IA")
+    memory.record_message("default", "assistant", "Synthèse : Modèle TasteVal 2026 publié.")
+
+    # Tour 2 : question de rappel méta
+    events = [ev async for ev in engine.run_stream("Rappelle moi les news stp ?")]
+
+    # Doit être traité en direct par chat avec streaming, sans relancer une recherche externe
+    assert any(isinstance(ev, StreamChunkEvent) for ev in events)
+    assert any(isinstance(ev, DoneEvent) for ev in events)
+    assert not any(isinstance(ev, PlanEvent) for ev in events)
+    assert not any(isinstance(ev, ToolCallEvent) for ev in events)
+
 

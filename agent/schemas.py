@@ -12,11 +12,30 @@ from providers.base import LLMProvider
 class UserIntent(BaseModel):
     """Classification de l'intention utilisateur en amont de l'orchestration."""
 
+    thought: str = Field(
+        default="",
+        description="Courte réflexion pour déterminer si la demande nécessite une recherche externe web/scientifique, ou s'il s'agit d'une discussion, rappel ou réponse directe.",
+    )
     intent: Literal["chat", "research", "action"] = Field(
         default="chat",
-        description="Type d'intention : 'chat' (discussion directe, salutation), "
+        description="Type d'intention : 'chat' (discussion directe, salutation, rappel), "
         "'research' (veille, SOTA, articles, code), 'action' (todo, fichiers, commandes).",
     )
+
+    @field_validator("intent", mode="before")
+    @classmethod
+    def normalize_intent(cls, value: Any) -> str:
+        """Tolère les dicts de schéma ou variations lexicales."""
+        if isinstance(value, dict) and "default" in value:
+            value = value["default"]
+        if not isinstance(value, str):
+            return "chat"
+        val = value.lower().strip()
+        if val in {"research", "search", "recherche"}:
+            return "research"
+        if val in {"action", "tool", "tools"}:
+            return "action"
+        return "chat"
 
 
 class SearchPlan(BaseModel):
@@ -41,10 +60,26 @@ class SearchPlan(BaseModel):
         description="Réponse directe si is_search_needed est False.",
     )
 
+    @field_validator("is_search_needed", mode="before")
+    @classmethod
+    def sanitize_is_search_needed(cls, value: Any) -> bool:
+        """Coerce toute valeur ou fragment de schéma en booléen sûr."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, dict):
+            if "default" in value:
+                return bool(value["default"])
+            return True
+        if isinstance(value, str):
+            return value.strip().lower() not in {"false", "0", "no", "null"}
+        return bool(value)
+
     @field_validator("focus", mode="before")
     @classmethod
     def normalize_focus(cls, value: Any) -> str:
         """Tolère et normalise les variations lexicales générées par les modèles compacts."""
+        if isinstance(value, dict) and "default" in value:
+            value = value["default"]
         if not isinstance(value, str):
             return "web"
         val = value.lower().strip()
@@ -53,6 +88,18 @@ class SearchPlan(BaseModel):
         if val in {"code", "github", "git", "repo", "repository"}:
             return "code"
         return "web"
+
+    @field_validator("queries", mode="before")
+    @classmethod
+    def normalize_queries(cls, value: Any) -> list[str]:
+        """Assure que les requêtes sont toujours une liste de chaînes valides."""
+        if isinstance(value, dict) and "default" in value:
+            value = value["default"]
+        if isinstance(value, str):
+            return [value.strip()] if value.strip() else []
+        if isinstance(value, list):
+            return [str(q).strip() for q in value if str(q).strip()]
+        return []
 
 
 class AgentRequest(BaseModel):

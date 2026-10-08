@@ -45,3 +45,25 @@ async def test_gemini_provider_retry_success() -> None:
         res = await provider.generate_text("Test prompt")
         assert res == "Succès au 2e essai"
         assert calls == 2
+
+
+def test_clean_json_payload_unwraps_properties_and_defaults() -> None:
+    """Vérifie que clean_json_payload élimine les fragments de schéma JSON émis par les SLMs."""
+    import json
+    from providers.local import clean_json_payload
+
+    # Cas 1 : Enveloppe globale 'properties'
+    raw1 = '{"properties": {"intent": "chat"}}'
+    cleaned1 = clean_json_payload(raw1)
+    assert json.loads(cleaned1) == {"intent": "chat"}
+
+    # Cas 2 : Propriété avec définition de schéma {'default': ..., 'type': ...}
+    raw2 = '{"is_search_needed": {"default": true, "type": "boolean"}, "focus": "web"}'
+    cleaned2 = clean_json_payload(raw2)
+    assert json.loads(cleaned2) == {"is_search_needed": True, "focus": "web"}
+
+    # Cas 3 : Markdown avec bloc json
+    raw3 = '```json\n{"properties": {"thought": "ok", "intent": "action"}}\n```'
+    cleaned3 = clean_json_payload(raw3)
+    assert json.loads(cleaned3) == {"thought": "ok", "intent": "action"}
+

@@ -21,11 +21,20 @@ def build_intent_prompt(ctx: ExecutionContext | None = None) -> str:
     """Construit le prompt de classification enrichi de l'ancrage temporel."""
     date_info = f"\nDate du jour : {ctx.current_date} (Année : {ctx.current_year})." if ctx else ""
     return (
-        f"Classifie la demande en une seule catégorie stricte :{date_info}\n"
-        "- 'chat' : salutation, politesse, bavardage, question théorique ne nécessitant aucune recherche externe.\n"
-        "- 'research' : veille technique, actualités récentes, articles scientifiques, bioinfo, code, SOTA.\n"
-        "- 'action' : commande d'action (tâches todo, manipulation de fichiers, commandes système)."
+        f"Tu es le Routeur d'Ekko. Tu classifies la dernière demande de l'utilisateur.{date_info}\n"
+        "RÈGLES STRICTES :\n"
+        "- 'chat' : salutation, discussion, question théorique, ou rappel/question portant sur l'historique récent de la conversation (ne nécessite aucune recherche web externe).\n"
+        "- 'research' : veille technologique, actualités récentes, nouveaux modèles/articles scientifiques, bioinformatique, code nécessitant une recherche web ou académique.\n"
+        "- 'action' : tâches todo, commandes système, manipulation de fichiers ou outils."
     )
+
+
+def build_intent_user_prompt(query: str, ctx: ExecutionContext | None = None) -> str:
+    """Formate la requête avec l'historique récent pour un routage conscient du contexte."""
+    history = ctx.history_block.strip() if ctx and ctx.history_block else ""
+    if history:
+        return f"Historique de la conversation :\n{history}\n\nDemande utilisateur :\n\"{query.strip()}\""
+    return f"Demande utilisateur : \"{query.strip()}\""
 
 
 def is_fast_greeting(query: str) -> bool:
@@ -40,11 +49,11 @@ async def classify_intent(
     query: str,
     ctx: ExecutionContext | None = None,
 ) -> str:
-    """Classifie l'intention utilisateur via détection rapide ou appel structuré."""
+    """Classifie l'intention utilisateur via détection rapide ou appel structuré conscient du contexte."""
     if is_fast_greeting(query):
         return "chat"
 
-    prompt = f"Demande utilisateur : {query.strip()}"
+    prompt = build_intent_user_prompt(query, ctx)
     sys_prompt = build_intent_prompt(ctx)
     try:
         decision = await provider.generate_structured(

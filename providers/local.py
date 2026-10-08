@@ -16,14 +16,29 @@ from .base import LLMProvider
 T = TypeVar("T", bound=BaseModel)
 
 
+def _unwrap_schema_fragments(obj: Any) -> Any:
+    """Recursively unwraps JSON schema fragments echoed by compact models."""
+    if isinstance(obj, dict):
+        if "properties" in obj and isinstance(obj["properties"], dict):
+            return _unwrap_schema_fragments(obj["properties"])
+        if "default" in obj and ("type" in obj or len(obj) <= 3):
+            return _unwrap_schema_fragments(obj["default"])
+        if "value" in obj and len(obj) <= 3:
+            return _unwrap_schema_fragments(obj["value"])
+        return {k: _unwrap_schema_fragments(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_unwrap_schema_fragments(item) for item in obj]
+    return obj
+
+
 def clean_json_payload(text: str) -> str:
-    """Extrait le JSON brut et déballe l'enveloppe 'properties' si imitée par le modèle."""
+    """Extracts raw JSON and strips out schema metadata wrappers."""
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
     cleaned = match.group(1).strip() if match else text.strip()
     try:
         data = json.loads(cleaned)
-        if isinstance(data, dict) and "properties" in data and isinstance(data["properties"], dict):
-            return json.dumps(data["properties"])
+        unwrapped = _unwrap_schema_fragments(data)
+        return json.dumps(unwrapped)
     except Exception:
         pass
     return cleaned
