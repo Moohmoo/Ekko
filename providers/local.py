@@ -16,11 +16,16 @@ T = TypeVar("T", bound=BaseModel)
 
 
 def clean_json_payload(text: str) -> str:
-    """Extrait le JSON brut si le modèle l'a enveloppé dans des balises Markdown."""
+    """Extrait le JSON brut et déballe l'enveloppe 'properties' si imitée par le modèle."""
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
-    if match:
-        return match.group(1).strip()
-    return text.strip()
+    cleaned = match.group(1).strip() if match else text.strip()
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict) and "properties" in data and isinstance(data["properties"], dict):
+            return json.dumps(data["properties"])
+    except Exception:
+        pass
+    return cleaned
 
 
 class LocalProvider(LLMProvider):

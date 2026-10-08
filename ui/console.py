@@ -162,7 +162,28 @@ class AgentUI:
 
     def on_thinking_start(self) -> None:
         """Démarre le spinner dynamique pour la réflexion du modèle."""
-        self._start_spinner("Réflexion en cours...")
+        self._start_spinner("Cadrage et analyse de la demande...")
+
+    def on_plan(self, focus: str, queries: list[str], elapsed: float) -> None:
+        """Affiche le cadrage de la recherche et relance le spinner de collecte."""
+        self.stop_spinner()
+        queries_str = ", ".join(f"'{q}'" for q in queries) if queries else "direct"
+        console.print(f"[dim cyan]🔍 [1/3] Cadrage : {focus} ({elapsed:.1f}s)[/dim cyan]")
+        if self.debug and queries:
+            console.print(f"[dim]   Requêtes : {queries_str}[/dim]")
+        if queries:
+            self._start_spinner(f"Collecte des sources ({focus})...")
+
+    def on_retrieval(self, source: str, count: int, elapsed: float) -> None:
+        """Affiche la collecte et démarre le spinner de synthèse."""
+        self.stop_spinner()
+        console.print(f"[dim green]📚 [2/3] Collecte : {count} sources vérifiées ({elapsed:.1f}s)[/dim green]")
+        self._start_spinner("Rédaction de la synthèse technique...")
+
+    def on_validation(self, elapsed: float) -> None:
+        """Affiche la certification de validation."""
+        self.stop_spinner()
+        console.print(f"[dim magenta]⚡ [3/3] Synthèse certifiée ({elapsed:.1f}s)[/dim magenta]")
 
     def on_thought(self, thought: str) -> None:
         """Arrête le spinner et affiche la pensée (discrète ou détaillée)."""

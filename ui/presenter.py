@@ -9,6 +9,8 @@ from agent.schemas import (
     AgentEvent,
     AgentResponse,
     DoneEvent,
+    PlanEvent,
+    RetrievalEvent,
     ThoughtEvent,
     ToolCallEvent,
     ToolResultEvent,
@@ -32,7 +34,11 @@ class ConsolePresenter:
 
     def render_event(self, event: AgentEvent) -> None:
         """Traite et affiche un événement unitaire du moteur."""
-        if isinstance(event, ThoughtEvent):
+        if isinstance(event, PlanEvent):
+            self.ui.on_plan(event.focus, event.queries, event.elapsed)
+        elif isinstance(event, RetrievalEvent):
+            self.ui.on_retrieval(event.source, event.count, event.elapsed)
+        elif isinstance(event, ThoughtEvent):
             self.ui.stop_spinner()
             if self.debug:
                 render_thought_panel(event.thought)
@@ -43,9 +49,7 @@ class ConsolePresenter:
         elif isinstance(event, ToolResultEvent):
             self.ui.on_tool_result(event.tool_name, event.result)
         elif isinstance(event, ValidationEvent):
-            self.ui.stop_spinner()
-            if self.debug:
-                console.print(f"[dim cyan]  ✓ Validation critique certifiée ({event.elapsed:.2f}s)[/dim cyan]")
+            self.ui.on_validation(event.elapsed)
         elif isinstance(event, DoneEvent):
             self.ui.stop_spinner()
             render_final_answer(event.response)

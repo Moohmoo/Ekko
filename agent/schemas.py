@@ -4,9 +4,45 @@ Centralise les structures de données d'entrée (AgentRequest),
 de sortie (AgentResponse) et de décision ReAct (AgentAction).
 """
 
-from typing import Any
+from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 from providers.base import LLMProvider
+
+
+class SearchPlan(BaseModel):
+    """Plan de recherche formulé lors du cadrage de la demande."""
+
+    model_config = {"extra": "ignore"}
+
+    is_search_needed: bool = Field(
+        default=True,
+        description="True si la question nécessite une recherche externe, False pour salutation, conversation ou théorie pure.",
+    )
+    focus: Literal["academic", "code", "web"] = Field(
+        default="academic",
+        description="Angle de recherche ('academic' pour arXiv, 'code' pour GitHub, 'web' pour le web technique).",
+    )
+    queries: list[str] = Field(
+        default_factory=list,
+        description="1 à 2 requêtes clés en anglais pour les moteurs de recherche académiques ou de code.",
+    )
+    direct_answer: str | None = Field(
+        default=None,
+        description="Réponse directe si is_search_needed est False.",
+    )
+
+    @field_validator("focus", mode="before")
+    @classmethod
+    def normalize_focus(cls, value: Any) -> str:
+        """Tolère et normalise les variations lexicales générées par les modèles compacts."""
+        if not isinstance(value, str):
+            return "web"
+        val = value.lower().strip()
+        if val in {"academic", "science", "arxiv", "paper", "papers", "bio", "research"}:
+            return "academic"
+        if val in {"code", "github", "git", "repo", "repository"}:
+            return "code"
+        return "web"
 
 
 class AgentRequest(BaseModel):
@@ -85,6 +121,22 @@ class ThoughtEvent(BaseModel):
     elapsed: float = 0.0
 
 
+class PlanEvent(BaseModel):
+    """Événement émis lors du cadrage de la recherche."""
+
+    focus: str
+    queries: list[str] = Field(default_factory=list)
+    elapsed: float = 0.0
+
+
+class RetrievalEvent(BaseModel):
+    """Événement émis lors de la collecte et du dédoublonnage des sources."""
+
+    source: str
+    count: int
+    elapsed: float = 0.0
+
+
 class ToolCallEvent(BaseModel):
     """Événement émis lors du déclenchement d'un outil externe."""
 
@@ -112,7 +164,15 @@ class DoneEvent(BaseModel):
     response: AgentResponse
 
 
-AgentEvent = ThoughtEvent | ToolCallEvent | ToolResultEvent | ValidationEvent | DoneEvent
+AgentEvent = (
+    ThoughtEvent
+    | PlanEvent
+    | RetrievalEvent
+    | ToolCallEvent
+    | ToolResultEvent
+    | ValidationEvent
+    | DoneEvent
+)
 
 
 async def decide_action(

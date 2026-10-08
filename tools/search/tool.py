@@ -38,10 +38,22 @@ class SearchParams(BaseModel):
 WebSearchParams = SearchParams
 
 
+ARXIV_STOP_WORDS = {
+    "a", "an", "the", "in", "on", "at", "for", "to", "of", "with", "by", "from",
+    "and", "or", "as", "is", "are", "was", "were", "be", "been", "being",
+    "recent", "advances", "advance", "advancements", "latest", "new", "novel",
+    "research", "studies", "study", "methods", "method", "approach", "approaches",
+    "paper", "papers", "survey", "review", "overview",
+    "dernier", "derniers", "derniere", "dernieres", "avancees", "avances", "actualites", "progres",
+}
+
+
 def _build_arxiv_search_query(query: str) -> str:
-    """Construit une requête booléenne optimisée avec les mots-clés essentiels."""
-    clean_words = [w.strip() for w in query.strip().split() if len(w.strip()) > 1]
-    return " AND ".join(f"all:{w}" for w in clean_words[:6]) if clean_words else "all:ai"
+    """Construit une requête booléenne optimisée en ne conservant que les termes pivots."""
+    tokens = [w.strip() for w in query.strip().split() if len(w.strip()) > 1]
+    filtered = [w for w in tokens if w.lower() not in ARXIV_STOP_WORDS]
+    target_words = filtered if filtered else tokens
+    return " AND ".join(f"all:{w}" for w in target_words[:4]) if target_words else "all:ai"
 
 
 async def _fetch_arxiv_entries(query: str, max_results: int) -> list[dict[str, Any]]:

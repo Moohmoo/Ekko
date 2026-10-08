@@ -46,6 +46,7 @@ def initialize_engine(settings: Settings | None = None) -> EkkoEngine:
         registry=default_registry,
         memory=memory,
         user_profile=user_profile,
+        use_pipeline=True,
     )
 
 
