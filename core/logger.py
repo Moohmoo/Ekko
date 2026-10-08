@@ -5,6 +5,7 @@ et composants, tout en isolant les flux des bibliothèques tierces bruyantes.
 """
 
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 AGENT_LOG_FORMAT = "%(asctime)s [%(levelname)-7s] [%(name)s] %(message)s"
@@ -36,9 +37,14 @@ class Logger:
         self._logger.debug(message, *args, exc_info=exc_info)
 
 
-def _configure_file_handler(log_file: Path) -> logging.FileHandler:
-    """Initialise le gestionnaire de fichier avec formatage aligné pour agents."""
-    handler = logging.FileHandler(log_file, encoding="utf-8")
+def _configure_file_handler(log_file: Path) -> RotatingFileHandler:
+    """Initialise le gestionnaire de fichier avec rotation bornée (10 Mo, 3 archives)."""
+    handler = RotatingFileHandler(
+        log_file,
+        maxBytes=10 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
     formatter = logging.Formatter(AGENT_LOG_FORMAT, datefmt=AGENT_DATE_FORMAT)
     handler.setFormatter(formatter)
     handler.setLevel(logging.DEBUG)

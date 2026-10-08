@@ -253,6 +253,8 @@ async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class MockResponse:
         text = html_content
+        content = html_content.encode("utf-8")
+        headers = {"content-type": "text/html"}
 
         def raise_for_status(self) -> None:
             pass
@@ -280,6 +282,32 @@ async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     # Vérifie également le cas sans schéma explicite
     res_no_scheme = await tool.execute(url="example.com/page")
     assert "Contenu extrait de `https://example.com/page`" in res_no_scheme
+
+
+@pytest.mark.asyncio
+async def test_reader_tool_binary_and_oversize(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vérifie le rejet sécurisé des formats binaires et fichiers trop volumineux."""
+    class MockBinaryResponse:
+        content = b"x" * 100
+        text = ""
+        headers = {"content-type": "application/octet-stream"}
+        def raise_for_status(self) -> None:
+            pass
+
+    class MockAsyncClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *args: object):
+            pass
+        async def get(self, *args: object, **kwargs: object):
+            return MockBinaryResponse()
+
+    monkeypatch.setattr("httpx.AsyncClient", MockAsyncClient)
+    tool = ReaderTool()
+    res = await tool.execute(url="https://example.com/archive.bin")
+    assert "n'est pas un format textuel lisible" in res
 
 
 def test_get_region_for_language_mapping() -> None:

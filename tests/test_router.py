@@ -107,3 +107,12 @@ async def test_classify_intent_passes_history_context() -> None:
     assert provider.call_count == 1
     assert "Historique de la conversation :" in provider.captured_prompt
 
+
+@pytest.mark.asyncio
+async def test_classify_intent_empty_query_short_circuit() -> None:
+    """Vérifie le court-circuit immédiat sur chaîne vide sans appel LLM."""
+    provider = MockRouterLLM(intent="research")
+    assert await classify_intent(provider, "") == "chat"
+    assert await classify_intent(provider, "   ") == "chat"
+    assert provider.call_count == 0
+

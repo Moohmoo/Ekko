@@ -3,12 +3,13 @@
 import asyncio
 from unittest.mock import AsyncMock, patch
 import pytest
+from providers.errors import ProviderAuthError
 from providers.gemini import GeminiProvider
 
 
 def test_gemini_provider_requires_api_key() -> None:
-    """Vérifie le rejet d'une clé API vide."""
-    with pytest.raises(ValueError, match="clé GEMINI_API_KEY valide"):
+    """Vérifie le rejet d'une clé API vide avec ProviderAuthError."""
+    with pytest.raises(ProviderAuthError, match="clé GEMINI_API_KEY valide"):
         GeminiProvider(api_key="")
 
 

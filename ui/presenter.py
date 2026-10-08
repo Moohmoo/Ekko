@@ -93,6 +93,8 @@ class ConsolePresenter:
     async def render_stream(self, stream: AsyncIterator[AgentEvent]) -> AgentResponse | None:
         """Consomme le flux asynchrone d'événements et pilote le rendu en temps réel."""
         final_response: AgentResponse | None = None
+        self._has_streamed = False
+        self._streamed_text = ""
         self.ui.on_thinking_start()
         try:
             async for event in stream:
@@ -102,6 +104,8 @@ class ConsolePresenter:
         finally:
             self._stop_live()
             self.ui.stop_spinner()
+            self._has_streamed = False
+            self._streamed_text = ""
         return final_response
 
 

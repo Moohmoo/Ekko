@@ -96,3 +96,21 @@ async def test_validator_prevents_false_negative_when_primary_sources_present() 
     )
     assert res == draft
     assert provider.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_validator_graceful_fallback_on_exception() -> None:
+    """Vérifie le repli sécurisé sur le brouillon initial si le fournisseur LLM échoue."""
+    class FailingProvider(MockValidatorProvider):
+        async def generate_text(self, prompt: str, system_instruction: str = "") -> str:
+            raise RuntimeError("API Timeout / 503")
+
+    draft = "Synthèse existante"
+    res = await validate_draft(
+        provider=FailingProvider(),
+        user_query="Sujet",
+        draft_answer=draft,
+        observations=["obs"],
+        user_profile="",
+    )
+    assert res == draft

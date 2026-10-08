@@ -26,12 +26,15 @@ async def validate_draft(
 
     system_instruction = build_validator_prompt(user_profile)
     prompt = format_validation_prompt(user_query, draft_answer, observations)
-    validated = (
-        await provider.generate_text(
-            prompt=prompt,
-            system_instruction=system_instruction,
-        )
-    ).strip()
+    try:
+        validated = (
+            await provider.generate_text(
+                prompt=prompt,
+                system_instruction=system_instruction,
+            )
+        ).strip()
+    except Exception:
+        return draft_answer
 
     if not validated:
         return draft_answer

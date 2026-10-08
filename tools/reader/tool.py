@@ -46,6 +46,11 @@ class ReaderTool(BaseTool):
             async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
                 resp = await client.get(clean_url, headers=headers)
                 resp.raise_for_status()
+                ctype = resp.headers.get("content-type", "").lower()
+                if ctype and not any(t in ctype for t in ("text", "html", "json", "xml", "markdown")):
+                    return f"Le document `{clean_url}` n'est pas un format textuel lisible ({ctype})."
+                if len(resp.content) > 2 * 1024 * 1024:
+                    return f"Le document `{clean_url}` dépasse la taille maximale autorisée (2 Mo)."
                 text = _clean_html_to_text(resp.text)
                 truncated = text[:max_chars] + ("..." if len(text) > max_chars else "")
                 return f"Contenu extrait de `{clean_url}` :\n\n{truncated}"

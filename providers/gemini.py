@@ -64,8 +64,8 @@ class GeminiProvider(LLMProvider):
         timeout: float = 12.0,
     ) -> None:
         """Initialise le client Google GenAI avec timeout et options de serveur."""
-        if not api_key:
-            raise ValueError("Une clé GEMINI_API_KEY valide est requise pour GeminiProvider.")
+        if not api_key or not api_key.strip():
+            raise ProviderAuthError("Une clé GEMINI_API_KEY valide est requise pour GeminiProvider.")
         timeout_ms = int(timeout * 1000)
         options = types.HttpOptions(timeout=timeout_ms)
         self.client = genai.Client(api_key=api_key, http_options=options)

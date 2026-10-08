@@ -15,7 +15,8 @@ async def classify_intent(
     query: str,
     ctx: ExecutionContext | None = None,
 ) -> str:
-    """Classifie sémantiquement l'intention utilisateur via appel structuré conscient du contexte."""
+    if not query or not query.strip():
+        return "chat"
     prompt = build_intent_user_prompt(query, ctx)
     sys_prompt = build_intent_prompt(ctx)
     try:
