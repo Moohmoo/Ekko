@@ -83,4 +83,23 @@ def test_clean_json_text_strips_markdown_fences() -> None:
     assert _clean_json_text(None) == "{}"
 
 
+def test_translate_local_error_types() -> None:
+    """Vérifie la conversion typée des erreurs réseau du fournisseur local."""
+    import httpx
+    from providers.errors import ProviderError, ProviderTimeoutError, ProviderUnavailableError
+    from providers.local import _translate_local_error
+
+    conn_err = httpx.ConnectError("Connection refused")
+    typed_unavail = _translate_local_error(conn_err, "http://localhost:11434")
+    assert isinstance(typed_unavail, ProviderUnavailableError)
+
+    timeout_err = httpx.ReadTimeout("Read timed out")
+    typed_timeout = _translate_local_error(timeout_err, "http://localhost:11434")
+    assert isinstance(typed_timeout, ProviderTimeoutError)
+
+    status_err = httpx.HTTPStatusError("500 Server Error", request=None, response=httpx.Response(500))  # type: ignore[arg-type]
+    typed_status = _translate_local_error(status_err, "http://localhost:11434")
+    assert isinstance(typed_status, ProviderError)
+
+
 

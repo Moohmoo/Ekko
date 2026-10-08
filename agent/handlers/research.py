@@ -84,7 +84,7 @@ class ResearchHandler(BaseHandler):
         sources, count, el_retrieval = await collect_sources(self.search_tool, plan)
         yield RetrievalEvent(source=plan.focus, count=count, elapsed=el_retrieval)
 
-        if count == 0 or not sources.strip() or sources.startswith("Aucune source"):
+        if count == 0 or not sources.strip():
             async for ev in self._handle_no_sources(req):
                 yield ev
             return

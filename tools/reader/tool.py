@@ -38,13 +38,16 @@ class ReaderTool(BaseTool):
 
     async def execute(self, url: str, max_chars: int = 4000) -> str:
         """Télécharge la page de manière asynchrone et extrait le texte utile."""
+        clean_url = url.strip()
+        if not clean_url.startswith(("http://", "https://")):
+            clean_url = f"https://{clean_url}"
         headers = {"User-Agent": USER_AGENT}
         try:
             async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-                resp = await client.get(url, headers=headers)
+                resp = await client.get(clean_url, headers=headers)
                 resp.raise_for_status()
                 text = _clean_html_to_text(resp.text)
                 truncated = text[:max_chars] + ("..." if len(text) > max_chars else "")
-                return f"Contenu extrait de `{url}` :\n\n{truncated}"
+                return f"Contenu extrait de `{clean_url}` :\n\n{truncated}"
         except Exception as exc:
-            return f"Impossible de charger la page `{url}` : {exc}"
+            return f"Impossible de charger la page `{clean_url}` : {exc}"

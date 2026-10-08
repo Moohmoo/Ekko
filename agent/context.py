@@ -7,6 +7,7 @@ le profil utilisateur et la mémoire de travail de la session active.
 from datetime import datetime
 import os
 from pathlib import Path
+import platform
 from pydantic import BaseModel, Field
 from .storage import SessionStorage
 from .prompts import format_history_block
@@ -91,7 +92,7 @@ def build_execution_context(
         current_date=now.strftime("%d %B %Y"),
         current_year=now.year,
         current_time=now.strftime("%H:%M"),
-        os_name=os.name,
+        os_name=platform.system(),
         cwd=str(Path.cwd()),
     )
     recent_messages = storage.get_recent_messages(session_id, limit=history_limit)

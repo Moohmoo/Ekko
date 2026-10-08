@@ -265,3 +265,14 @@ async def test_engine_multiturn_recall_routes_to_chat(tmp_path: Path) -> None:
     assert not any(isinstance(ev, ToolCallEvent) for ev in events)
 
 
+@pytest.mark.asyncio
+async def test_engine_custom_handler_fallback(tmp_path: Path) -> None:
+    """Vérifie que l'orchestrateur ne lève pas de KeyError avec des handlers personnalisés."""
+    engine, _ = setup_engine(tmp_path, [])
+    # Injection d'un dictionnaire avec une seule clé 'custom'
+    engine.handlers = {"custom": engine.handlers["chat"]}
+    engine.use_pipeline = False
+    events = [ev async for ev in engine.run_stream("Bonjour")]
+    assert any(isinstance(ev, DoneEvent) for ev in events)
+
+

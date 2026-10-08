@@ -53,7 +53,7 @@ def _build_arxiv_search_query(query: str) -> str:
     """Construit une requête booléenne pour l'API arXiv à partir des termes clés."""
     tokens = [w.strip() for w in query.strip().split() if len(w.strip()) > 1]
     if not tokens:
-        return "all:technology"
+        return ""
     clean_terms = [t for t in tokens if t.isalnum() or "-" in t]
     target = clean_terms[:5] if clean_terms else tokens[:5]
     return " AND ".join(f"all:{term}" for term in target)
@@ -61,39 +61,45 @@ def _build_arxiv_search_query(query: str) -> str:
 
 async def _fetch_arxiv_entries(query: str, max_results: int) -> list[SearchItem]:
     """Interroge l'API officielle d'arXiv pour extraire des articles et abstracts récents."""
+    search_query = _build_arxiv_search_query(query)
+    if not search_query:
+        return []
     url = "https://export.arxiv.org/api/query"
     params = {
-        "search_query": _build_arxiv_search_query(query),
+        "search_query": search_query,
         "sortBy": "submittedDate",
         "sortOrder": "descending",
         "start": 0,
         "max_results": max_results,
     }
     headers = {"User-Agent": USER_AGENT}
-    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-        resp = await client.get(url, params=params, headers=headers)
-        resp.raise_for_status()
-
-    root = ET.fromstring(resp.text)
-    ns = {"atom": "http://www.w3.org/2005/Atom"}
-    items: list[SearchItem] = []
-    for entry in root.findall("atom:entry", ns):
-        title_el = entry.find("atom:title", ns)
-        summary_el = entry.find("atom:summary", ns)
-        id_el = entry.find("atom:id", ns)
-        pub_el = entry.find("atom:published", ns)
-        authors = [a.find("atom:name", ns).text or "" for a in entry.findall("atom:author", ns)]
-        items.append(
-            SearchItem(
-                title=" ".join((title_el.text or "Sans titre").split()),
-                url=(id_el.text or "").strip(),
-                snippet=" ".join((summary_el.text or "").split()),
-                source="arXiv",
-                date=(pub_el.text or "")[:10],
-                authors=[a for a in authors if a][:3],
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(url, params=params, headers=headers)
+            if resp.status_code != 200:
+                return []
+        root = ET.fromstring(resp.text)
+        ns = {"atom": "http://www.w3.org/2005/Atom"}
+        items: list[SearchItem] = []
+        for entry in root.findall("atom:entry", ns):
+            title_el = entry.find("atom:title", ns)
+            summary_el = entry.find("atom:summary", ns)
+            id_el = entry.find("atom:id", ns)
+            pub_el = entry.find("atom:published", ns)
+            authors = [a.find("atom:name", ns).text or "" for a in entry.findall("atom:author", ns)]
+            items.append(
+                SearchItem(
+                    title=" ".join((title_el.text or "Sans titre").split()),
+                    url=(id_el.text or "").strip(),
+                    snippet=" ".join((summary_el.text or "").split()),
+                    source="arXiv",
+                    date=(pub_el.text or "")[:10],
+                    authors=[a for a in authors if a][:3],
+                )
             )
-        )
-    return items
+        return items
+    except Exception:
+        return []
 
 
 async def _fetch_github_repos(query: str, max_results: int) -> list[SearchItem]:
@@ -137,20 +143,6 @@ def _perform_ddgs_web(query: str, max_results: int, region: str) -> list[SearchI
         ]
 
 
-def _build_news_search_query(query: str) -> str:
-    """Nettoie et affine la requête d'actualités en éliminant les termes parasites."""
-    tokens = [w.strip() for w in query.strip().split() if w.strip()]
-    stop_news = {"news", "latest", "recent", "actualites", "actualite", "nouvelles", "in", "of", "the", "for"}
-    clean_tokens = [w for w in tokens if w.lower() not in stop_news]
-    if len(clean_tokens) >= 2:
-        cleaned = " ".join(clean_tokens)
-    elif clean_tokens:
-        cleaned = " ".join([w for w in tokens if w.lower() not in {"news", "actualites", "actualite"}])
-    else:
-        cleaned = query.strip()
-    return re.sub(r"\b[Aa][Ii]\b", '"AI"', cleaned)
-
-
 def _fetch_web_fallback(client: DDGS, query: str, region: str, limit: int) -> list[SearchItem]:
     """Complète la recherche d'actualités avec le web récent pour les sujets techniques."""
     current_year = str(datetime.now().year)
@@ -171,12 +163,12 @@ def _fetch_web_fallback(client: DDGS, query: str, region: str, limit: int) -> li
 
 
 def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[SearchItem]:
-    """Exécute la recherche DuckDuckGo News avec repli web sur les domaines spécialisés."""
-    refined = _build_news_search_query(query)
+    """Exécute la recherche DuckDuckGo News avec repli web si aucun résultat n'est retourné."""
+    clean_q = query.strip()
     with DDGS() as client:
         for limit in ("w", None):
             try:
-                hits = list(client.news(refined, region=region, timelimit=limit, max_results=max_results))
+                hits = list(client.news(clean_q, region=region, timelimit=limit, max_results=max_results))
                 if len(hits) >= 2:
                     return [
                         SearchItem(
@@ -190,7 +182,7 @@ def _perform_ddgs_news(query: str, max_results: int, region: str) -> list[Search
                     ]
             except Exception:
                 pass
-        return _fetch_web_fallback(client, refined, region, max_results)
+        return _fetch_web_fallback(client, clean_q, region, max_results)
 
 
 def _format_academic_results(items: list[SearchItem], query: str) -> str:

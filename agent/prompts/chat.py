@@ -1,6 +1,6 @@
 """Prompts et directives pour le gestionnaire conversationnel (ChatHandler)."""
 
-CHAT_SYSTEM_TEMPLATE = """Tu es Ekko, l'assistant personnel d'ingénierie et de recherche de Mohamed.
+CHAT_SYSTEM_TEMPLATE = """Tu es Ekko, un assistant personnel d'ingénierie et de recherche.
 Date actuelle : {current_date}.
 Profil utilisateur :
 {user_profile}

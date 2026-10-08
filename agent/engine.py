@@ -65,10 +65,12 @@ class EkkoEngine:
         """Point d'entrée unique : résout le contexte et dispatche vers le handler approprié."""
         req = normalize_request(request, session_id)
         ctx = build_execution_context(self.storage, req.session_id, self.user_profile)
+        if not self.handlers:
+            raise RuntimeError("Aucun gestionnaire d'intention disponible dans le moteur.")
         if not self.use_pipeline:
-            handler = self.handlers["action"]
+            handler = self.handlers.get("action") or next(iter(self.handlers.values()))
         else:
             intent = await classify_intent(self.provider, req.query, ctx=ctx)
-            handler = self.handlers.get(intent, self.handlers["chat"])
+            handler = self.handlers.get(intent) or self.handlers.get("chat") or next(iter(self.handlers.values()))
         async for event in handler.handle_stream(req, ctx):
             yield event

@@ -64,11 +64,11 @@ def classify_generic_exception(exc: Exception) -> EkkoError | ProviderError:
 def _get_remediation_action(error: Exception) -> str:
     """Fournit un conseil d'action immédiat selon la nature de l'erreur."""
     if isinstance(error, ProviderUnavailableError):
-        return "Attendez 30-60s (pic de charge temporaire chez Google) ou basculez en modèle local."
+        return "Attendez 30-60s (pic de charge temporaire du fournisseur LLM) ou basculez de modèle."
     if isinstance(error, ProviderTimeoutError):
         return "Le serveur distant tarde à répondre. Vérifiez votre accès réseau ou réessayez."
     if isinstance(error, ProviderAuthError):
-        return "Vérifiez que GEMINI_API_KEY est correctement renseignée dans votre fichier .env."
+        return "Vérifiez vos identifiants ou clés d'API dans votre fichier .env."
     if isinstance(error, ToolExecutionError):
         return "Vérifiez les prérequis matériels ou les autorisations système de l'outil."
     return "Consultez les détails dans data/logs/ekko.log ou réessayez avec une requête reformulée."

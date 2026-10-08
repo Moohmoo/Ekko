@@ -12,6 +12,7 @@ import httpx
 from pydantic import BaseModel
 
 from .base import LLMProvider
+from .errors import ProviderError, ProviderTimeoutError, ProviderUnavailableError
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -46,6 +47,29 @@ def clean_json_payload(text: str) -> str:
     return cleaned
 
 
+def _translate_local_error(exc: Exception, base_url: str) -> Exception:
+    """Traduit les défaillances réseau ou timeouts d'un serveur local en erreurs typées."""
+    if isinstance(exc, httpx.ConnectError):
+        return ProviderUnavailableError(
+            f"Le serveur LLM local ({base_url}) est inaccessible. Vérifiez qu'Ollama ou vLLM est démarré.",
+            technical_details=str(exc),
+        )
+    if isinstance(exc, (httpx.TimeoutException, TimeoutError)):
+        return ProviderTimeoutError(
+            f"Le serveur LLM local ({base_url}) n'a pas répondu dans le délai imparti.",
+            technical_details=str(exc),
+        )
+    if isinstance(exc, httpx.HTTPStatusError):
+        return ProviderError(
+            f"Erreur HTTP {exc.response.status_code} renvoyée par le serveur local.",
+            technical_details=str(exc),
+        )
+    return ProviderError(
+        f"Erreur du fournisseur local : {exc}",
+        technical_details=str(exc),
+    )
+
+
 class LocalProvider(LLMProvider):
     """Fournisseur interrogeant une instance locale (ex: Ollama / vLLM)."""
 
@@ -61,11 +85,14 @@ class LocalProvider(LLMProvider):
     async def _post_chat(self, payload: dict[str, Any]) -> str:
         """Envoie une requête POST vers le point de terminaison chat/completions."""
         url = f"{self.base_url}/chat/completions"
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            res = await client.post(url, json=payload)
-            res.raise_for_status()
-            data = res.json()
-            return str(data["choices"][0]["message"]["content"])
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                res = await client.post(url, json=payload)
+                res.raise_for_status()
+                data = res.json()
+                return str(data["choices"][0]["message"]["content"])
+        except Exception as exc:
+            raise _translate_local_error(exc, self.base_url) from exc
 
     async def generate_structured(
         self,
@@ -125,15 +152,18 @@ class LocalProvider(LLMProvider):
             "stream": True,
         }
         url = f"{self.base_url}/chat/completions"
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            async with client.stream("POST", url, json=payload) as response:
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    if line.startswith("data: ") and not line.strip().endswith("[DONE]"):
-                        try:
-                            data = json.loads(line[6:].strip())
-                            delta = data["choices"][0]["delta"].get("content", "")
-                            if delta:
-                                yield delta
-                        except Exception:
-                            continue
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream("POST", url, json=payload) as response:
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: ") and not line.strip().endswith("[DONE]"):
+                            try:
+                                data = json.loads(line[6:].strip())
+                                delta = data["choices"][0]["delta"].get("content", "")
+                                if delta:
+                                    yield delta
+                            except Exception:
+                                continue
+        except Exception as exc:
+            raise _translate_local_error(exc, self.base_url) from exc

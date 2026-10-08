@@ -18,7 +18,7 @@ RÈGLE TEMPORELLE ABSOLUE : Utilise l'année en cours ({year}) ou des termes ré
 3. Pour le focus 'news' : proscris le mot 'news' et cible des termes techniques d'actualité comme 'model release announcement', 'framework', 'benchmark'."""
 
 
-SYNTHESIZER_SYSTEM_TEMPLATE = """Tu es le Rédacteur Scientifique et Technique d'Ekko pour Mohamed.
+SYNTHESIZER_SYSTEM_TEMPLATE = """Tu es le Rédacteur Scientifique et Technique d'Ekko.
 
 ### PROFIL UTILISATEUR :
 {user_profile}

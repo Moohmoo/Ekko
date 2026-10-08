@@ -222,13 +222,13 @@ async def test_search_tool_search_returns_typed_items(monkeypatch: pytest.Monkey
     assert items[0].snippet == "Snippet 1"
 
 
-def test_build_news_search_query() -> None:
-    """Vérifie le nettoyage des mots parasites et la protection de l'acronyme AI."""
-    from tools.search.tool import _build_news_search_query
+def test_build_arxiv_search_query() -> None:
+    """Vérifie la construction propre des requêtes booléennes arXiv."""
+    from tools.search.tool import _build_arxiv_search_query
 
-    assert _build_news_search_query("latest AI news 2026") == '"AI" 2026'
-    assert _build_news_search_query("recent AI models release") == '"AI" models release'
-    assert _build_news_search_query("bioinformatics new tools") == "bioinformatics new tools"
+    assert _build_arxiv_search_query("machine learning") == "all:machine AND all:learning"
+    assert _build_arxiv_search_query("") == ""
+    assert _build_arxiv_search_query("   ") == ""
 
 
 @pytest.mark.asyncio
@@ -261,6 +261,10 @@ async def test_reader_tool_execution(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert "Titre Paragraphe intéressant" in res
     assert "Contenu extrait" in res
+
+    # Vérifie également le cas sans schéma explicite
+    res_no_scheme = await tool.execute(url="example.com/page")
+    assert "Contenu extrait de `https://example.com/page`" in res_no_scheme
 
 
 def test_get_region_for_language_mapping() -> None:
