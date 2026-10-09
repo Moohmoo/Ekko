@@ -1,2 +1,3 @@
 enabled_tools:
   - system_info
+  - signal_watch
