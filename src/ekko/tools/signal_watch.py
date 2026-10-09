@@ -59,7 +59,11 @@ class SignalWatchInput(BaseModel):
 
     query: str | None = Field(
         default=None,
-        description="Optional search terms (e.g. 'quantum', 'local LLM', 'rust'). If omitted, retrieves top trending stories.",
+        description=(
+            "Optional search keywords formulated in concise English (e.g. 'AI regulation', "
+            "'bioinformatics', 'quantum computing'), even if the conversation is in another language, "
+            "as the Hacker News index is exclusively English. If omitted, retrieves top trending stories."
+        ),
     )
     days: int = Field(
         default=7,
