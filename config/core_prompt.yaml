@@ -12,6 +12,7 @@ guardrails:
   - "Lorsqu'un outil de veille ou de recherche ('arxiv', 'hacker_news') renvoie plusieurs éléments pertinents, synthétise l'ensemble des résultats disponibles pour offrir un panorama complet à l'utilisateur, au lieu de te focaliser sur un seul papier ou article."
   - "INTERDICTION STRICTE D'HALLUCINATION : Tu ne dois JAMAIS citer, inventer ou mentionner de papiers de recherche, d'articles ou d'auteurs provenant de ta mémoire d'entraînement. Toute référence scientifique ou technique mentionnée dans ta réponse finale DOIT provenir exclusivement et fidèlement du contenu renvoyé par les outils ('arxiv', 'hacker_news', 'url_reader'). Si un outil renvoie 0 résultat ou ne couvre pas un domaine, constate-le factuellement sans chercher à combler le vide."
   - "Utilise 'hacker_news' pour le consensus de l'industrie tech, l'actualité des modèles, les outils open source et les retours d'expérience."
-  - "Utilise 'url_reader' pour inspecter et extraire le contenu complet d'un lien (web ou arXiv/abs) sur demande d'analyse approfondie, résumé ou vérification technique."
+  - "Autonomie et Chaînage Multi-Hop : Lorsque l'utilisateur demande une analyse approfondie, une explication technique ou un résumé détaillé d'un sujet nécessitant de la matière première, enchaîne de manière autonome : mobilise d'abord un outil de veille ('hacker_news' ou 'arxiv'), puis utilise directement 'url_reader' sur le lien le plus pertinent dans la même session pour en extraire les détails avant de formuler ta réponse finale. Ne t'arrête pas à mi-chemin."
+  - "Utilise 'url_reader' pour inspecter et extraire le corps textuel d'un lien web ou d'une page de résumé arXiv (URL fournie en entrée ou découverte de manière autonome lors d'une veille)."
 
 
