@@ -1,7 +1,19 @@
 """Core orchestrator executing conversational turns and ReAct tool calling."""
 
 import json
+import time
+from collections.abc import AsyncIterator
 from typing import Any
+from ekko.core.errors import ProviderError
+from ekko.core.events import (
+    EngineError,
+    EngineEvent,
+    StepStarted,
+    TokenChunk,
+    ToolCallCompleted,
+    ToolCallStarted,
+    TurnCompleted,
+)
 from ekko.core.models import Message, ToolCall, ToolResult
 from ekko.core.ports import LLMProviderPort, MemoryPort
 from ekko.utils.logger import get_logger
@@ -34,6 +46,38 @@ async def _execute_tool_call(tools: Any, call: ToolCall) -> ToolResult:
     )
 
 
+def _map_exception_to_engine_error(exc: Exception) -> EngineError:
+    """Map infrastructure or execution exceptions to user-actionable EngineError events."""
+    if isinstance(exc, ValueError):
+        return EngineError(
+            error_type="InvalidInput",
+            message=str(exc),
+            actionable_hint="Veuillez saisir une requête textuelle valide et non vide.",
+        )
+    if isinstance(exc, ProviderError):
+        msg = str(exc)
+        hint = (
+            "Vérifie qu'Ollama est démarré localement ('systemctl status ollama' ou 'ollama serve') "
+            "ou que tes identifiants d'API sont valides."
+        )
+        return EngineError(
+            error_type="ProviderUnavailable",
+            message=msg,
+            actionable_hint=hint,
+        )
+    if isinstance(exc, TimeoutError):
+        return EngineError(
+            error_type="InfrastructureTimeout",
+            message=str(exc) or "Upstream request timed out",
+            actionable_hint="Le service tiers ou le modèle met trop de temps à répondre. Réessaie dans quelques instants.",
+        )
+    return EngineError(
+        error_type="InternalError",
+        message=str(exc),
+        actionable_hint="Une erreur imprévue est survenue dans le moteur d'exécution.",
+    )
+
+
 class EkkoEngine:
     """Central orchestrator managing conversation turns, memory, and tool execution."""
 
@@ -58,11 +102,19 @@ class EkkoEngine:
         session_id: str,
         tool_calls: list[ToolCall],
         executed_calls: set[tuple[str, str]],
-    ) -> None:
-        """Execute tool calls sequentially with circuit-breaker intercepting duplicates."""
+    ) -> AsyncIterator[EngineEvent]:
+        """Execute tool calls sequentially with circuit-breaker and event emission."""
         for call in tool_calls:
             logger.debug("Executing tool call '%s' (id=%s)", call.name, call.id)
+            yield ToolCallStarted(
+                tool_call_id=call.id,
+                tool_name=call.name,
+                arguments=call.arguments,
+            )
+
             call_sig = (call.name, json.dumps(call.arguments, sort_keys=True))
+            start_time = time.perf_counter()
+
             if call_sig in executed_calls:
                 logger.warning("Duplicate tool call detected in turn for '%s': short-circuiting", call.name)
                 result = ToolResult(
@@ -74,36 +126,60 @@ class EkkoEngine:
                 executed_calls.add(call_sig)
                 result = await _execute_tool_call(self.tools, call)
 
+            duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            yield ToolCallCompleted(
+                tool_call_id=call.id,
+                tool_name=call.name,
+                success=result.success,
+                summary=result.content[:200] if result.content else "No output",
+                duration_ms=duration_ms,
+            )
+
             msg = Message(role="tool", content=result.content, tool_call_id=call.id)
             await self.memory.add_message(session_id, msg)
 
-    async def process_message(
+    async def run_stream(
         self,
         user_input: str,
         session_id: str = "default",
-    ) -> str:
-        """Run iterative ReAct conversation loop until final reply or ceiling."""
-        sanitized = _validate_user_input(user_input)
-        logger.info("Starting message turn for session '%s'", session_id)
+    ) -> AsyncIterator[EngineEvent]:
+        """Run iterative ReAct conversation loop yielding typed domain events in real-time."""
+        try:
+            sanitized = _validate_user_input(user_input)
+        except Exception as exc:
+            yield _map_exception_to_engine_error(exc)
+            return
+
+        logger.info("Starting streaming message turn for session '%s'", session_id)
         await self.memory.add_message(session_id, Message(role="user", content=sanitized))
         tool_schemas = self.tools.get_schemas() if self.tools else None
         executed_calls: set[tuple[str, str]] = set()
 
         for iteration in range(self.max_iterations):
-            logger.debug("ReAct loop step %d/%d", iteration + 1, self.max_iterations)
+            step_idx = iteration + 1
+            logger.debug("ReAct loop step %d/%d", step_idx, self.max_iterations)
+            yield StepStarted(step_index=step_idx, max_steps=self.max_iterations)
+
             history = await self.memory.get_messages(session_id, limit=self.history_limit)
             if history and history[0].role == "system":
                 payload = history
             else:
                 payload = [Message(role="system", content=self.system_prompt), *history]
-            response = await self.provider.generate(payload, tools=tool_schemas)
 
+            try:
+                response = await self.provider.generate(payload, tools=tool_schemas)
+            except Exception as exc:
+                yield _map_exception_to_engine_error(exc)
+                return
 
             if not response.tool_calls:
                 asst_msg = Message(role="assistant", content=response.content)
                 await self.memory.add_message(session_id, asst_msg)
-                logger.info("Completed message turn for session '%s' in %d step(s)", session_id, iteration + 1)
-                return response.content
+                logger.info("Completed message turn for session '%s' in %d step(s)", session_id, step_idx)
+                if response.content:
+                    yield TokenChunk(delta=response.content)
+                yield TurnCompleted(content=response.content, total_steps=step_idx)
+                return
 
             asst_call_msg = Message(
                 role="assistant",
@@ -111,8 +187,25 @@ class EkkoEngine:
                 tool_calls=response.tool_calls,
             )
             await self.memory.add_message(session_id, asst_call_msg)
-            await self._run_tool_steps(session_id, response.tool_calls, executed_calls)
+            async for event in self._run_tool_steps(session_id, response.tool_calls, executed_calls):
+                yield event
 
         logger.warning("Hit max_iterations (%d) without final answer for session '%s'", self.max_iterations, session_id)
+        yield TurnCompleted(content="Max iterations reached without final response.", total_steps=self.max_iterations)
+
+    async def process_message(
+        self,
+        user_input: str,
+        session_id: str = "default",
+    ) -> str:
+        """Run iterative ReAct conversation loop until final reply or ceiling (façade over run_stream)."""
+        _validate_user_input(user_input)
+        async for event in self.run_stream(user_input, session_id=session_id):
+            if isinstance(event, TurnCompleted):
+                return event.content
+            if isinstance(event, EngineError):
+                return f"Erreur : {event.message}"
         return "Max iterations reached without final response."
+
+
 
