@@ -6,6 +6,10 @@ import litellm
 
 from ekko.core.errors import ProviderError
 from ekko.core.models import Message, ModelResponse, ToolCall
+from ekko.utils.logger import get_logger
+
+logger = get_logger("providers.litellm")
+
 
 
 def _format_single_message(msg: Message) -> dict[str, Any]:
@@ -93,12 +97,16 @@ class LiteLLMProvider:
         if tools:
             call_kwargs["tools"] = tools
 
+        logger.debug("Inference targeting model: %s (tools: %d)", self.model, len(tools) if tools else 0)
+        logger.debug("Inference prompt payload: %s", payload)
+
         try:
             response = await litellm.acompletion(**call_kwargs)
             message = response.choices[0].message
             content = message.content or ""
             p_tokens, c_tokens = _extract_tokens(getattr(response, "usage", None))
             tool_calls = _parse_tool_calls(getattr(message, "tool_calls", None))
+            logger.debug("Inference raw tool_calls: %s", tool_calls)
 
             return ModelResponse(
                 content=content,
@@ -108,5 +116,6 @@ class LiteLLMProvider:
                 tool_calls=tool_calls,
             )
         except Exception as err:
-            # Trap foreign vendor exceptions to avoid leaking infrastructure into domain
+            logger.error("Inference failure on model '%s': %s", self.model, err)
             raise ProviderError(f"LLM inference failed: {err}", cause=err) from err
+

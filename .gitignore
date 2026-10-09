@@ -25,7 +25,9 @@ dist/
 # Local configuration and runtime data
 .env
 data/
+logs/
 *.log
+
 
 # Editor and operating system files
 .idea/

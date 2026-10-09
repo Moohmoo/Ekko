@@ -5,6 +5,9 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from ekko.core.models import ToolResult
+from ekko.utils.logger import get_logger
+
+logger = get_logger("tools")
 
 
 class BaseTool(ABC):
@@ -32,18 +35,24 @@ class BaseTool(ABC):
 
     async def execute(self, **kwargs: Any) -> ToolResult:
         """Validate input arguments against args_schema before delegating to _run."""
+        logger.debug("Executing tool '%s' with arguments: %s", self.name, kwargs)
         try:
             validated = self.args_schema.model_validate(kwargs)
-            return await self._run(**validated.model_dump())
+            result = await self._run(**validated.model_dump())
+            logger.info("Tool '%s' executed successfully (success=%s)", self.name, result.success)
+            return result
         except ValidationError as err:
+            logger.error("Validation failed for tool '%s': %s", self.name, err)
             return ToolResult(
                 content=f"Validation error: {err}",
                 success=False,
                 error=str(err),
             )
         except Exception as err:
+            logger.error("Runtime exception in tool '%s': %s", self.name, err)
             return ToolResult(
                 content=f"Execution error: {err}",
                 success=False,
                 error=str(err),
             )
+

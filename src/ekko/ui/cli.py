@@ -7,6 +7,8 @@ from ekko.memory.in_memory import InMemoryMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings
 from ekko.tools.registry import ToolRegistry
+from ekko.utils.logger import setup_logger
+
 
 EXIT_COMMANDS = {"exit", "quit", "q", "/exit", "/quit"}
 
@@ -55,12 +57,14 @@ async def run_repl(engine: EkkoEngine, session_id: str = "default") -> None:
 def main() -> None:
     """Bootstrap dependencies and run CLI application."""
     settings = Settings()
+    setup_logger(settings)
     provider = LLMRouter(settings=settings).get_provider()
     memory = InMemoryMemory()
     tools = ToolRegistry()
     engine = EkkoEngine(provider=provider, memory=memory, tools=tools)
 
     asyncio.run(run_repl(engine))
+
 
 
 

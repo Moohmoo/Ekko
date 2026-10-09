@@ -2,6 +2,9 @@
 
 from typing import Any
 from ekko.core.ports import ToolPort
+from ekko.utils.logger import get_logger
+
+logger = get_logger("tools.registry")
 
 
 class ToolRegistry:
@@ -13,12 +16,17 @@ class ToolRegistry:
     def register(self, tool: ToolPort) -> None:
         """Register a tool instance, preventing accidental name collisions."""
         if tool.name in self._tools:
+            logger.error("Attempted duplicate registration for tool: %s", tool.name)
             raise ValueError(f"Tool with name '{tool.name}' is already registered")
         self._tools[tool.name] = tool
+        logger.info("Registered tool: %s", tool.name)
 
     def get(self, name: str) -> ToolPort | None:
         """Retrieve registered tool by name, or None if not found."""
-        return self._tools.get(name)
+        tool = self._tools.get(name)
+        logger.debug("Tool lookup for '%s': %s", name, "found" if tool else "not found")
+        return tool
+
 
     def list_tools(self) -> list[str]:
         """Return list of all registered tool names."""

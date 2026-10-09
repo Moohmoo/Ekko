@@ -23,3 +23,7 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     memory_dir_path: str = Field(default="data/memory")
     history_retention_days: int = Field(default=60, gt=0)
+
+    log_level: str = Field(default="INFO")
+    log_file: str | None = Field(default="logs/ekko.log")
+
