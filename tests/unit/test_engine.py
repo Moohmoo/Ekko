@@ -74,3 +74,156 @@ async def test_engine_rejects_empty_input() -> None:
         await engine.process_message("   ")
 
     mock_provider.generate.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_engine_executes_tool_call_and_returns_final_response() -> None:
+    """Ensure engine executes tool, stores role='tool' message, and gets final reply."""
+    from pydantic import BaseModel
+    from ekko.core.models import ToolCall, ToolResult
+    from ekko.tools.base import BaseTool
+    from ekko.tools.registry import ToolRegistry
+
+    class CalcArgs(BaseModel):
+        a: int
+        b: int
+
+    class MockCalc(BaseTool):
+        name: str = "calculator"
+        description: str = "Adds numbers"
+        args_schema: type[BaseModel] = CalcArgs
+
+        async def _run(self, a: int, b: int) -> ToolResult:
+            return ToolResult(content=str(a + b), success=True)
+
+    registry = ToolRegistry()
+    registry.register(MockCalc())
+
+    tool_call = ToolCall(id="call_1", name="calculator", arguments={"a": 10, "b": 20})
+    mock_provider = AsyncMock()
+    mock_provider.generate.side_effect = [
+        ModelResponse(content="", model_name="mock", tool_calls=[tool_call]),
+        ModelResponse(content="The answer is 30.", model_name="mock"),
+    ]
+
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=mock_provider, memory=memory, tools=registry)
+
+    reply = await engine.process_message("Compute 10 + 20", session_id="s_tool")
+
+    assert reply == "The answer is 30."
+
+    messages = await memory.get_messages("s_tool")
+    assert len(messages) == 4
+    assert messages[0].role == "user"
+    assert messages[1].role == "assistant"
+    assert len(messages[1].tool_calls) == 1
+    assert messages[2].role == "tool"
+    assert messages[2].content == "30"
+    assert messages[2].tool_call_id == "call_1"
+    assert messages[3].role == "assistant"
+    assert messages[3].content == "The answer is 30."
+
+
+@pytest.mark.asyncio
+async def test_engine_handles_unknown_tool_gracefully() -> None:
+    """Ensure engine reports error when LLM invokes an unregistered tool."""
+    from ekko.core.models import ToolCall
+    from ekko.tools.registry import ToolRegistry
+
+    registry = ToolRegistry()
+    tool_call = ToolCall(id="c_err", name="ghost_tool", arguments={})
+    mock_provider = AsyncMock()
+    mock_provider.generate.side_effect = [
+        ModelResponse(content="", model_name="mock", tool_calls=[tool_call]),
+        ModelResponse(content="Sorry, tool not found.", model_name="mock"),
+    ]
+
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=mock_provider, memory=memory, tools=registry)
+
+    reply = await engine.process_message("Call ghost", session_id="s_ghost")
+
+    assert reply == "Sorry, tool not found."
+    messages = await memory.get_messages("s_ghost")
+    assert messages[2].role == "tool"
+    assert "not found" in messages[2].content
+
+
+@pytest.mark.asyncio
+async def test_engine_stops_at_max_iterations() -> None:
+    """Ensure ReAct loop terminates when max_iterations ceiling is hit."""
+    from ekko.core.models import ToolCall
+    from ekko.tools.registry import ToolRegistry
+
+    registry = ToolRegistry()
+    loop_call = ToolCall(id="loop", name="dummy", arguments={})
+    mock_provider = AsyncMock()
+    mock_provider.generate.return_value = ModelResponse(
+        content="",
+        model_name="mock",
+        tool_calls=[loop_call],
+    )
+
+    memory = InMemoryMemory()
+    engine = EkkoEngine(
+        provider=mock_provider,
+        memory=memory,
+        tools=registry,
+        max_iterations=2,
+    )
+
+    reply = await engine.process_message("Loop forever", session_id="s_loop")
+
+    assert "Max iterations" in reply
+    assert mock_provider.generate.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_engine_executes_multiple_tool_calls_sequentially() -> None:
+    """Ensure multiple tool calls in a single turn are executed sequentially."""
+    from pydantic import BaseModel
+    from ekko.core.models import ToolCall, ToolResult
+    from ekko.tools.base import BaseTool
+    from ekko.tools.registry import ToolRegistry
+
+    order: list[str] = []
+
+    class DummyArgs(BaseModel):
+        tag: str
+
+    class StepTool(BaseTool):
+        name: str = "step_tool"
+        description: str = "Records step"
+        args_schema: type[BaseModel] = DummyArgs
+
+        async def _run(self, tag: str) -> ToolResult:
+            order.append(tag)
+            return ToolResult(content=f"Step {tag} done", success=True)
+
+    registry = ToolRegistry()
+    registry.register(StepTool())
+
+    calls = [
+        ToolCall(id="tc_1", name="step_tool", arguments={"tag": "first"}),
+        ToolCall(id="tc_2", name="step_tool", arguments={"tag": "second"}),
+    ]
+    mock_provider = AsyncMock()
+    mock_provider.generate.side_effect = [
+        ModelResponse(content="", model_name="mock", tool_calls=calls),
+        ModelResponse(content="All steps executed.", model_name="mock"),
+    ]
+
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=mock_provider, memory=memory, tools=registry)
+
+    reply = await engine.process_message("Execute steps", session_id="s_multi")
+
+    assert reply == "All steps executed."
+    assert order == ["first", "second"]
+    messages = await memory.get_messages("s_multi")
+    assert len(messages) == 5  # user, asst(2 calls), tool1, tool2, asst(final)
+    assert messages[2].tool_call_id == "tc_1"
+    assert messages[3].tool_call_id == "tc_2"
+
+

@@ -42,3 +42,26 @@ def test_provider_error_hierarchy() -> None:
     assert isinstance(err, EkkoError)
     assert err.cause is cause
     assert "Provider failed to respond" in str(err)
+
+
+def test_tool_port_runtime_checkable() -> None:
+    """Ensure ToolPort protocol verifies compliant tool implementations."""
+    from ekko.core.models import ToolResult
+    from ekko.core.ports import ToolPort
+
+    class ValidTool:
+        name: str = "test_tool"
+        description: str = "Does testing"
+
+        def get_schema(self) -> dict[str, Any]:
+            return {"type": "function"}
+
+        async def execute(self, **kwargs: Any) -> ToolResult:
+            return ToolResult(content="done", success=True)
+
+    class InvalidTool:
+        pass
+
+    assert isinstance(ValidTool(), ToolPort)
+    assert not isinstance(InvalidTool(), ToolPort)
+

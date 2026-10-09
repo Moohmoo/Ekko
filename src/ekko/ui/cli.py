@@ -6,6 +6,7 @@ from ekko.core.errors import EkkoError
 from ekko.memory.in_memory import InMemoryMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings
+from ekko.tools.registry import ToolRegistry
 
 EXIT_COMMANDS = {"exit", "quit", "q", "/exit", "/quit"}
 
@@ -32,7 +33,7 @@ async def _handle_turn(
 
 async def run_repl(engine: EkkoEngine, session_id: str = "default") -> None:
     """Main interactive REPL loop reading standard input."""
-    print("=== Ekko Agentic OS (Phase 0 CLI) ===")
+    print("=== Ekko Agentic OS (CLI) ===")
     print("Type 'exit' or 'quit' to end session.\n")
 
     while True:
@@ -56,9 +57,11 @@ def main() -> None:
     settings = Settings()
     provider = LLMRouter(settings=settings).get_provider()
     memory = InMemoryMemory()
-    engine = EkkoEngine(provider=provider, memory=memory)
+    tools = ToolRegistry()
+    engine = EkkoEngine(provider=provider, memory=memory, tools=tools)
 
     asyncio.run(run_repl(engine))
+
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """Abstract ports (interfaces) defining inbound and outbound domain boundaries."""
 
 from typing import Any, Protocol, runtime_checkable
-from ekko.core.models import Message, ModelResponse
+from ekko.core.models import Message, ModelResponse, ToolResult
 
 
 @runtime_checkable
@@ -11,6 +11,7 @@ class LLMProviderPort(Protocol):
     async def generate(
         self,
         messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> ModelResponse:
         """Generate a response from the underlying LLM provider."""
@@ -33,3 +34,18 @@ class MemoryPort(Protocol):
         """Remove all messages associated with the specified session."""
         ...
 
+
+@runtime_checkable
+class ToolPort(Protocol):
+    """Port defining the contract for modular tools and capabilities."""
+
+    name: str
+    description: str
+
+    def get_schema(self) -> dict[str, Any]:
+        """Return the tool JSON schema definition for LLM tool calling."""
+        ...
+
+    async def execute(self, **kwargs: Any) -> ToolResult:
+        """Execute the tool logic using provided parameters."""
+        ...
