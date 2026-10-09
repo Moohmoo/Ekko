@@ -257,3 +257,201 @@ async def test_run_stream_emits_engine_error_on_invalid_input() -> None:
     assert isinstance(events[0], EngineError)
     assert events[0].error_type == "InvalidInput"
     assert events[0].actionable_hint is not None
+
+
+class MockStreamingProvider:
+    """Mock provider yielding chunks sequentially per inference step."""
+
+    def __init__(self, stream_sequences: list[list[Any]]) -> None:
+        self.stream_sequences = list(stream_sequences)
+        self.call_history: list[list[Message]] = []
+
+    async def generate_stream(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ):
+        self.call_history.append(messages)
+        if not self.stream_sequences:
+            raise RuntimeError("No more mocked stream sequences available")
+        chunks = self.stream_sequences.pop(0)
+        for chunk in chunks:
+            yield chunk
+
+
+@pytest.mark.asyncio
+async def test_run_stream_incremental_text_chunks() -> None:
+    """Verify distinct TokenChunk events are yielded sequentially during streaming, ending with TurnCompleted."""
+    from types import SimpleNamespace
+
+    chunks = [
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Un ", tool_calls=None))]),
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="deux ", tool_calls=None))]),
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="trois.", tool_calls=None))]),
+    ]
+    provider = MockStreamingProvider([chunks])
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=provider, memory=memory)
+
+    events = [event async for event in engine.run_stream("Compte jusqu'à trois", session_id="test_stream_chunks")]
+
+    assert len(events) == 5
+    assert isinstance(events[0], StepStarted)
+    assert events[0].step_index == 1
+
+    assert isinstance(events[1], TokenChunk)
+    assert events[1].delta == "Un "
+
+    assert isinstance(events[2], TokenChunk)
+    assert events[2].delta == "deux "
+
+    assert isinstance(events[3], TokenChunk)
+    assert events[3].delta == "trois."
+
+    assert isinstance(events[4], TurnCompleted)
+    assert events[4].content == "Un deux trois."
+    assert events[4].total_steps == 1
+
+    history = await memory.get_messages("test_stream_chunks")
+    assert len(history) == 2
+    assert history[1].role == "assistant"
+    assert history[1].content == "Un deux trois."
+
+
+@pytest.mark.asyncio
+async def test_run_stream_accumulates_fragmented_tool_call_deltas() -> None:
+    """Verify fragmented tool call deltas are accumulated into a complete ToolCall without emitting TokenChunk."""
+    from types import SimpleNamespace
+
+    step1_tool_chunks = [
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(
+                        content=None,
+                        tool_calls=[
+                            SimpleNamespace(
+                                index=0,
+                                id="call_arxiv_1",
+                                function=SimpleNamespace(name="arxiv", arguments='{"query": '),
+                            )
+                        ],
+                    )
+                )
+            ]
+        ),
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(
+                        content=None,
+                        tool_calls=[
+                            SimpleNamespace(
+                                index=0,
+                                id=None,
+                                function=SimpleNamespace(name=None, arguments='"test"'),
+                            )
+                        ],
+                    )
+                )
+            ]
+        ),
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(
+                        content=None,
+                        tool_calls=[
+                            SimpleNamespace(
+                                index=0,
+                                id=None,
+                                function=SimpleNamespace(name=None, arguments="}"),
+                            )
+                        ],
+                    )
+                )
+            ]
+        ),
+    ]
+
+    step2_final_chunks = [
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(
+                        content="Voici la synthèse sur test.",
+                        tool_calls=None,
+                    )
+                )
+            ]
+        )
+    ]
+
+    provider = MockStreamingProvider([step1_tool_chunks, step2_final_chunks])
+    tool = MockTool(ToolResult(content="Found test paper", success=True))
+    registry = MockToolRegistry({"arxiv": tool})
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=provider, memory=memory, tools=registry)
+
+    events = [event async for event in engine.run_stream("Cherche test", session_id="test_stream_accum")]
+
+    assert len(events) == 6
+    assert isinstance(events[0], StepStarted)
+    assert events[0].step_index == 1
+
+    assert isinstance(events[1], ToolCallStarted)
+    assert events[1].tool_call_id == "call_arxiv_1"
+    assert events[1].tool_name == "arxiv"
+    assert events[1].arguments == {"query": "test"}
+
+    assert isinstance(events[2], ToolCallCompleted)
+    assert events[2].tool_call_id == "call_arxiv_1"
+    assert events[2].tool_name == "arxiv"
+    assert events[2].success is True
+    assert events[2].summary == "Found test paper"
+
+    assert isinstance(events[3], StepStarted)
+    assert events[3].step_index == 2
+
+    assert isinstance(events[4], TokenChunk)
+    assert events[4].delta == "Voici la synthèse sur test."
+
+    assert isinstance(events[5], TurnCompleted)
+    assert events[5].content == "Voici la synthèse sur test."
+    assert events[5].total_steps == 2
+
+    # Verify tool execution parameters
+    assert len(tool.executed_with) == 1
+    assert tool.executed_with[0] == {"query": "test"}
+
+
+@pytest.mark.asyncio
+async def test_run_stream_accumulates_dict_format_tool_call_chunks() -> None:
+    """Verify tool call accumulation works seamlessly when chunks are dictionaries."""
+    step1_dict_chunks = [
+        {"choices": [{"delta": {"tool_calls": [{"index": 0, "id": "call_d1", "name": "arxiv", "arguments": '{"query": "'}]}}]},
+        {"choices": [{"delta": {"tool_calls": [{"index": 0, "arguments": 'dict_test"'}]}}]},
+        {"choices": [{"delta": {"tool_calls": [{"index": 0, "arguments": '}'}]}}]},
+    ]
+    step2_dict_chunks = [
+        {"choices": [{"delta": {"content": "Fin de recherche."}}]}
+    ]
+
+    provider = MockStreamingProvider([step1_dict_chunks, step2_dict_chunks])
+    tool = MockTool(ToolResult(content="Found dict paper", success=True))
+    registry = MockToolRegistry({"arxiv": tool})
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=provider, memory=memory, tools=registry)
+
+    events = [event async for event in engine.run_stream("Recherche dict", session_id="test_dict_stream")]
+
+    tool_started = [e for e in events if isinstance(e, ToolCallStarted)]
+    assert len(tool_started) == 1
+    assert tool_started[0].arguments == {"query": "dict_test"}
+
+    turn_completed = [e for e in events if isinstance(e, TurnCompleted)]
+    assert len(turn_completed) == 1
+    assert turn_completed[0].content == "Fin de recherche."
+
+

@@ -203,3 +203,59 @@ async def test_litellm_provider_formats_assistant_tool_calls_and_tool_results() 
             "tool_call_id": "call_1",
         }
 
+
+@pytest.mark.asyncio
+async def test_litellm_provider_generate_stream_success() -> None:
+    """Ensure generate_stream calls litellm with stream=True and yields chunks."""
+    fake_chunks = [
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Chunk 1"))]),
+        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Chunk 2"))]),
+    ]
+
+    async def fake_stream(*args, **kwargs):
+        for c in fake_chunks:
+            yield c
+
+    with patch(
+        "litellm.acompletion",
+        new_callable=AsyncMock,
+        return_value=fake_stream(),
+    ) as mock_acompletion:
+        provider = LiteLLMProvider(model="gemini/gemini-2.5-flash", api_key="test-key")
+        messages = [Message(role="user", content="Stream please")]
+
+        collected = [chunk async for chunk in provider.generate_stream(messages)]
+
+        assert len(collected) == 2
+        assert collected[0].choices[0].delta.content == "Chunk 1"
+        assert collected[1].choices[0].delta.content == "Chunk 2"
+
+        mock_acompletion.assert_awaited_once_with(
+            model="gemini/gemini-2.5-flash",
+            messages=[{"role": "user", "content": "Stream please"}],
+            api_key="test-key",
+            api_base=None,
+            temperature=0.7,
+            stream=True,
+        )
+
+
+@pytest.mark.asyncio
+async def test_litellm_provider_generate_stream_maps_exception() -> None:
+    """Ensure exceptions in generate_stream are wrapped into ProviderError."""
+    with patch(
+        "litellm.acompletion",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("Stream failure"),
+    ):
+        provider = LiteLLMProvider(model="ollama/llama3.1")
+        messages = [Message(role="user", content="Ping")]
+
+        with pytest.raises(ProviderError) as exc_info:
+            async for _ in provider.generate_stream(messages):
+                pass
+
+        assert "LLM streaming inference failed" in str(exc_info.value)
+        assert isinstance(exc_info.value.cause, RuntimeError)
+
+

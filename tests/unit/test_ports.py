@@ -5,7 +5,7 @@ import pytest
 
 from ekko.core.errors import EkkoError, ProviderError
 from ekko.core.models import Message, ModelResponse
-from ekko.core.ports import LLMProviderPort
+from ekko.core.ports import LLMProviderPort, StreamingLLMProviderPort
 
 
 class DummyValidProvider:
@@ -32,6 +32,23 @@ def test_provider_port_runtime_checkable() -> None:
 
     assert isinstance(valid_instance, LLMProviderPort)
     assert not isinstance(invalid_instance, LLMProviderPort)
+
+
+def test_streaming_provider_port_runtime_checkable() -> None:
+    """Ensure StreamingLLMProviderPort validates conforming implementations at runtime."""
+    from collections.abc import AsyncIterator
+
+    class DummyStreamingProvider(DummyValidProvider):
+        async def generate_stream(self, messages: list[Message], **kwargs: Any) -> AsyncIterator[Any]:
+            yield "chunk"
+
+    streaming_instance = DummyStreamingProvider()
+    non_streaming_instance = DummyValidProvider()
+
+    assert isinstance(streaming_instance, StreamingLLMProviderPort)
+    assert isinstance(streaming_instance, LLMProviderPort)
+    assert not isinstance(non_streaming_instance, StreamingLLMProviderPort)
+
 
 
 def test_provider_error_hierarchy() -> None:

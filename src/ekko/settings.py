@@ -29,4 +29,10 @@ class Settings(BaseSettings):
     config_dir: str = Field(default="config")
     sqlite_db_path: str = Field(default="data/ekko.db")
 
+    @property
+    def active_model(self) -> str:
+        """Return the active model identifier based on selected provider."""
+        return self.local_llm_model if self.llm_provider == "local" else self.gemini_model
+
+
 

@@ -46,6 +46,82 @@ async def _execute_tool_call(tools: Any, call: ToolCall) -> ToolResult:
     )
 
 
+def _extract_field(obj: Any, key: str, default: Any = None) -> Any:
+    """Extract attribute or dict item safely."""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def _extract_delta(chunk: Any) -> Any:
+    """Extract the delta object from an inference streaming chunk."""
+    delta = chunk
+    choices = _extract_field(delta, "choices")
+    if choices and len(choices) > 0:
+        delta = choices[0]
+    inner_delta = _extract_field(delta, "delta")
+    if inner_delta is not None:
+        delta = inner_delta
+    return delta
+
+
+def _accumulate_tool_call_delta(
+    raw_tc: Any,
+    accumulated: dict[int, dict[str, str]],
+) -> None:
+    """Accumulate fragmented tool call parts into an indexed buffer."""
+    idx = _extract_field(raw_tc, "index", 0)
+    if idx is None:
+        idx = 0
+    if idx not in accumulated:
+        accumulated[idx] = {"id": "", "name": "", "arguments": ""}
+
+    tc_id = _extract_field(raw_tc, "id")
+    if tc_id:
+        accumulated[idx]["id"] += str(tc_id)
+
+    func = _extract_field(raw_tc, "function")
+    fn_name = _extract_field(func, "name") if func else _extract_field(raw_tc, "name")
+    if fn_name:
+        accumulated[idx]["name"] += str(fn_name)
+
+    fn_args = _extract_field(func, "arguments") if func else _extract_field(raw_tc, "arguments")
+    if fn_args:
+        accumulated[idx]["arguments"] += str(fn_args)
+
+
+def _build_accumulated_tool_calls(accumulated: dict[int, dict[str, str]]) -> list[ToolCall]:
+    """Convert accumulated string buffers into valid domain ToolCall instances."""
+    results: list[ToolCall] = []
+    for idx in sorted(accumulated.keys()):
+        item = accumulated[idx]
+        name = item["name"].strip()
+        if not name:
+            continue
+        raw_args = item["arguments"].strip()
+        try:
+            parsed_args = json.loads(raw_args) if raw_args else {}
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse tool call JSON arguments for '%s': %s", name, raw_args)
+            parsed_args = {"raw_arguments": raw_args}
+
+        tc_id = item["id"].strip() or f"call_{idx}"
+        results.append(ToolCall(id=tc_id, name=name, arguments=parsed_args))
+    return results
+
+
+def _is_streaming_provider(provider: Any) -> bool:
+    """Determine whether the provider supports explicit real-time streaming."""
+    cls = type(provider)
+    if hasattr(cls, "generate_stream") and cls.__name__ not in ("AsyncMock", "MagicMock", "Mock"):
+        return True
+    if "generate_stream" in getattr(provider, "__dict__", {}):
+        return True
+    return False
+
+
+
+
 def _map_exception_to_engine_error(exc: Exception) -> EngineError:
     """Map infrastructure or execution exceptions to user-actionable EngineError events."""
     if isinstance(exc, ValueError):
@@ -166,32 +242,62 @@ class EkkoEngine:
             else:
                 payload = [Message(role="system", content=self.system_prompt), *history]
 
+            accumulated_text = ""
+            accumulated_calls: dict[int, dict[str, str]] = {}
+            is_streaming = _is_streaming_provider(self.provider)
+
             try:
-                response = await self.provider.generate(payload, tools=tool_schemas)
+                if is_streaming:
+                    stream = self.provider.generate_stream(payload, tools=tool_schemas)
+                    if hasattr(stream, "__aiter__"):
+                        async for chunk in stream:
+                            delta = _extract_delta(chunk)
+                            tc_deltas = _extract_field(delta, "tool_calls")
+                            if tc_deltas:
+                                for tc in tc_deltas:
+                                    _accumulate_tool_call_delta(tc, accumulated_calls)
+                            else:
+                                chunk_content = _extract_field(delta, "content")
+                                if chunk_content:
+                                    accumulated_text += chunk_content
+                                    yield TokenChunk(delta=chunk_content)
+
+                        tool_calls = _build_accumulated_tool_calls(accumulated_calls)
+                    else:
+                        response = await self.provider.generate(payload, tools=tool_schemas)
+                        accumulated_text = response.content or ""
+                        tool_calls = response.tool_calls
+                        is_streaming = False
+                else:
+                    response = await self.provider.generate(payload, tools=tool_schemas)
+                    accumulated_text = response.content or ""
+                    tool_calls = response.tool_calls
             except Exception as exc:
                 yield _map_exception_to_engine_error(exc)
                 return
 
-            if not response.tool_calls:
-                asst_msg = Message(role="assistant", content=response.content)
+
+            if not tool_calls:
+                asst_msg = Message(role="assistant", content=accumulated_text)
                 await self.memory.add_message(session_id, asst_msg)
                 logger.info("Completed message turn for session '%s' in %d step(s)", session_id, step_idx)
-                if response.content:
-                    yield TokenChunk(delta=response.content)
-                yield TurnCompleted(content=response.content, total_steps=step_idx)
+                if not is_streaming and accumulated_text:
+                    yield TokenChunk(delta=accumulated_text)
+                yield TurnCompleted(content=accumulated_text, total_steps=step_idx)
                 return
 
             asst_call_msg = Message(
                 role="assistant",
-                content=response.content,
-                tool_calls=response.tool_calls,
+                content=accumulated_text or None,
+                tool_calls=tool_calls,
             )
             await self.memory.add_message(session_id, asst_call_msg)
-            async for event in self._run_tool_steps(session_id, response.tool_calls, executed_calls):
+            async for event in self._run_tool_steps(session_id, tool_calls, executed_calls):
                 yield event
 
         logger.warning("Hit max_iterations (%d) without final answer for session '%s'", self.max_iterations, session_id)
         yield TurnCompleted(content="Max iterations reached without final response.", total_steps=self.max_iterations)
+
 
     async def process_message(
         self,

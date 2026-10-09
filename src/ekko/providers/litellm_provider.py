@@ -1,5 +1,6 @@
 """LiteLLM outbound adapter providing model-agnostic inference and tool calling."""
 
+from collections.abc import AsyncIterator
 import json
 from typing import Any
 import litellm
@@ -118,4 +119,38 @@ class LiteLLMProvider:
         except Exception as err:
             logger.error("Inference failure on model '%s': %s", self.model, err)
             raise ProviderError(f"LLM inference failed: {err}", cause=err) from err
+
+    async def generate_stream(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[Any]:
+        """Call LiteLLM with stream=True and yield streaming chunks."""
+        payload = _format_messages(messages)
+        call_kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": payload,
+            "api_key": self.api_key,
+            "api_base": self.api_base,
+            "temperature": kwargs.get("temperature", self.temperature),
+            "stream": True,
+        }
+        if tools:
+            call_kwargs["tools"] = tools
+
+        logger.debug("Streaming inference targeting model: %s (tools: %d)", self.model, len(tools) if tools else 0)
+
+        try:
+            response = await litellm.acompletion(**call_kwargs)
+            if hasattr(response, "__aiter__"):
+                async for chunk in response:
+                    yield chunk
+            else:
+                for chunk in response:
+                    yield chunk
+        except Exception as err:
+            logger.error("Streaming inference failure on model '%s': %s", self.model, err)
+            raise ProviderError(f"LLM streaming inference failed: {err}", cause=err) from err
+
 
