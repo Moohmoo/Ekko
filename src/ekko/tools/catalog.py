@@ -4,6 +4,7 @@ from ekko.tools.base import BaseTool
 from ekko.tools.hacker_news import HackerNewsTool
 from ekko.tools.registry import ToolRegistry
 from ekko.tools.system_info import SystemInfoTool
+from ekko.tools.url_reader import UrlReaderTool
 from ekko.utils.logger import get_logger
 
 logger = get_logger("tools.catalog")
@@ -17,6 +18,7 @@ class ToolCatalog:
         if include_defaults:
             self.register(SystemInfoTool)
             self.register(HackerNewsTool)
+            self.register(UrlReaderTool)
 
     def register(self, tool_cls: type[BaseTool]) -> None:
         """Register a tool class mapped to its canonical tool name."""

@@ -8,6 +8,7 @@ from ekko.tools.base import BaseTool
 from ekko.tools.catalog import ToolCatalog
 from ekko.tools.hacker_news import HackerNewsTool
 from ekko.tools.system_info import SystemInfoTool
+from ekko.tools.url_reader import UrlReaderTool
 
 
 class MockArgs(BaseModel):
@@ -42,6 +43,13 @@ def test_catalog_default_includes_hacker_news() -> None:
     """Ensure default catalog contains HackerNewsTool."""
     catalog = ToolCatalog(include_defaults=True)
     assert catalog.get_class("hacker_news") is HackerNewsTool
+
+
+def test_catalog_default_includes_url_reader() -> None:
+    """Ensure default catalog contains UrlReaderTool."""
+    catalog = ToolCatalog(include_defaults=True)
+    assert catalog.get_class("url_reader") is UrlReaderTool
+
 
 
 def test_catalog_build_registry_filters_enabled_tools() -> None:

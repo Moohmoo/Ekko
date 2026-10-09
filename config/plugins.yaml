@@ -1,3 +1,4 @@
 enabled_tools:
   - system_info
   - hacker_news
+  - url_reader
