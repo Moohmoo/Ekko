@@ -1,0 +1,7 @@
+# Profil utilisateur (copiez ce fichier vers user_context.yaml pour personnaliser)
+user_name: Alice
+preferred_language: fr
+preferences:
+  - Réponses directes et concises
+  - Focus sur le code propre et l'architecture logicielle
+custom_instructions: null

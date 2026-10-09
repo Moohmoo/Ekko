@@ -1,16 +1,19 @@
 """Interactive terminal REPL adapter driving Ekko conversations."""
 
 import asyncio
+from ekko.config.loader import (
+    load_core_prompt,
+    load_plugins_config,
+    load_user_context,
+)
 from ekko.core.engine import EkkoEngine
 from ekko.core.errors import EkkoError
+from ekko.core.prompt import build_system_prompt
 from ekko.memory.in_memory import InMemoryMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings
-from ekko.tools.registry import ToolRegistry
-from ekko.tools.system_info import SystemInfoTool
+from ekko.tools.catalog import ToolCatalog
 from ekko.utils.logger import setup_logger
-
-
 
 EXIT_COMMANDS = {"exit", "quit", "q", "/exit", "/quit"}
 
@@ -57,16 +60,29 @@ async def run_repl(engine: EkkoEngine, session_id: str = "default") -> None:
 
 
 def main() -> None:
-    """Bootstrap dependencies and run CLI application."""
+    """Bootstrap dependencies, load contexts, and run CLI application."""
     settings = Settings()
     setup_logger(settings)
+
+    core_prompt = load_core_prompt(settings.config_dir)
+    user_context = load_user_context(settings.config_dir)
+    plugins_config = load_plugins_config(settings.config_dir)
+
+    system_prompt = build_system_prompt(core_prompt, user_context)
+    catalog = ToolCatalog(include_defaults=True)
+    tools = catalog.build_registry(plugins_config.enabled_tools)
+
     provider = LLMRouter(settings=settings).get_provider()
     memory = InMemoryMemory()
-    tools = ToolRegistry()
-    tools.register(SystemInfoTool())
-    engine = EkkoEngine(provider=provider, memory=memory, tools=tools)
+    engine = EkkoEngine(
+        provider=provider,
+        memory=memory,
+        tools=tools,
+        system_prompt=system_prompt,
+    )
 
     asyncio.run(run_repl(engine))
+
 
 
 

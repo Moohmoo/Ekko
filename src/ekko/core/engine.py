@@ -72,8 +72,12 @@ class EkkoEngine:
         for iteration in range(self.max_iterations):
             logger.debug("ReAct loop step %d/%d", iteration + 1, self.max_iterations)
             history = await self.memory.get_messages(session_id)
-            payload = [Message(role="system", content=self.system_prompt), *history]
+            if history and history[0].role == "system":
+                payload = history
+            else:
+                payload = [Message(role="system", content=self.system_prompt), *history]
             response = await self.provider.generate(payload, tools=tool_schemas)
+
 
             if not response.tool_calls:
                 asst_msg = Message(role="assistant", content=response.content)

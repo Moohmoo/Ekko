@@ -27,6 +27,9 @@ dist/
 data/
 logs/
 *.log
+config/user_context.yaml
+!config/user_context.yaml.example
+
 
 
 # Editor and operating system files
