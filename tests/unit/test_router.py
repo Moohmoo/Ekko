@@ -62,10 +62,11 @@ def test_router_creates_local_provider() -> None:
     provider = router.get_provider()
 
     assert isinstance(provider, LiteLLMProvider)
-    assert provider.model == "ollama/llama3.1"
+    assert provider.model == "ollama_chat/llama3.1"
     assert provider.api_base == "http://127.0.0.1:11434"
     assert provider.api_key is None
     assert provider.temperature == 0.5
+
 
 
 def test_router_strips_v1_from_local_ollama_url() -> None:

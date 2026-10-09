@@ -34,15 +34,25 @@ def _normalize_local_url(url: str) -> str:
     return cleaned
 
 
+def _normalize_local_model_name(model: str) -> str:
+    """Ensure local Ollama models use LiteLLM native ollama_chat prefix for tools."""
+    if model.startswith("ollama/"):
+        return f"ollama_chat/{model[7:]}"
+    if "/" in model:
+        return model
+    return f"ollama_chat/{model}"
+
+
 def _build_local_provider(settings: Settings) -> LiteLLMProvider:
     """Build LiteLLM provider pointing to a local inference server (e.g. Ollama)."""
-    model = _normalize_model_name(settings.local_llm_model, "ollama")
+    model = _normalize_local_model_name(settings.local_llm_model)
     api_base = _normalize_local_url(settings.local_llm_url)
     return LiteLLMProvider(
         model=model,
         api_base=api_base,
         temperature=settings.llm_temperature,
     )
+
 
 
 

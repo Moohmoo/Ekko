@@ -7,7 +7,9 @@ from ekko.memory.in_memory import InMemoryMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings
 from ekko.tools.registry import ToolRegistry
+from ekko.tools.system_info import SystemInfoTool
 from ekko.utils.logger import setup_logger
+
 
 
 EXIT_COMMANDS = {"exit", "quit", "q", "/exit", "/quit"}
@@ -61,9 +63,11 @@ def main() -> None:
     provider = LLMRouter(settings=settings).get_provider()
     memory = InMemoryMemory()
     tools = ToolRegistry()
+    tools.register(SystemInfoTool())
     engine = EkkoEngine(provider=provider, memory=memory, tools=tools)
 
     asyncio.run(run_repl(engine))
+
 
 
 
