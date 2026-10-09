@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import pytest
 
 from ekko.core.models import ToolResult
+from ekko.tools.arxiv import ArxivTool
 from ekko.tools.base import BaseTool
 from ekko.tools.catalog import ToolCatalog
 from ekko.tools.hacker_news import HackerNewsTool
@@ -49,6 +50,12 @@ def test_catalog_default_includes_url_reader() -> None:
     """Ensure default catalog contains UrlReaderTool."""
     catalog = ToolCatalog(include_defaults=True)
     assert catalog.get_class("url_reader") is UrlReaderTool
+
+
+def test_catalog_default_includes_arxiv() -> None:
+    """Ensure default catalog contains ArxivTool."""
+    catalog = ToolCatalog(include_defaults=True)
+    assert catalog.get_class("arxiv") is ArxivTool
 
 
 

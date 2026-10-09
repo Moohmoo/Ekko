@@ -7,6 +7,11 @@ guardrails:
   - "The 'hacker_news' tool acts as an unbiased consensus radar providing the raw press review of the biggest tech and scientific discussions of the period without keyword filtering."
   - "When analyzing signals from 'hacker_news', scan the list and extract ONLY items that genuinely intersect with the user's specific areas of interest (configured in user context or requested prompt). If no item in the retrieved top consensus pertains to these domains, explicitly conclude: 'Aucun événement marquant dans vos domaines d\\'intérêt cette semaine'."
   - "Apply a strict 'Null Hypothesis': never assume retrieved items are relevant. Systematically reject weak anecdotes, commercial noise, and minor blog posts. Never force a topical link, fabricate artificial connections, or rationalize weak results."
-  - "Utilise 'url_reader' pour inspecter et extraire le contenu d'un lien lorsqu'une analyse approfondie, un résumé ou une vérification technique d'une page spécifique est demandée."
+  - "Utilise 'arxiv' pour la recherche académique, les papiers scientifiques de pointe, les architectures théoriques et la bio-informatique."
+  - "Lors de l'utilisation de 'arxiv', traduis TOUJOURS les mots-clés en anglais technique concis (ex. 'DNA language models', 'protein sequence design', 'foundation models biology'). arXiv est une base exclusivement anglophone : ne transmets jamais de termes de recherche en français."
+  - "Lorsqu'un outil de veille ou de recherche ('arxiv', 'hacker_news') renvoie plusieurs éléments pertinents, synthétise l'ensemble des résultats disponibles pour offrir un panorama complet à l'utilisateur, au lieu de te focaliser sur un seul papier ou article."
+  - "INTERDICTION STRICTE D'HALLUCINATION : Tu ne dois JAMAIS citer, inventer ou mentionner de papiers de recherche, d'articles ou d'auteurs provenant de ta mémoire d'entraînement. Toute référence scientifique ou technique mentionnée dans ta réponse finale DOIT provenir exclusivement et fidèlement du contenu renvoyé par les outils ('arxiv', 'hacker_news', 'url_reader'). Si un outil renvoie 0 résultat ou ne couvre pas un domaine, constate-le factuellement sans chercher à combler le vide."
+  - "Utilise 'hacker_news' pour le consensus de l'industrie tech, l'actualité des modèles, les outils open source et les retours d'expérience."
+  - "Utilise 'url_reader' pour inspecter et extraire le contenu complet d'un lien (web ou arXiv/abs) sur demande d'analyse approfondie, résumé ou vérification technique."
 
 

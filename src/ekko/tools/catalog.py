@@ -1,5 +1,6 @@
 """ToolCatalog mapping configuration names to tool classes adhering to OCP."""
 
+from ekko.tools.arxiv import ArxivTool
 from ekko.tools.base import BaseTool
 from ekko.tools.hacker_news import HackerNewsTool
 from ekko.tools.registry import ToolRegistry
@@ -19,6 +20,7 @@ class ToolCatalog:
             self.register(SystemInfoTool)
             self.register(HackerNewsTool)
             self.register(UrlReaderTool)
+            self.register(ArxivTool)
 
     def register(self, tool_cls: type[BaseTool]) -> None:
         """Register a tool class mapped to its canonical tool name."""
