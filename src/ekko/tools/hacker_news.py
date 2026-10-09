@@ -1,4 +1,4 @@
-"""SignalWatchTool capturing high-consensus technology and science signals from Hacker News."""
+"""HackerNewsTool capturing high-consensus technology and science signals from Hacker News."""
 
 import json
 import time
@@ -10,7 +10,7 @@ from ekko.core.models import ToolResult
 from ekko.tools.base import BaseTool
 from ekko.utils.logger import get_logger
 
-logger = get_logger("tools.signal_watch")
+logger = get_logger("tools.hacker_news")
 
 HN_ALGOLIA_URL = "https://hn.algolia.com/api/v1/search"
 
@@ -46,7 +46,7 @@ def _format_hits_response(hits: list[dict[str, Any]]) -> str:
     return json.dumps(compact_items, ensure_ascii=False)
 
 
-class SignalWatchInput(BaseModel):
+class HackerNewsInput(BaseModel):
     """Input parameters for capturing high-consensus tech signals."""
 
     days: int = Field(
@@ -68,15 +68,15 @@ class SignalWatchInput(BaseModel):
     )
 
 
-class SignalWatchTool(BaseTool):
+class HackerNewsTool(BaseTool):
     """Tool capturing high-impact consensus signals and tech breakthroughs via Hacker News."""
 
-    name: str = "signal_watch"
+    name: str = "hacker_news"
     description: str = (
         "Consensus radar capturing the highest-impact technology and science discussions, breakthroughs, "
         "and ecosystem shifts from Hacker News for a given period."
     )
-    args_schema: type[BaseModel] = SignalWatchInput
+    args_schema: type[BaseModel] = HackerNewsInput
 
     async def _run(
         self,
@@ -93,7 +93,7 @@ class SignalWatchTool(BaseTool):
                 response.raise_for_status()
                 data = response.json()
         except httpx.RequestError as err:
-            logger.warning("Network failure in SignalWatchTool: %s", err)
+            logger.warning("Network failure in HackerNewsTool: %s", err)
             return ToolResult(
                 content=f"Network error while fetching signals: {err}",
                 success=False,

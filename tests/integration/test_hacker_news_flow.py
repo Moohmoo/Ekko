@@ -1,4 +1,4 @@
-"""Integration test verifying end-to-end ReAct flow with SignalWatchTool and EkkoEngine."""
+"""Integration test verifying end-to-end ReAct flow with HackerNewsTool and EkkoEngine."""
 
 from unittest.mock import AsyncMock, patch
 import httpx
@@ -7,15 +7,15 @@ import pytest
 from ekko.core.engine import EkkoEngine
 from ekko.core.models import ModelResponse, ToolCall
 from ekko.memory.in_memory import InMemoryMemory
+from ekko.tools.hacker_news import HackerNewsTool
 from ekko.tools.registry import ToolRegistry
-from ekko.tools.signal_watch import SignalWatchTool
 
 
 @pytest.mark.asyncio
-async def test_signal_watch_tool_integration_in_engine() -> None:
-    """Ensure engine delegates to SignalWatchTool and synthesizes intelligence."""
+async def test_hacker_news_tool_integration_in_engine() -> None:
+    """Ensure engine delegates to HackerNewsTool and synthesizes intelligence."""
     registry = ToolRegistry()
-    registry.register(SignalWatchTool())
+    registry.register(HackerNewsTool())
 
     mock_provider = AsyncMock()
     mock_provider.generate.side_effect = [
@@ -24,8 +24,8 @@ async def test_signal_watch_tool_integration_in_engine() -> None:
             model_name="mock-llm",
             tool_calls=[
                 ToolCall(
-                    id="call_sig",
-                    name="signal_watch",
+                    id="call_hn",
+                    name="hacker_news",
                     arguments={"days": 7, "limit": 5},
                 )
             ],
@@ -66,6 +66,6 @@ async def test_signal_watch_tool_integration_in_engine() -> None:
     assert messages[0].role == "user"
     assert messages[1].role == "assistant"
     assert messages[2].role == "tool"
-    assert messages[2].tool_call_id == "call_sig"
+    assert messages[2].tool_call_id == "call_hn"
     assert "Room-temperature quantum computing" in messages[2].content
     assert messages[3].role == "assistant"

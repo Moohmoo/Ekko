@@ -6,7 +6,7 @@ import pytest
 from ekko.core.models import ToolResult
 from ekko.tools.base import BaseTool
 from ekko.tools.catalog import ToolCatalog
-from ekko.tools.signal_watch import SignalWatchTool
+from ekko.tools.hacker_news import HackerNewsTool
 from ekko.tools.system_info import SystemInfoTool
 
 
@@ -38,10 +38,10 @@ def test_catalog_default_includes_system_info() -> None:
     assert catalog.get_class("system_info") is SystemInfoTool
 
 
-def test_catalog_default_includes_signal_watch() -> None:
-    """Ensure default catalog contains SignalWatchTool."""
+def test_catalog_default_includes_hacker_news() -> None:
+    """Ensure default catalog contains HackerNewsTool."""
     catalog = ToolCatalog(include_defaults=True)
-    assert catalog.get_class("signal_watch") is SignalWatchTool
+    assert catalog.get_class("hacker_news") is HackerNewsTool
 
 
 def test_catalog_build_registry_filters_enabled_tools() -> None:

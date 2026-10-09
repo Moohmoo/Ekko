@@ -1,54 +1,58 @@
-"""Unit tests for SignalWatchTool and HN Algolia signal gathering."""
+"""Unit tests for HackerNewsTool and HN Algolia consensus signal gathering."""
 
+import json
+import time
+from unittest.mock import AsyncMock, patch
+import httpx
 import pytest
 from pydantic import ValidationError
 
 from ekko.core.ports import ToolPort
-from ekko.tools.signal_watch import SignalWatchInput, SignalWatchTool
+from ekko.tools.hacker_news import HackerNewsInput, HackerNewsTool
 
 
-def test_signal_watch_implements_tool_port() -> None:
-    """Ensure SignalWatchTool complies with domain ToolPort protocol."""
-    tool = SignalWatchTool()
+def test_hacker_news_implements_tool_port() -> None:
+    """Ensure HackerNewsTool complies with domain ToolPort protocol."""
+    tool = HackerNewsTool()
     assert isinstance(tool, ToolPort)
-    assert tool.name == "signal_watch"
-    assert "signal" in tool.description.lower() or "hacker news" in tool.description.lower()
+    assert tool.name == "hacker_news"
+    assert "hacker news" in tool.description.lower()
 
 
-def test_signal_watch_input_defaults() -> None:
+def test_hacker_news_input_defaults() -> None:
     """Ensure default parameters adhere to agreed specifications."""
-    schema = SignalWatchInput()
+    schema = HackerNewsInput()
     assert not hasattr(schema, "query")
     assert schema.days == 7
     assert schema.min_score == 150
     assert schema.limit == 20
 
 
-def test_signal_watch_input_validation_bounds() -> None:
+def test_hacker_news_input_validation_bounds() -> None:
     """Ensure validation enforces strict bounds on days, min_score and limit."""
     # days must be between 1 and 30
     with pytest.raises(ValidationError):
-        SignalWatchInput(days=0)
+        HackerNewsInput(days=0)
     with pytest.raises(ValidationError):
-        SignalWatchInput(days=31)
+        HackerNewsInput(days=31)
 
     # limit must be between 5 and 30
     with pytest.raises(ValidationError):
-        SignalWatchInput(limit=4)
+        HackerNewsInput(limit=4)
     with pytest.raises(ValidationError):
-        SignalWatchInput(limit=31)
+        HackerNewsInput(limit=31)
 
     # min_score must be at least 50
     with pytest.raises(ValidationError):
-        SignalWatchInput(min_score=49)
+        HackerNewsInput(min_score=49)
 
 
-def test_signal_watch_json_schema() -> None:
+def test_hacker_news_json_schema() -> None:
     """Ensure generated JSON schema exposes only radar parameters without query."""
-    tool = SignalWatchTool()
+    tool = HackerNewsTool()
     schema = tool.get_schema()
     assert schema["type"] == "function"
-    assert schema["function"]["name"] == "signal_watch"
+    assert schema["function"]["name"] == "hacker_news"
     parameters = schema["function"]["parameters"]
     assert parameters["type"] == "object"
     props = parameters["properties"]
@@ -59,13 +63,9 @@ def test_signal_watch_json_schema() -> None:
 
 
 @pytest.mark.asyncio
-async def test_signal_watch_query_params_defaults() -> None:
+async def test_hacker_news_query_params_defaults() -> None:
     """Ensure default parameters construct correct Algolia query with tags and timestamp."""
-    import time
-    from unittest.mock import AsyncMock, patch
-    import httpx
-
-    tool = SignalWatchTool()
+    tool = HackerNewsTool()
     now = int(time.time())
     mock_resp = httpx.Response(
         200,
@@ -98,13 +98,9 @@ async def test_signal_watch_query_params_defaults() -> None:
 
 
 @pytest.mark.asyncio
-async def test_signal_watch_query_params_custom() -> None:
+async def test_hacker_news_query_params_custom() -> None:
     """Ensure custom days, min_score and limit are forwarded properly."""
-    import time
-    from unittest.mock import AsyncMock, patch
-    import httpx
-
-    tool = SignalWatchTool()
+    tool = HackerNewsTool()
     now = int(time.time())
     mock_resp = httpx.Response(
         200,
@@ -132,13 +128,9 @@ async def test_signal_watch_query_params_custom() -> None:
 
 
 @pytest.mark.asyncio
-async def test_signal_watch_compact_output_with_url_fallback() -> None:
+async def test_hacker_news_compact_output_with_url_fallback() -> None:
     """Ensure raw Algolia hits are projected compactly with fallback URL for Ask/Show HN."""
-    import json
-    from unittest.mock import AsyncMock, patch
-    import httpx
-
-    tool = SignalWatchTool()
+    tool = HackerNewsTool()
     sample_hits = [
         {
             "title": "Show HN: Local WebGPU Inference Engine",
@@ -187,12 +179,9 @@ async def test_signal_watch_compact_output_with_url_fallback() -> None:
 
 
 @pytest.mark.asyncio
-async def test_signal_watch_empty_hits() -> None:
+async def test_hacker_news_empty_hits() -> None:
     """Ensure empty hits list returns clean message without error."""
-    from unittest.mock import AsyncMock, patch
-    import httpx
-
-    tool = SignalWatchTool()
+    tool = HackerNewsTool()
     mock_resp = httpx.Response(
         200,
         json={"hits": []},
@@ -208,12 +197,9 @@ async def test_signal_watch_empty_hits() -> None:
 
 
 @pytest.mark.asyncio
-async def test_signal_watch_network_error_resilience() -> None:
+async def test_hacker_news_network_error_resilience() -> None:
     """Ensure network failure returns graceful ToolResult with error detail."""
-    from unittest.mock import AsyncMock, patch
-    import httpx
-
-    tool = SignalWatchTool()
+    tool = HackerNewsTool()
 
     with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get:
         mock_get.side_effect = httpx.ConnectTimeout("Connection timed out")
@@ -222,5 +208,3 @@ async def test_signal_watch_network_error_resilience() -> None:
     assert result.success is False
     assert result.error == "ConnectTimeout"
     assert "connection timed out" in result.content.lower()
-
-
