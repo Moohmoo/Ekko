@@ -26,7 +26,7 @@ async def test_signal_watch_tool_integration_in_engine() -> None:
                 ToolCall(
                     id="call_sig",
                     name="signal_watch",
-                    arguments={"query": "quantum", "limit": 2},
+                    arguments={"days": 7, "limit": 5},
                 )
             ],
         ),

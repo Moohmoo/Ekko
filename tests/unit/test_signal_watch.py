@@ -18,33 +18,33 @@ def test_signal_watch_implements_tool_port() -> None:
 def test_signal_watch_input_defaults() -> None:
     """Ensure default parameters adhere to agreed specifications."""
     schema = SignalWatchInput()
-    assert schema.query is None
+    assert not hasattr(schema, "query")
     assert schema.days == 7
     assert schema.min_score == 150
-    assert schema.limit == 15
+    assert schema.limit == 20
 
 
 def test_signal_watch_input_validation_bounds() -> None:
-    """Ensure validation enforces strict bounds on days and limit."""
+    """Ensure validation enforces strict bounds on days, min_score and limit."""
     # days must be between 1 and 30
     with pytest.raises(ValidationError):
         SignalWatchInput(days=0)
     with pytest.raises(ValidationError):
         SignalWatchInput(days=31)
 
-    # limit must be between 1 and 30
+    # limit must be between 5 and 30
     with pytest.raises(ValidationError):
-        SignalWatchInput(limit=0)
+        SignalWatchInput(limit=4)
     with pytest.raises(ValidationError):
         SignalWatchInput(limit=31)
 
-    # min_score must be non-negative
+    # min_score must be at least 50
     with pytest.raises(ValidationError):
-        SignalWatchInput(min_score=-1)
+        SignalWatchInput(min_score=49)
 
 
 def test_signal_watch_json_schema() -> None:
-    """Ensure generated JSON schema correctly exposes parameters to LLM."""
+    """Ensure generated JSON schema exposes only radar parameters without query."""
     tool = SignalWatchTool()
     schema = tool.get_schema()
     assert schema["type"] == "function"
@@ -52,7 +52,7 @@ def test_signal_watch_json_schema() -> None:
     parameters = schema["function"]["parameters"]
     assert parameters["type"] == "object"
     props = parameters["properties"]
-    assert "query" in props
+    assert "query" not in props
     assert "days" in props
     assert "min_score" in props
     assert "limit" in props
@@ -85,7 +85,7 @@ async def test_signal_watch_query_params_defaults() -> None:
     assert called_url == "https://hn.algolia.com/api/v1/search"
     params = called_kwargs["params"]
     assert params["tags"] == "story"
-    assert params["hitsPerPage"] == 15
+    assert params["hitsPerPage"] == 20
     assert "query" not in params
 
     filters = params["numericFilters"]
@@ -99,7 +99,7 @@ async def test_signal_watch_query_params_defaults() -> None:
 
 @pytest.mark.asyncio
 async def test_signal_watch_query_params_custom() -> None:
-    """Ensure custom query, days, min_score and limit are forwarded properly."""
+    """Ensure custom days, min_score and limit are forwarded properly."""
     import time
     from unittest.mock import AsyncMock, patch
     import httpx
@@ -114,16 +114,16 @@ async def test_signal_watch_query_params_custom() -> None:
 
     with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get:
         mock_get.return_value = mock_resp
-        result = await tool.execute(query="quantum", days=3, min_score=100, limit=5)
+        result = await tool.execute(days=3, min_score=200, limit=10)
 
     assert result.success is True
     mock_get.assert_awaited_once()
     called_kwargs = mock_get.call_args[1]
     params = called_kwargs["params"]
 
-    assert params["query"] == "quantum"
-    assert params["hitsPerPage"] == 5
-    assert "points>=100" in params["numericFilters"]
+    assert "query" not in params
+    assert params["hitsPerPage"] == 10
+    assert "points>=200" in params["numericFilters"]
     expected_cutoff = now - (3 * 86400)
     for item in params["numericFilters"].split(","):
         if item.startswith("created_at_i>="):

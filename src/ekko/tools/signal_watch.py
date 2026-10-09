@@ -1,4 +1,4 @@
-"""SignalWatchTool capturing high-impact technology and science signals from Hacker News."""
+"""SignalWatchTool capturing high-consensus technology and science signals from Hacker News."""
 
 import json
 import time
@@ -15,22 +15,14 @@ logger = get_logger("tools.signal_watch")
 HN_ALGOLIA_URL = "https://hn.algolia.com/api/v1/search"
 
 
-def _build_query_params(
-    query: str | None,
-    days: int,
-    min_score: int,
-    limit: int,
-) -> dict[str, Any]:
-    """Construct Algolia query parameters applying freshness and score filters."""
+def _build_query_params(days: int, min_score: int, limit: int) -> dict[str, Any]:
+    """Construct Algolia query parameters applying freshness and consensus score filters."""
     cutoff_ts = int(time.time() - (days * 86400))
-    params: dict[str, Any] = {
+    return {
         "tags": "story",
         "numericFilters": f"points>={min_score},created_at_i>={cutoff_ts}",
         "hitsPerPage": limit,
     }
-    if query:
-        params["query"] = query
-    return params
 
 
 def _format_hit(hit: dict[str, Any]) -> dict[str, Any]:
@@ -55,54 +47,46 @@ def _format_hits_response(hits: list[dict[str, Any]]) -> str:
 
 
 class SignalWatchInput(BaseModel):
-    """Input parameters for capturing tech and scientific signals."""
+    """Input parameters for capturing high-consensus tech signals."""
 
-    query: str | None = Field(
-        default=None,
-        description=(
-            "Optional targeted search term in concise English (e.g. 'vLLM', 'PostgreSQL', 'WebGPU'). "
-            "Leave as None for broad or exploratory watch to scan top consensus signals without keyword bias."
-        ),
-    )
     days: int = Field(
         default=7,
         ge=1,
         le=30,
-        description="Time window in days to enforce signal freshness (1 to 30 days).",
+        description="Time window in days for consensus watch (1 to 30 days).",
     )
     min_score: int = Field(
         default=150,
-        ge=0,
-        description="Minimum points/upvotes threshold to filter out noise.",
+        ge=50,
+        description="Minimum points threshold to filter noise and retain only consensus signals (minimum 50).",
     )
     limit: int = Field(
-        default=15,
-        ge=1,
+        default=20,
+        ge=5,
         le=30,
-        description="Maximum number of items to retrieve (1 to 30).",
+        description="Number of top consensus items to retrieve (5 to 30).",
     )
 
 
 class SignalWatchTool(BaseTool):
-    """Tool capturing high-impact signals and ecosystem breakthroughs via Hacker News Algolia API."""
+    """Tool capturing high-impact consensus signals and tech breakthroughs via Hacker News."""
 
     name: str = "signal_watch"
     description: str = (
-        "Captures emerging technology and science signals, breakthroughs, and ecosystem shifts "
-        "from Hacker News without requiring external API keys."
+        "Consensus radar capturing the highest-impact technology and science discussions, breakthroughs, "
+        "and ecosystem shifts from Hacker News for a given period."
     )
     args_schema: type[BaseModel] = SignalWatchInput
 
     async def _run(
         self,
-        query: str | None = None,
         days: int = 7,
         min_score: int = 150,
-        limit: int = 15,
+        limit: int = 20,
     ) -> ToolResult:
-        """Execute signal gathering query against Hacker News Algolia API."""
-        params = _build_query_params(query, days, min_score, limit)
-        logger.debug("Querying Algolia HN with params: %s", params)
+        """Execute consensus signal gathering query against Hacker News Algolia API."""
+        params = _build_query_params(days, min_score, limit)
+        logger.debug("Querying Algolia HN consensus radar with params: %s", params)
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(HN_ALGOLIA_URL, params=params, timeout=10.0)
