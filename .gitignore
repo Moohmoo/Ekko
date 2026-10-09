@@ -1,4 +1,4 @@
-# Python
+# Python cache and local environments
 __pycache__/
 *.py[cod]
 *$py.class
@@ -9,18 +9,26 @@ env/
 venv/
 ENV/
 
-# Testing & Tools
+# Test and tooling artifacts
 .pytest_cache/
 .coverage
 htmlcov/
+.mypy_cache/
+.pytype/
+.ruff_cache/
 
-# Local configuration & storage
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Local configuration and runtime data
 .env
-data/memory/*.db
-data/memory/*.db-journal
-data/memory/*.db-wal
-data/logs/
+data/
 *.log
 
-# System
+# Editor and operating system files
+.idea/
+.vscode/*
+!.vscode/settings.json
 .DS_Store

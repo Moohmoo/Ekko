@@ -68,6 +68,22 @@ def test_router_creates_local_provider() -> None:
     assert provider.temperature == 0.5
 
 
+def test_router_strips_v1_from_local_ollama_url() -> None:
+    """Ensure router cleans /v1 suffix for local Ollama compatibility."""
+    settings = Settings(
+        llm_provider="local",
+        local_llm_url="http://localhost:11434/v1",
+        local_llm_model="qwen2.5:7b",
+        _env_file=None,
+    )
+    router = LLMRouter(settings=settings)
+    provider = router.get_provider()
+
+    assert isinstance(provider, LiteLLMProvider)
+    assert provider.api_base == "http://localhost:11434"
+
+
+
 def test_router_rejects_unsupported_provider() -> None:
     """Ensure router raises ProviderError when unknown provider is specified."""
     settings = Settings(

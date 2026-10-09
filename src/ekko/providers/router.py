@@ -26,14 +26,24 @@ def _build_gemini_provider(settings: Settings) -> LiteLLMProvider:
     )
 
 
+def _normalize_local_url(url: str) -> str:
+    """Trim /v1 suffix from local URL to support native Ollama endpoints."""
+    cleaned = url.rstrip("/")
+    if cleaned.endswith("/v1"):
+        return cleaned[:-3]
+    return cleaned
+
+
 def _build_local_provider(settings: Settings) -> LiteLLMProvider:
     """Build LiteLLM provider pointing to a local inference server (e.g. Ollama)."""
     model = _normalize_model_name(settings.local_llm_model, "ollama")
+    api_base = _normalize_local_url(settings.local_llm_url)
     return LiteLLMProvider(
         model=model,
-        api_base=settings.local_llm_url,
+        api_base=api_base,
         temperature=settings.llm_temperature,
     )
+
 
 
 class LLMRouter:
