@@ -1,5 +1,6 @@
 """Core orchestrator executing conversational turns and ReAct tool calling."""
 
+import json
 from typing import Any
 from ekko.core.models import Message, ToolCall, ToolResult
 from ekko.core.ports import LLMProviderPort, MemoryPort
@@ -52,11 +53,27 @@ class EkkoEngine:
         self.max_iterations = max_iterations
         self.history_limit = history_limit
 
-    async def _run_tool_steps(self, session_id: str, tool_calls: list[ToolCall]) -> None:
-        """Execute multiple tool calls sequentially and persist observations."""
+    async def _run_tool_steps(
+        self,
+        session_id: str,
+        tool_calls: list[ToolCall],
+        executed_calls: set[tuple[str, str]],
+    ) -> None:
+        """Execute tool calls sequentially with circuit-breaker intercepting duplicates."""
         for call in tool_calls:
             logger.debug("Executing tool call '%s' (id=%s)", call.name, call.id)
-            result = await _execute_tool_call(self.tools, call)
+            call_sig = (call.name, json.dumps(call.arguments, sort_keys=True))
+            if call_sig in executed_calls:
+                logger.warning("Duplicate tool call detected in turn for '%s': short-circuiting", call.name)
+                result = ToolResult(
+                    content="Cet outil a déjà été exécuté avec les mêmes paramètres. Analyse le résultat obtenu et passe à l'étape suivante.",
+                    success=False,
+                    error="DuplicateToolCall",
+                )
+            else:
+                executed_calls.add(call_sig)
+                result = await _execute_tool_call(self.tools, call)
+
             msg = Message(role="tool", content=result.content, tool_call_id=call.id)
             await self.memory.add_message(session_id, msg)
 
@@ -70,6 +87,7 @@ class EkkoEngine:
         logger.info("Starting message turn for session '%s'", session_id)
         await self.memory.add_message(session_id, Message(role="user", content=sanitized))
         tool_schemas = self.tools.get_schemas() if self.tools else None
+        executed_calls: set[tuple[str, str]] = set()
 
         for iteration in range(self.max_iterations):
             logger.debug("ReAct loop step %d/%d", iteration + 1, self.max_iterations)
@@ -93,7 +111,7 @@ class EkkoEngine:
                 tool_calls=response.tool_calls,
             )
             await self.memory.add_message(session_id, asst_call_msg)
-            await self._run_tool_steps(session_id, response.tool_calls)
+            await self._run_tool_steps(session_id, response.tool_calls, executed_calls)
 
         logger.warning("Hit max_iterations (%d) without final answer for session '%s'", self.max_iterations, session_id)
         return "Max iterations reached without final response."

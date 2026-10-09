@@ -3,3 +3,4 @@ enabled_tools:
   - hacker_news
   - url_reader
   - arxiv
+  - save_note

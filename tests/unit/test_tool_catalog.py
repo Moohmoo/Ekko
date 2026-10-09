@@ -8,6 +8,7 @@ from ekko.tools.arxiv import ArxivTool
 from ekko.tools.base import BaseTool
 from ekko.tools.catalog import ToolCatalog
 from ekko.tools.hacker_news import HackerNewsTool
+from ekko.tools.note_writer import NoteWriterTool
 from ekko.tools.system_info import SystemInfoTool
 from ekko.tools.url_reader import UrlReaderTool
 
@@ -56,6 +57,12 @@ def test_catalog_default_includes_arxiv() -> None:
     """Ensure default catalog contains ArxivTool."""
     catalog = ToolCatalog(include_defaults=True)
     assert catalog.get_class("arxiv") is ArxivTool
+
+
+def test_catalog_default_includes_save_note() -> None:
+    """Ensure default catalog contains NoteWriterTool."""
+    catalog = ToolCatalog(include_defaults=True)
+    assert catalog.get_class("save_note") is NoteWriterTool
 
 
 

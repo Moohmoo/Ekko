@@ -227,3 +227,58 @@ async def test_engine_executes_multiple_tool_calls_sequentially() -> None:
     assert messages[3].tool_call_id == "tc_2"
 
 
+@pytest.mark.asyncio
+async def test_engine_circuit_breaker_intercepts_duplicate_tool_call() -> None:
+    """Ensure engine circuit-breaker catches identical tool calls in the same turn."""
+    from pydantic import BaseModel
+    from ekko.core.models import ToolCall, ToolResult
+    from ekko.tools.base import BaseTool
+    from ekko.tools.registry import ToolRegistry
+
+    call_count = 0
+
+    class ProbeArgs(BaseModel):
+        target: str
+
+    class ProbeTool(BaseTool):
+        name: str = "probe_tool"
+        description: str = "Probes a target"
+        args_schema: type[BaseModel] = ProbeArgs
+
+        async def _run(self, target: str) -> ToolResult:
+            nonlocal call_count
+            call_count += 1
+            return ToolResult(content=f"Probe result for {target}", success=True)
+
+    registry = ToolRegistry()
+    registry.register(ProbeTool())
+
+    duplicate_call = ToolCall(id="c_dup", name="probe_tool", arguments={"target": "same_url"})
+
+    mock_provider = AsyncMock()
+    mock_provider.generate.side_effect = [
+        # Turn 1: LLM calls probe_tool
+        ModelResponse(content="", model_name="mock", tool_calls=[ToolCall(id="c_1", name="probe_tool", arguments={"target": "same_url"})]),
+        # Turn 2: LLM erroneously calls probe_tool with identical arguments again
+        ModelResponse(content="", model_name="mock", tool_calls=[duplicate_call]),
+        # Turn 3: LLM provides final answer
+        ModelResponse(content="Final synthesized output.", model_name="mock"),
+    ]
+
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=mock_provider, memory=memory, tools=registry)
+
+    reply = await engine.process_message("Investigate same_url", session_id="circuit_breaker_test")
+
+    assert reply == "Final synthesized output."
+    # Physical tool execution must happen ONLY once
+    assert call_count == 1
+
+    messages = await memory.get_messages("circuit_breaker_test")
+    # user, asst(call1), tool(obs1), asst(call2), tool(circuit_breaker), asst(final)
+    assert len(messages) == 6
+    assert messages[2].content == "Probe result for same_url"
+    assert "Cet outil a déjà été exécuté avec les mêmes paramètres" in messages[4].content
+    assert messages[4].tool_call_id == "c_dup"
+
+
