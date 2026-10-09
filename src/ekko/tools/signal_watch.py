@@ -12,7 +12,7 @@ from ekko.utils.logger import get_logger
 
 logger = get_logger("tools.signal_watch")
 
-HN_ALGOLIA_URL = "https://hn.algolia.com/api/v1/search_by_date"
+HN_ALGOLIA_URL = "https://hn.algolia.com/api/v1/search"
 
 
 def _build_query_params(
@@ -60,9 +60,8 @@ class SignalWatchInput(BaseModel):
     query: str | None = Field(
         default=None,
         description=(
-            "Optional search keywords formulated in concise English (e.g. 'AI regulation', "
-            "'bioinformatics', 'quantum computing'), even if the conversation is in another language, "
-            "as the Hacker News index is exclusively English. If omitted, retrieves top trending stories."
+            "Optional targeted search term in concise English (e.g. 'vLLM', 'PostgreSQL', 'WebGPU'). "
+            "Leave as None for broad or exploratory watch to scan top consensus signals without keyword bias."
         ),
     )
     days: int = Field(
@@ -72,15 +71,15 @@ class SignalWatchInput(BaseModel):
         description="Time window in days to enforce signal freshness (1 to 30 days).",
     )
     min_score: int = Field(
-        default=50,
+        default=150,
         ge=0,
         description="Minimum points/upvotes threshold to filter out noise.",
     )
     limit: int = Field(
-        default=10,
+        default=15,
         ge=1,
-        le=20,
-        description="Maximum number of items to retrieve (1 to 20).",
+        le=30,
+        description="Maximum number of items to retrieve (1 to 30).",
     )
 
 
@@ -98,8 +97,8 @@ class SignalWatchTool(BaseTool):
         self,
         query: str | None = None,
         days: int = 7,
-        min_score: int = 50,
-        limit: int = 10,
+        min_score: int = 150,
+        limit: int = 15,
     ) -> ToolResult:
         """Execute signal gathering query against Hacker News Algolia API."""
         params = _build_query_params(query, days, min_score, limit)

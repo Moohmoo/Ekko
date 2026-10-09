@@ -50,7 +50,7 @@ async def test_signal_watch_tool_integration_in_engine() -> None:
                 }
             ]
         },
-        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search_by_date"),
+        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search"),
     )
 
     memory = InMemoryMemory()

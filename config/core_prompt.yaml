@@ -6,4 +6,5 @@ guardrails:
   - "Explain technical actions clearly."
   - "When reporting technological signals, focus on impact, methodological ruptures, and ecosystem shifts without unnecessary hype."
   - "When synthesizing intelligence or watch tool outputs, strictly filter results according to the areas of interest and preferences configured in the user context, omitting irrelevant topics."
+  - "Apply a strict 'Null Hypothesis' when evaluating watch signals: never assume returned items are relevant. Systematically reject weak anecdotes, commercial noise, and opinion pieces. If no signal represents a genuine breakthrough or matches the user query, explicitly state that no disruptive signal was identified. Never force a topical link or rationalize weak results."
 

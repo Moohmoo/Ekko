@@ -20,8 +20,8 @@ def test_signal_watch_input_defaults() -> None:
     schema = SignalWatchInput()
     assert schema.query is None
     assert schema.days == 7
-    assert schema.min_score == 50
-    assert schema.limit == 10
+    assert schema.min_score == 150
+    assert schema.limit == 15
 
 
 def test_signal_watch_input_validation_bounds() -> None:
@@ -32,11 +32,11 @@ def test_signal_watch_input_validation_bounds() -> None:
     with pytest.raises(ValidationError):
         SignalWatchInput(days=31)
 
-    # limit must be between 1 and 20
+    # limit must be between 1 and 30
     with pytest.raises(ValidationError):
         SignalWatchInput(limit=0)
     with pytest.raises(ValidationError):
-        SignalWatchInput(limit=21)
+        SignalWatchInput(limit=31)
 
     # min_score must be non-negative
     with pytest.raises(ValidationError):
@@ -70,7 +70,7 @@ async def test_signal_watch_query_params_defaults() -> None:
     mock_resp = httpx.Response(
         200,
         json={"hits": []},
-        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search_by_date"),
+        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search"),
     )
 
     with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get:
@@ -82,14 +82,14 @@ async def test_signal_watch_query_params_defaults() -> None:
     called_url = mock_get.call_args[0][0]
     called_kwargs = mock_get.call_args[1]
 
-    assert called_url == "https://hn.algolia.com/api/v1/search_by_date"
+    assert called_url == "https://hn.algolia.com/api/v1/search"
     params = called_kwargs["params"]
     assert params["tags"] == "story"
-    assert params["hitsPerPage"] == 10
+    assert params["hitsPerPage"] == 15
     assert "query" not in params
 
     filters = params["numericFilters"]
-    assert "points>=50" in filters
+    assert "points>=150" in filters
     expected_cutoff = now - (7 * 86400)
     for item in filters.split(","):
         if item.startswith("created_at_i>="):
@@ -109,7 +109,7 @@ async def test_signal_watch_query_params_custom() -> None:
     mock_resp = httpx.Response(
         200,
         json={"hits": []},
-        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search_by_date"),
+        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search"),
     )
 
     with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get:
@@ -161,7 +161,7 @@ async def test_signal_watch_compact_output_with_url_fallback() -> None:
     mock_resp = httpx.Response(
         200,
         json={"hits": sample_hits},
-        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search_by_date"),
+        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search"),
     )
 
     with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get:
@@ -196,7 +196,7 @@ async def test_signal_watch_empty_hits() -> None:
     mock_resp = httpx.Response(
         200,
         json={"hits": []},
-        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search_by_date"),
+        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search"),
     )
 
     with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get:
