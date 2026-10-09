@@ -27,5 +27,6 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
     log_file: str | None = Field(default="logs/ekko.log")
     config_dir: str = Field(default="config")
+    sqlite_db_path: str = Field(default="data/ekko.db")
 
 

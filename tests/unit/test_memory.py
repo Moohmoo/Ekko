@@ -56,3 +56,17 @@ async def test_in_memory_clear_session() -> None:
 
     history = await mem.get_messages("session-1")
     assert history == []
+
+
+@pytest.mark.asyncio
+async def test_in_memory_bounded_limit() -> None:
+    """Ensure get_messages limit returns only the most recent N turns."""
+    mem = InMemoryMemory()
+    session_id = "bounded-session"
+    for i in range(5):
+        await mem.add_message(session_id, Message(role="user", content=f"Msg {i}"))
+
+    recent = await mem.get_messages(session_id, limit=2)
+    assert len(recent) == 2
+    assert recent[0].content == "Msg 3"
+    assert recent[1].content == "Msg 4"

@@ -43,12 +43,14 @@ class EkkoEngine:
         tools: Any = None,
         system_prompt: str = DEFAULT_SYSTEM_PROMPT,
         max_iterations: int = 5,
+        history_limit: int = 50,
     ) -> None:
         self.provider = provider
         self.memory = memory
         self.tools = tools
         self.system_prompt = system_prompt
         self.max_iterations = max_iterations
+        self.history_limit = history_limit
 
     async def _run_tool_steps(self, session_id: str, tool_calls: list[ToolCall]) -> None:
         """Execute multiple tool calls sequentially and persist observations."""
@@ -71,7 +73,7 @@ class EkkoEngine:
 
         for iteration in range(self.max_iterations):
             logger.debug("ReAct loop step %d/%d", iteration + 1, self.max_iterations)
-            history = await self.memory.get_messages(session_id)
+            history = await self.memory.get_messages(session_id, limit=self.history_limit)
             if history and history[0].role == "system":
                 payload = history
             else:

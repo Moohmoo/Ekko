@@ -26,8 +26,8 @@ class MemoryPort(Protocol):
         """Persist a message into the specified session."""
         ...
 
-    async def get_messages(self, session_id: str) -> list[Message]:
-        """Retrieve full conversation history for the specified session."""
+    async def get_messages(self, session_id: str, limit: int = 50) -> list[Message]:
+        """Retrieve conversation history for the session, up to limit turns."""
         ...
 
     async def clear_session(self, session_id: str) -> None:

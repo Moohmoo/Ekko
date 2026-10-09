@@ -1,10 +1,10 @@
 """Unit tests for the REPL CLI driving adapter."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ekko.core.errors import ProviderError
-from ekko.ui.cli import run_repl
+from ekko.ui.cli import main, parse_args, run_repl
 
 
 @pytest.mark.asyncio
@@ -59,3 +59,72 @@ async def test_repl_handles_keyboard_interrupt(capsys: pytest.CaptureFixture[str
 
     captured = capsys.readouterr().out
     assert "Session closed." in captured
+
+
+def test_parse_args_defaults() -> None:
+    """Ensure parse_args defaults to session 'default' and clear=False."""
+    args = parse_args([])
+    assert args.session == "default"
+    assert args.clear is False
+
+
+def test_parse_args_custom_session() -> None:
+    """Ensure parse_args accepts custom session argument."""
+    args = parse_args(["--session", "work_project"])
+    assert args.session == "work_project"
+    assert args.clear is False
+
+    short_args = parse_args(["-s", "short_sess"])
+    assert short_args.session == "short_sess"
+
+
+def test_parse_args_clear_flag() -> None:
+    """Ensure parse_args detects --clear flag."""
+    args = parse_args(["--clear"])
+    assert args.session == "default"
+    assert args.clear is True
+
+
+@patch("ekko.ui.cli.SqliteMemory")
+@patch("ekko.ui.cli.EkkoEngine")
+@patch("ekko.ui.cli.run_repl")
+def test_main_wires_sqlite_and_runs_repl(
+    mock_run_repl: MagicMock,
+    mock_engine_cls: MagicMock,
+    mock_sqlite_cls: MagicMock,
+) -> None:
+    """Ensure main initializes SqliteMemory and passes target session to REPL."""
+    mock_sqlite_instance = MagicMock()
+    mock_sqlite_cls.return_value = mock_sqlite_instance
+    mock_run_repl.return_value = None
+
+    with patch("sys.argv", ["ekko", "--session", "custom_sess"]):
+        main()
+
+    mock_sqlite_cls.assert_called_once()
+    mock_engine_cls.assert_called_once()
+    _, kwargs = mock_engine_cls.call_args
+    assert kwargs["memory"] == mock_sqlite_instance
+
+
+@patch("ekko.ui.cli.SqliteMemory")
+@patch("ekko.ui.cli.EkkoEngine")
+@patch("ekko.ui.cli.run_repl")
+def test_main_clears_session_when_flag_present(
+    mock_run_repl: MagicMock,
+    mock_engine_cls: MagicMock,
+    mock_sqlite_cls: MagicMock,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Ensure main clears the session before starting REPL when --clear is provided."""
+    mock_sqlite_instance = MagicMock()
+    mock_sqlite_instance.clear_session = AsyncMock()
+    mock_sqlite_cls.return_value = mock_sqlite_instance
+    mock_run_repl.return_value = None
+
+    with patch("sys.argv", ["ekko", "--session", "temp_sess", "--clear"]):
+        main()
+
+    mock_sqlite_instance.clear_session.assert_awaited_once_with("temp_sess")
+    captured = capsys.readouterr().out
+    assert "Session 'temp_sess' cleared." in captured

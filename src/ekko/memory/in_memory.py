@@ -14,9 +14,10 @@ class InMemoryMemory:
         """Append a message to the session message log."""
         self._storage[session_id].append(message)
 
-    async def get_messages(self, session_id: str) -> list[Message]:
-        """Return a copy of the recorded conversation turns for session."""
-        return list(self._storage[session_id])
+    async def get_messages(self, session_id: str, limit: int = 50) -> list[Message]:
+        """Return the most recent recorded conversation turns up to limit."""
+        messages = self._storage[session_id]
+        return list(messages[-limit:] if limit > 0 else messages)
 
     async def clear_session(self, session_id: str) -> None:
         """Reset conversation turns for the specified session."""
