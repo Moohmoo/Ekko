@@ -106,12 +106,12 @@ def main(argv: list[str] | None = None) -> None:
     plugins_config = load_plugins_config(settings.config_dir)
 
     system_prompt = build_system_prompt(core_prompt, user_context)
+    db_manager = DatabaseManager(db_path=settings.sqlite_db_path)
     catalog = ToolCatalog(include_defaults=True)
-    tools = catalog.build_registry(plugins_config.enabled_tools)
+    tools = catalog.build_registry(plugins_config.enabled_tools, db_manager=db_manager)
 
     provider = LLMRouter(settings=settings).get_provider()
     memory = SqliteMemory(db_path=settings.sqlite_db_path)
-    DatabaseManager(db_path=settings.sqlite_db_path)
     engine = EkkoEngine(
         provider=provider,
         memory=memory,

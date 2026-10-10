@@ -1,15 +1,34 @@
 """ToolCatalog mapping configuration names to tool classes adhering to OCP."""
 
+from pathlib import Path
+from typing import Any
+
+from ekko.core.ports import HybridMemoryPort
 from ekko.tools.base import BaseTool
 from ekko.tools.note_writer import NoteWriterTool
 from ekko.tools.query_knowledge import QueryKnowledgeTool
+from ekko.tools.read_resource import ReadResourceTool
 from ekko.tools.registry import ToolRegistry
 from ekko.tools.scan_inbox import ScanInboxTool
 from ekko.tools.system_info import SystemInfoTool
-from ekko.tools.url_reader import UrlReaderTool
 from ekko.utils.logger import get_logger
 
 logger = get_logger("tools.catalog")
+
+
+def _instantiate_tool(
+    cls: type[BaseTool],
+    db_manager: HybridMemoryPort | None = None,
+    notes_dir: Path | str = "data/notes",
+    embedder: Any | None = None,
+) -> BaseTool:
+    """Instantiate a tool class injecting optional dependencies."""
+    name = getattr(cls, "name", "")
+    if name == "save_note":
+        return NoteWriterTool(notes_dir=notes_dir, db_manager=db_manager, embedder=embedder)
+    if name in {"query_knowledge", "scan_inbox"}:
+        return cls(db_manager=db_manager)  # type: ignore[call-arg]
+    return cls()
 
 
 class ToolCatalog:
@@ -19,7 +38,7 @@ class ToolCatalog:
         self._classes: dict[str, type[BaseTool]] = {}
         if include_defaults:
             self.register(SystemInfoTool)
-            self.register(UrlReaderTool)
+            self.register(ReadResourceTool)
             self.register(NoteWriterTool)
             self.register(QueryKnowledgeTool)
             self.register(ScanInboxTool)
@@ -34,13 +53,19 @@ class ToolCatalog:
         """Retrieve tool class by registered name, or None."""
         return self._classes.get(name)
 
-    def build_registry(self, enabled_names: list[str]) -> ToolRegistry:
+    def build_registry(
+        self,
+        enabled_names: list[str],
+        db_manager: HybridMemoryPort | None = None,
+        notes_dir: Path | str = "data/notes",
+        embedder: Any | None = None,
+    ) -> ToolRegistry:
         """Instantiate and register tools declared in enabled configuration."""
         registry = ToolRegistry()
         for name in enabled_names:
             cls = self.get_class(name)
             if cls is not None:
-                instance = cls()
+                instance = _instantiate_tool(cls, db_manager, notes_dir, embedder)
                 registry.register(instance)
                 logger.info("Instantiated and activated tool from catalog: %s", name)
             else:

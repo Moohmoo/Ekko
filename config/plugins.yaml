@@ -1,6 +1,6 @@
 enabled_tools:
   - system_info
-  - url_reader
+  - read_resource
   - save_note
   - query_knowledge
   - scan_inbox

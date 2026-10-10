@@ -78,7 +78,7 @@ def test_renderer_tool_call_failure(string_console: tuple[Console, io.StringIO])
     renderer.render_event(
         ToolCallCompleted(
             tool_call_id="call_2",
-            tool_name="url_reader",
+            tool_name="read_resource",
             success=False,
             summary="HTTP 404 Not Found",
             duration_ms=105.0,
@@ -86,7 +86,7 @@ def test_renderer_tool_call_failure(string_console: tuple[Console, io.StringIO])
     )
 
     output = buffer.getvalue()
-    assert "url_reader" in output
+    assert "read_resource" in output
     assert "HTTP 404 Not Found" in output
 
 

@@ -90,6 +90,14 @@ class HybridMemoryPort(Protocol):
         """Fetch raw signals matching source and status criteria."""
         ...
 
+    async def save_knowledge_note(
+        self,
+        note: Any,
+        embedding: list[float] | None = None,
+    ) -> None:
+        """Persist a distilled knowledge note with FTS and vector indexing."""
+        ...
+
 
 @runtime_checkable
 class IngestionPort(Protocol):

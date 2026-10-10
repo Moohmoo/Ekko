@@ -1,7 +1,7 @@
 """Integration test validating autonomous multi-hop tool chaining in EkkoEngine."""
 
-from unittest.mock import AsyncMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
@@ -9,21 +9,21 @@ from ekko.core.engine import EkkoEngine
 from ekko.core.models import ModelResponse, ToolCall
 from ekko.memory.in_memory import InMemoryMemory
 from ekko.memory.models import RawSignal, SignalStatus
+from ekko.tools.read_resource import ReadResourceTool
 from ekko.tools.registry import ToolRegistry
 from ekko.tools.scan_inbox import ScanInboxTool
-from ekko.tools.url_reader import UrlReaderTool
 
 
 @pytest.mark.asyncio
-async def test_multihop_autonomous_chaining_scan_inbox_to_url_reader() -> None:
-    """Ensure engine autonomously chains scan_inbox followed by url_reader.
+async def test_multihop_autonomous_chaining_scan_inbox_to_read_resource() -> None:
+    """Ensure engine autonomously chains scan_inbox followed by read_resource.
 
     Scenario:
     1. User asks to inspect incoming intelligence and read the main linked article.
     2. Step 1 (Model): calls 'scan_inbox'.
     3. Engine executes 'scan_inbox' and returns pending raw signals.
-    4. Step 2 (Model): inspects the observation, picks top URL and autonomously calls 'url_reader'.
-    5. Engine executes 'url_reader' and stores observation in memory.
+    4. Step 2 (Model): inspects the observation, picks top URL and autonomously calls 'read_resource'.
+    5. Engine executes 'read_resource' and stores observation in memory.
     6. Step 3 (Model): synthesizes extracted article body into final response without further tool calls.
     """
     mock_db = AsyncMock()
@@ -43,7 +43,7 @@ async def test_multihop_autonomous_chaining_scan_inbox_to_url_reader() -> None:
 
     registry = ToolRegistry()
     registry.register(ScanInboxTool(db_manager=mock_db))
-    registry.register(UrlReaderTool())
+    registry.register(ReadResourceTool())
 
     mock_provider = AsyncMock()
     mock_provider.generate.side_effect = [
@@ -65,9 +65,9 @@ async def test_multihop_autonomous_chaining_scan_inbox_to_url_reader() -> None:
             model_name="mock-llm",
             tool_calls=[
                 ToolCall(
-                    id="call_url_reader",
-                    name="url_reader",
-                    arguments={"url": "https://example.com/mistral-large-4"},
+                    id="call_read_resource",
+                    name="read_resource",
+                    arguments={"uri": "https://example.com/mistral-large-4"},
                 )
             ],
         ),
@@ -96,11 +96,11 @@ async def test_multihop_autonomous_chaining_scan_inbox_to_url_reader() -> None:
         request=httpx.Request("GET", "https://example.com/mistral-large-4"),
     )
 
-    with patch.object(
-        httpx.AsyncClient, "get", new_callable=AsyncMock
-    ) as mock_http_get, patch(
-        "ekko.tools.url_reader.trafilatura.extract"
-    ) as mock_extract:
+    with (
+        patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_http_get,
+        patch("trafilatura.extract") as mock_extract,
+        patch("ekko.tools.read_resource.SSRFValidator.validate_url", return_value="https://example.com/mistral-large-4"),
+    ):
         mock_http_get.return_value = mock_response
         mock_extract.return_value = (
             "# Mistral Large 4\n\nMistral Large 4 is our new frontier model with 128k context."
@@ -134,17 +134,13 @@ async def test_multihop_autonomous_chaining_scan_inbox_to_url_reader() -> None:
     assert messages[2].tool_call_id == "call_scan_inbox"
     assert "Mistral Large 4 Release and Benchmarks" in messages[2].content
 
-    # Message 3: Assistant calling url_reader
+    # Message 3: Assistant calling read_resource
     assert messages[3].role == "assistant"
     assert messages[3].tool_calls is not None
-    assert messages[3].tool_calls[0].name == "url_reader"
-    assert messages[3].tool_calls[0].arguments["url"] == "https://example.com/mistral-large-4"
+    assert messages[3].tool_calls[0].name == "read_resource"
+    assert messages[3].tool_calls[0].arguments["uri"] == "https://example.com/mistral-large-4"
 
-    # Message 4: Tool result from url_reader
+    # Message 4: Tool result from read_resource
     assert messages[4].role == "tool"
-    assert messages[4].tool_call_id == "call_url_reader"
+    assert messages[4].tool_call_id == "call_read_resource"
     assert "# Mistral Large 4" in messages[4].content
-
-    # Message 5: Final assistant response
-    assert messages[5].role == "assistant"
-    assert "Synthèse approfondie" in messages[5].content

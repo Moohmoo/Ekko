@@ -203,3 +203,31 @@ async def test_note_writer_explicit_path_traversal_rejection(tmp_path: Path) -> 
         assert "Accès refusé" in result.content
     finally:
         nw._slugify = original_slugify
+
+
+@pytest.mark.asyncio
+async def test_note_writer_with_hybrid_memory_injection(tmp_path: Path) -> None:
+    """Ensure NoteWriterTool persists note to disk and updates hybrid store and embeddings."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_db = MagicMock()
+    mock_db.save_knowledge_note = AsyncMock()
+    mock_embedder = MagicMock()
+    mock_embedder.embed_query.return_value = [0.1] * 384
+
+    tool = NoteWriterTool(notes_dir=tmp_path, db_manager=mock_db, embedder=mock_embedder)
+    result = await tool._run(
+        title="CRISPR Analysis",
+        content="Research into gene targeting precision.",
+        tags=["bio", "crispr"],
+        sources=["https://example.com/crispr"],
+    )
+
+    assert result.success is True
+    assert "mémoire hybride" in result.content
+    assert mock_db.save_knowledge_note.call_count == 1
+    call_args = mock_db.save_knowledge_note.call_args
+    saved_note = call_args[0][0]
+    assert saved_note.title == "CRISPR Analysis"
+    assert saved_note.tags == ["bio", "crispr"]
+    assert call_args[1]["embedding"] == [0.1] * 384

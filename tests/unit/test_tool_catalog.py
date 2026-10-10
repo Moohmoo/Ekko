@@ -7,8 +7,8 @@ from ekko.core.models import ToolResult
 from ekko.tools.base import BaseTool
 from ekko.tools.catalog import ToolCatalog
 from ekko.tools.note_writer import NoteWriterTool
+from ekko.tools.read_resource import ReadResourceTool
 from ekko.tools.system_info import SystemInfoTool
-from ekko.tools.url_reader import UrlReaderTool
 
 
 class MockArgs(BaseModel):
@@ -39,10 +39,10 @@ def test_catalog_default_includes_system_info() -> None:
     assert catalog.get_class("system_info") is SystemInfoTool
 
 
-def test_catalog_default_includes_url_reader() -> None:
-    """Ensure default catalog contains UrlReaderTool."""
+def test_catalog_default_includes_read_resource() -> None:
+    """Ensure default catalog contains ReadResourceTool."""
     catalog = ToolCatalog(include_defaults=True)
-    assert catalog.get_class("url_reader") is UrlReaderTool
+    assert catalog.get_class("read_resource") is ReadResourceTool
 
 
 def test_catalog_default_includes_save_note() -> None:
@@ -77,3 +77,23 @@ def test_catalog_build_registry_skips_unknown_tool_without_crashing() -> None:
     registry = catalog.build_registry(enabled_names=["nonexistent_plugin"])
 
     assert registry.list_tools() == []
+ 
+ 
+def test_catalog_build_registry_injects_dependencies() -> None:
+    """Ensure build_registry propagates db_manager and notes_dir to tools."""
+    from unittest.mock import MagicMock
+
+    catalog = ToolCatalog(include_defaults=True)
+    mock_db = MagicMock()
+    registry = catalog.build_registry(
+        enabled_names=["save_note", "query_knowledge", "scan_inbox", "read_resource"],
+        db_manager=mock_db,
+    )
+
+    save_note = registry.get("save_note")
+    assert isinstance(save_note, NoteWriterTool)
+    assert save_note.db_manager is mock_db
+
+    query_tool = registry.get("query_knowledge")
+    assert query_tool is not None
+    assert getattr(query_tool, "db_manager") is mock_db
