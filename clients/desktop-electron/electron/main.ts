@@ -36,15 +36,17 @@ function createWindow() {
     hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
 
   if (VITE_DEV_SERVER_URL) {
+    console.log('[Main] Loading dev server URL:', VITE_DEV_SERVER_URL);
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
+    console.log('[Main] Loading static index.html from:', process.env.DIST);
     win.loadFile(path.join(process.env.DIST!, 'index.html'));
   }
 
@@ -56,7 +58,10 @@ function createWindow() {
 
 // IPC Handlers
 ipcMain.handle('daemon:ping', async () => {
-  return await sendJsonRpc<{ status: string; timestamp: string }>('ping');
+  console.log('[Main] Received daemon:ping invocation from renderer');
+  const res = await sendJsonRpc<{ status: string; timestamp: string }>('ping');
+  console.log('[Main] Returning daemon:ping result to renderer:', res);
+  return res;
 });
 
 ipcMain.handle('daemon:get_notes', async () => {

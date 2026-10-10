@@ -1,12 +1,13 @@
 import net from 'node:net';
 var DEFAULT_SOCKET_PATH = '/tmp/ekko.sock';
 /**
- * Send single request to the Ekko UNIX domain socket and await single response.
+ * Send single request to the Ekko UNIX domain socket with robust buffering, timeout, and logging.
  */
 export function sendJsonRpc(method, params, socketPath) {
     if (params === void 0) { params = {}; }
     if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
     return new Promise(function (resolve, reject) {
+        console.log("[IPC] Connecting to ".concat(socketPath, " for method '").concat(method, "'..."));
         var client = net.createConnection(socketPath);
         var payload = JSON.stringify({
             jsonrpc: '2.0',
@@ -15,13 +16,16 @@ export function sendJsonRpc(method, params, socketPath) {
             id: Date.now(),
         }) + '\n';
         var buffer = '';
+        client.setTimeout(3000);
         client.on('connect', function () {
+            console.log("[IPC] Connected to socket! Sending request: ".concat(method));
             client.write(payload);
         });
-        client.on('data', function (data) {
-            buffer += data.toString();
+        client.on('data', function (chunk) {
+            buffer += chunk.toString();
             if (buffer.includes('\n')) {
                 var line = buffer.split('\n')[0];
+                console.log("[IPC] Received response line for ".concat(method, ": ").concat(line.slice(0, 100), "..."));
                 client.end();
                 try {
                     var parsed = JSON.parse(line);
@@ -37,7 +41,13 @@ export function sendJsonRpc(method, params, socketPath) {
                 }
             }
         });
-        client.on('error', function () {
+        client.on('timeout', function () {
+            console.warn("[IPC] Timeout (3s) waiting for socket response to '".concat(method, "'"));
+            client.destroy();
+            reject(new Error('TIMEOUT'));
+        });
+        client.on('error', function (err) {
+            console.warn("[IPC] Socket error for '".concat(method, "':"), err.message);
             reject(new Error('DAEMON_OFFLINE'));
         });
     });
@@ -47,9 +57,11 @@ export function sendJsonRpc(method, params, socketPath) {
  */
 export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
     if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
+    console.log("[IPC] Streaming prompt to ".concat(socketPath, "..."));
     var client = net.createConnection(socketPath);
     var fullText = '';
     var buffer = '';
+    client.setTimeout(60000);
     var payload = JSON.stringify({
         jsonrpc: '2.0',
         method: 'submit_prompt',
@@ -57,6 +69,7 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
         id: Date.now(),
     }) + '\n';
     client.on('connect', function () {
+        console.log('[IPC] Connected for streamPrompt, writing payload');
         client.write(payload);
     });
     client.on('data', function (data) {
@@ -92,16 +105,23 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
                 }
             }
             catch (_a) {
-                // ignore parse fragment
+                // partial line
             }
         }
     });
     client.on('end', function () {
+        console.log('[IPC] Stream completed, total length:', fullText.length);
         if (fullText) {
             onComplete(fullText);
         }
     });
-    client.on('error', function () {
+    client.on('timeout', function () {
+        console.warn('[IPC] Stream timeout');
+        client.destroy();
+        onError('TIMEOUT');
+    });
+    client.on('error', function (err) {
+        console.warn('[IPC] Stream socket error:', err.message);
         onError('DAEMON_OFFLINE');
     });
 }

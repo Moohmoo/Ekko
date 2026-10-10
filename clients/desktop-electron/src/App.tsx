@@ -17,11 +17,16 @@ export const App: React.FC = () => {
   // Ping daemon health
   const checkHealth = useCallback(async () => {
     try {
-      if (window.ekkoAPI) {
-        const res = await window.ekkoAPI.ping();
-        setDaemonConnected(res.status === 'ok');
+      if (!window.ekkoAPI) {
+        console.warn('[Frontend] window.ekkoAPI is undefined! Preload script may not have executed.');
+        setDaemonConnected(false);
+        return;
       }
-    } catch {
+      const res = await window.ekkoAPI.ping();
+      console.log('[Frontend] Daemon ping response:', res);
+      setDaemonConnected(res && res.status === 'ok');
+    } catch (err) {
+      console.warn('[Frontend] Ping failed:', err);
       setDaemonConnected(false);
     }
   }, []);

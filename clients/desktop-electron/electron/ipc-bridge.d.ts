@@ -8,7 +8,7 @@ export interface JSONRPCResponse<T = unknown> {
     id?: number | string;
 }
 /**
- * Send single request to the Ekko UNIX domain socket and await single response.
+ * Send single request to the Ekko UNIX domain socket with robust buffering, timeout, and logging.
  */
 export declare function sendJsonRpc<T = unknown>(method: string, params?: Record<string, unknown>, socketPath?: string): Promise<T>;
 /**

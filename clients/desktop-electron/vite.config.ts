@@ -10,7 +10,7 @@ export default defineConfig({
       {
         entry: 'electron/main.ts',
         onstart(options) {
-          options.startup(['--no-sandbox']);
+          options.startup();
         },
         vite: {
           build: {
@@ -28,9 +28,18 @@ export default defineConfig({
         },
         vite: {
           build: {
+            lib: {
+              entry: 'electron/preload.ts',
+              formats: ['cjs'],
+              fileName: () => '[name].cjs',
+            },
             outDir: 'dist-electron',
             rollupOptions: {
               external: ['electron'],
+              output: {
+                format: 'cjs',
+                entryFileNames: '[name].cjs',
+              },
             },
           },
         },

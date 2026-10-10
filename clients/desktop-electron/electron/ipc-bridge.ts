@@ -13,7 +13,7 @@ export interface JSONRPCResponse<T = unknown> {
 }
 
 /**
- * Send single request to the Ekko UNIX domain socket and await single response.
+ * Send single request to the Ekko UNIX domain socket with robust buffering, timeout, and logging.
  */
 export function sendJsonRpc<T = unknown>(
   method: string,
@@ -21,6 +21,7 @@ export function sendJsonRpc<T = unknown>(
   socketPath: string = DEFAULT_SOCKET_PATH
 ): Promise<T> {
   return new Promise((resolve, reject) => {
+    console.log(`[IPC] Connecting to ${socketPath} for method '${method}'...`);
     const client = net.createConnection(socketPath);
     const payload = JSON.stringify({
       jsonrpc: '2.0',
@@ -31,14 +32,18 @@ export function sendJsonRpc<T = unknown>(
 
     let buffer = '';
 
+    client.setTimeout(3000);
+
     client.on('connect', () => {
+      console.log(`[IPC] Connected to socket! Sending request: ${method}`);
       client.write(payload);
     });
 
-    client.on('data', (data) => {
-      buffer += data.toString();
+    client.on('data', (chunk) => {
+      buffer += chunk.toString();
       if (buffer.includes('\n')) {
         const line = buffer.split('\n')[0];
+        console.log(`[IPC] Received response line for ${method}: ${line.slice(0, 100)}...`);
         client.end();
         try {
           const parsed = JSON.parse(line) as JSONRPCResponse<T>;
@@ -53,7 +58,14 @@ export function sendJsonRpc<T = unknown>(
       }
     });
 
-    client.on('error', () => {
+    client.on('timeout', () => {
+      console.warn(`[IPC] Timeout (3s) waiting for socket response to '${method}'`);
+      client.destroy();
+      reject(new Error('TIMEOUT'));
+    });
+
+    client.on('error', (err) => {
+      console.warn(`[IPC] Socket error for '${method}':`, err.message);
       reject(new Error('DAEMON_OFFLINE'));
     });
   });
@@ -69,9 +81,12 @@ export function streamPrompt(
   onError: (error: string) => void,
   socketPath: string = DEFAULT_SOCKET_PATH
 ): void {
+  console.log(`[IPC] Streaming prompt to ${socketPath}...`);
   const client = net.createConnection(socketPath);
   let fullText = '';
   let buffer = '';
+
+  client.setTimeout(60000);
 
   const payload = JSON.stringify({
     jsonrpc: '2.0',
@@ -81,6 +96,7 @@ export function streamPrompt(
   }) + '\n';
 
   client.on('connect', () => {
+    console.log('[IPC] Connected for streamPrompt, writing payload');
     client.write(payload);
   });
 
@@ -114,18 +130,26 @@ export function streamPrompt(
           return;
         }
       } catch {
-        // ignore parse fragment
+        // partial line
       }
     }
   });
 
   client.on('end', () => {
+    console.log('[IPC] Stream completed, total length:', fullText.length);
     if (fullText) {
       onComplete(fullText);
     }
   });
 
-  client.on('error', () => {
+  client.on('timeout', () => {
+    console.warn('[IPC] Stream timeout');
+    client.destroy();
+    onError('TIMEOUT');
+  });
+
+  client.on('error', (err) => {
+    console.warn('[IPC] Stream socket error:', err.message);
     onError('DAEMON_OFFLINE');
   });
 }
