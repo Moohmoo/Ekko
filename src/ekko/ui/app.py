@@ -109,6 +109,7 @@ def main(argv: list[str] | None = None) -> None:
     """Bootstrap application settings, dependencies, and launch modern REPL or daemon."""
     parsed = parse_args(argv)
     if getattr(parsed, "command", None) == "daemon":
+        # Permitted CLI router lazy-load: prevent loading full background daemon stack during REPL startup
         from ekko.daemon.service import run_daemon
 
         asyncio.run(run_daemon(poll_interval=parsed.interval))

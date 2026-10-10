@@ -8,6 +8,7 @@ import yaml
 from ekko.config.loader import (
     load_core_prompt,
     load_plugins_config,
+    load_sources_config,
     load_user_context,
 )
 from ekko.core.engine import EkkoEngine
@@ -86,8 +87,6 @@ async def test_full_context_loading_and_turn_execution(tmp_path: Path) -> None:
 
 def test_load_sources_config_integration() -> None:
     """Ensure declarative sources configuration loads properly from default config dir."""
-    from ekko.config.loader import load_sources_config
-
     catalog = load_sources_config("config")
     assert len(catalog.sources) >= 2
     source_ids = {s.id for s in catalog.sources}
