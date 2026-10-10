@@ -56,9 +56,11 @@ def _row_to_knowledge_note(row: sqlite3.Row) -> KnowledgeNote:
 class DatabaseManager:
     """Manages asynchronous access to unified SQLite tables and hybrid vector search."""
 
-    def __init__(self, db_path: str | Path = "data/ekko.db") -> None:
+    def __init__(self, db_path: str | Path = "data/ekko.db", auto_init: bool = True) -> None:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        if auto_init:
+            self.init_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
         """Create connection with sqlite-vec extension and foreign keys enabled."""

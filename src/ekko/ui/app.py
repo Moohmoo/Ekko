@@ -12,6 +12,7 @@ from ekko.config.loader import (
 )
 from ekko.core.engine import EkkoEngine
 from ekko.core.prompt import build_system_prompt
+from ekko.infrastructure.database.manager import DatabaseManager
 from ekko.memory.sqlite_memory import SqliteMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings
@@ -110,6 +111,7 @@ def main(argv: list[str] | None = None) -> None:
 
     provider = LLMRouter(settings=settings).get_provider()
     memory = SqliteMemory(db_path=settings.sqlite_db_path)
+    DatabaseManager(db_path=settings.sqlite_db_path)
     engine = EkkoEngine(
         provider=provider,
         memory=memory,
