@@ -5,8 +5,8 @@ import pytest
 
 from ekko.core.events import StepStarted, TokenChunk, TurnCompleted
 from ekko.settings import Settings
-from ekko.ui.app import main, run_app
-from ekko.ui.input import CommandType, ToolbarMetadata, UserInput
+from ekko.cli.app import main, run_app
+from ekko.cli.input import CommandType, ToolbarMetadata, UserInput
 
 
 
@@ -142,17 +142,17 @@ def test_main_initialization_with_real_settings() -> None:
     real_settings = Settings()
 
     with patch("sys.argv", ["ekko", "--session", "real_test", "--clear"]):
-        with patch("ekko.ui.app.Settings", return_value=real_settings):
-            with patch("ekko.ui.app.setup_logger"):
-                with patch("ekko.ui.app.load_core_prompt"):
-                    with patch("ekko.ui.app.load_user_context"):
-                        with patch("ekko.ui.app.load_plugins_config"):
-                            with patch("ekko.ui.app.build_system_prompt", return_value="System prompt"):
-                                with patch("ekko.ui.app.ToolCatalog"):
-                                    with patch("ekko.ui.app.LLMRouter"):
-                                        with patch("ekko.ui.app.SqliteMemory"):
-                                            with patch("ekko.ui.app.HybridStore"):
-                                                with patch("ekko.ui.app.run_app", new_callable=AsyncMock) as mock_run_app:
+        with patch("ekko.cli.app.Settings", return_value=real_settings):
+            with patch("ekko.cli.app.setup_logger"):
+                with patch("ekko.cli.app.load_core_prompt"):
+                    with patch("ekko.cli.app.load_user_context"):
+                        with patch("ekko.cli.app.load_plugins_config"):
+                            with patch("ekko.cli.app.build_system_prompt", return_value="System prompt"):
+                                with patch("ekko.cli.app.ToolCatalog"):
+                                    with patch("ekko.cli.app.LLMRouter"):
+                                        with patch("ekko.cli.app.SqliteMemory"):
+                                            with patch("ekko.cli.app.HybridStore"):
+                                                with patch("ekko.cli.app.run_app", new_callable=AsyncMock) as mock_run_app:
                                                     main()
 
                                                 mock_run_app.assert_awaited_once()

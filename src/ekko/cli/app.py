@@ -17,8 +17,8 @@ from ekko.memory.sqlite_memory import SqliteMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings
 from ekko.tools.catalog import ToolCatalog
-from ekko.ui.input import CLIInputHandler, CommandType, ToolbarMetadata
-from ekko.ui.renderer import CLIRenderer
+from ekko.cli.input import CLIInputHandler, CommandType, ToolbarMetadata
+from ekko.cli.renderer import CLIRenderer
 from ekko.logger import setup_logger
 
 

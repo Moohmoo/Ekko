@@ -12,8 +12,8 @@ from ekko.core.events import (
     ToolCallStarted,
     TurnCompleted,
 )
-from ekko.ui.input import ToolbarMetadata
-from ekko.ui.renderer import CLIRenderer
+from ekko.cli.input import ToolbarMetadata
+from ekko.cli.renderer import CLIRenderer
 
 
 @pytest.fixture

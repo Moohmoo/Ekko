@@ -15,7 +15,7 @@ from ekko.core.events import (
     ToolCallStarted,
     TurnCompleted,
 )
-from ekko.ui.input import ToolbarMetadata
+from ekko.cli.input import ToolbarMetadata
 
 
 class CLIRenderer:

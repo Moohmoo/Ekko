@@ -31,6 +31,6 @@ dev = [
 ]
 
 [project.scripts]
-ekko = "ekko.ui.app:main"
+ekko = "ekko.cli.app:main"
 
 

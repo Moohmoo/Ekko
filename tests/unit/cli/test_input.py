@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock
 
-from ekko.ui.input import (
+from ekko.cli.input import (
     CLIInputHandler,
     CommandType,
     ToolbarMetadata,
