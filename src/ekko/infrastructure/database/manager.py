@@ -1,11 +1,13 @@
-"""Thread-safe SQLite database manager for Ekko unified persistence."""
+"""Thread-safe SQLite database manager for Ekko unified persistence and hybrid search."""
 
 import asyncio
 from datetime import datetime
 import json
 from pathlib import Path
+import re
 import sqlite3
 from typing import Any
+import sqlite_vec
 
 from ekko.infrastructure.database.models import (
     KnowledgeNote,
@@ -29,22 +31,46 @@ def _from_iso(val: str | None) -> datetime | None:
     return datetime.fromisoformat(val) if val else None
 
 
+def _sanitize_fts_query(query: str) -> str:
+    """Format query string into safe quoted terms connected with OR for FTS5."""
+    terms = [re.sub(r"[^\w-]", "", term) for term in query.strip().split() if term.strip()]
+    valid_terms = [f'"{t}"' for t in terms if t]
+    return " OR ".join(valid_terms)
+
+
+def _row_to_knowledge_note(row: sqlite3.Row) -> KnowledgeNote:
+    """Map database Row object to KnowledgeNote model."""
+    return KnowledgeNote(
+        id=row["id"],
+        slug=row["slug"],
+        title=row["title"],
+        summary=row["summary"],
+        content=row["content"],
+        tags=json.loads(row["tags"]),
+        sources=json.loads(row["sources"]),
+        created_at=_from_iso(row["created_at"]) or datetime.now(),
+        updated_at=_from_iso(row["updated_at"]) or datetime.now(),
+    )
+
+
 class DatabaseManager:
-    """Manages asynchronous access to unified SQLite tables in WAL mode."""
+    """Manages asynchronous access to unified SQLite tables and hybrid vector search."""
 
     def __init__(self, db_path: str | Path = "data/ekko.db") -> None:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _get_connection(self) -> sqlite3.Connection:
-        """Create and configure a SQLite connection."""
+        """Create connection with sqlite-vec extension and foreign keys enabled."""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
+        conn.enable_load_extension(True)
+        sqlite_vec.load(conn)
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
 
     def init_schema(self) -> None:
-        """Initialize unified database tables and indices synchronously."""
+        """Initialize unified database tables, FTS5 index, and vec0 virtual tables."""
         with self._get_connection() as conn:
             conn.executescript(INIT_UNIFIED_SCHEMA_SQL)
         logger.debug("Unified SQLite schema initialized at %s", self.db_path)
@@ -237,9 +263,13 @@ class DatabaseManager:
         """Update signal status asynchronously."""
         await asyncio.to_thread(self._update_signal_status_sync, signal_id, status)
 
-    def _save_knowledge_note_sync(self, note: KnowledgeNote) -> None:
-        """Insert or replace knowledge note synchronously."""
-        sql = """
+    def _save_knowledge_note_sync(
+        self,
+        note: KnowledgeNote,
+        embedding: list[float] | None = None,
+    ) -> None:
+        """Persist knowledge note, update FTS5, and index vector embedding."""
+        insert_note_sql = """
         INSERT INTO knowledge_notes (
             id, slug, title, summary, content, tags, sources, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -251,44 +281,51 @@ class DatabaseManager:
             sources = excluded.sources,
             updated_at = excluded.updated_at;
         """
+        tags_json = json.dumps(note.tags)
         with self._get_connection() as conn:
             conn.execute(
-                sql,
+                insert_note_sql,
                 (
                     note.id,
                     note.slug,
                     note.title,
                     note.summary,
                     note.content,
-                    json.dumps(note.tags),
+                    tags_json,
                     json.dumps(note.sources),
                     _to_iso(note.created_at),
                     _to_iso(note.updated_at),
                 ),
             )
+            # Update FTS5 virtual table
+            conn.execute("DELETE FROM knowledge_fts WHERE note_id = ?;", (note.id,))
+            conn.execute(
+                "INSERT INTO knowledge_fts (note_id, title, summary, content, tags) VALUES (?, ?, ?, ?, ?);",
+                (note.id, note.title, note.summary, note.content, tags_json),
+            )
+            # Update sqlite-vec virtual table if vector is present
+            if embedding is not None:
+                conn.execute("DELETE FROM knowledge_vectors WHERE note_id = ?;", (note.id,))
+                serialized_vec = sqlite_vec.serialize_float32(embedding)
+                conn.execute(
+                    "INSERT INTO knowledge_vectors (note_id, embedding) VALUES (?, ?);",
+                    (note.id, serialized_vec),
+                )
 
-    async def save_knowledge_note(self, note: KnowledgeNote) -> None:
-        """Persist or update knowledge note asynchronously."""
-        await asyncio.to_thread(self._save_knowledge_note_sync, note)
+    async def save_knowledge_note(
+        self,
+        note: KnowledgeNote,
+        embedding: list[float] | None = None,
+    ) -> None:
+        """Persist or update knowledge note and its indexes asynchronously."""
+        await asyncio.to_thread(self._save_knowledge_note_sync, note, embedding)
 
     def _get_knowledge_note_by_slug_sync(self, slug: str) -> KnowledgeNote | None:
         """Query knowledge note by unique slug synchronously."""
         sql = "SELECT * FROM knowledge_notes WHERE slug = ?;"
         with self._get_connection() as conn:
             row = conn.execute(sql, (slug,)).fetchone()
-            if not row:
-                return None
-            return KnowledgeNote(
-                id=row["id"],
-                slug=row["slug"],
-                title=row["title"],
-                summary=row["summary"],
-                content=row["content"],
-                tags=json.loads(row["tags"]),
-                sources=json.loads(row["sources"]),
-                created_at=_from_iso(row["created_at"]) or datetime.now(),
-                updated_at=_from_iso(row["updated_at"]) or datetime.now(),
-            )
+            return _row_to_knowledge_note(row) if row else None
 
     async def get_knowledge_note_by_slug(self, slug: str) -> KnowledgeNote | None:
         """Fetch knowledge note by slug asynchronously."""
@@ -299,21 +336,82 @@ class DatabaseManager:
         sql = "SELECT * FROM knowledge_notes ORDER BY created_at DESC LIMIT ?;"
         with self._get_connection() as conn:
             rows = conn.execute(sql, (limit,)).fetchall()
-            return [
-                KnowledgeNote(
-                    id=row["id"],
-                    slug=row["slug"],
-                    title=row["title"],
-                    summary=row["summary"],
-                    content=row["content"],
-                    tags=json.loads(row["tags"]),
-                    sources=json.loads(row["sources"]),
-                    created_at=_from_iso(row["created_at"]) or datetime.now(),
-                    updated_at=_from_iso(row["updated_at"]) or datetime.now(),
-                )
-                for row in rows
-            ]
+            return [_row_to_knowledge_note(row) for row in rows]
 
     async def list_knowledge_notes(self, limit: int = 50) -> list[KnowledgeNote]:
         """List knowledge notes asynchronously."""
         return await asyncio.to_thread(self._list_knowledge_notes_sync, limit)
+
+    def _run_fts_search(self, conn: sqlite3.Connection, query: str, limit: int) -> dict[str, int]:
+        """Execute FTS5 search and return mapping of note_id to 1-based rank."""
+        sanitized = _sanitize_fts_query(query)
+        if not sanitized:
+            return {}
+        sql = "SELECT note_id FROM knowledge_fts WHERE knowledge_fts MATCH ? ORDER BY rank LIMIT ?;"
+        rows = conn.execute(sql, (sanitized, limit)).fetchall()
+        return {str(row["note_id"]): idx + 1 for idx, row in enumerate(rows)}
+
+    def _run_vec_search(
+        self,
+        conn: sqlite3.Connection,
+        embedding: list[float],
+        limit: int,
+    ) -> dict[str, int]:
+        """Execute sqlite-vec vector search and return mapping of note_id to 1-based rank."""
+        serialized = sqlite_vec.serialize_float32(embedding)
+        sql = "SELECT note_id FROM knowledge_vectors WHERE embedding MATCH ? ORDER BY distance LIMIT ?;"
+        rows = conn.execute(sql, (serialized, limit)).fetchall()
+        return {str(row["note_id"]): idx + 1 for idx, row in enumerate(rows)}
+
+    def _search_notes_sync(
+        self,
+        query: str,
+        query_embedding: list[float] | None,
+        mode: str,
+        limit: int,
+        k: int,
+    ) -> list[tuple[KnowledgeNote, float]]:
+        """Execute hybrid, lexical, or semantic note retrieval using RRF fusion."""
+        with self._get_connection() as conn:
+            fts_ranks = self._run_fts_search(conn, query, limit * 3) if mode in {"lexical", "hybrid"} else {}
+            vec_ranks = (
+                self._run_vec_search(conn, query_embedding, limit * 3)
+                if mode in {"semantic", "hybrid"} and query_embedding is not None
+                else {}
+            )
+
+            scores: dict[str, float] = {}
+            candidate_ids = set(fts_ranks.keys()) | set(vec_ranks.keys())
+            for nid in candidate_ids:
+                rrf = 0.0
+                if nid in fts_ranks:
+                    rrf += 1.0 / (k + fts_ranks[nid])
+                if nid in vec_ranks:
+                    rrf += 1.0 / (k + vec_ranks[nid])
+                scores[nid] = rrf
+
+            sorted_candidates = sorted(scores.items(), key=lambda item: item[1], reverse=True)[:limit]
+            if not sorted_candidates:
+                return []
+
+            note_map: dict[str, KnowledgeNote] = {}
+            placeholders = ",".join("?" for _ in sorted_candidates)
+            rows = conn.execute(
+                f"SELECT * FROM knowledge_notes WHERE id IN ({placeholders});",
+                tuple(nid for nid, _ in sorted_candidates),
+            ).fetchall()
+            for r in rows:
+                note_map[str(r["id"])] = _row_to_knowledge_note(r)
+
+            return [(note_map[nid], score) for nid, score in sorted_candidates if nid in note_map]
+
+    async def search_notes(
+        self,
+        query: str,
+        query_embedding: list[float] | None = None,
+        mode: str = "hybrid",
+        limit: int = 5,
+        k: int = 60,
+    ) -> list[tuple[KnowledgeNote, float]]:
+        """Search knowledge notes using RRF fusion, lexical FTS5, or semantic vectors."""
+        return await asyncio.to_thread(self._search_notes_sync, query, query_embedding, mode, limit, k)

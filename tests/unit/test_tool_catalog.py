@@ -65,6 +65,14 @@ def test_catalog_default_includes_save_note() -> None:
     assert catalog.get_class("save_note") is NoteWriterTool
 
 
+def test_catalog_default_includes_query_knowledge() -> None:
+    """Ensure default catalog contains QueryKnowledgeTool."""
+    from ekko.tools.query_knowledge import QueryKnowledgeTool
+
+    catalog = ToolCatalog(include_defaults=True)
+    assert catalog.get_class("query_knowledge") is QueryKnowledgeTool
+
+
 
 def test_catalog_build_registry_filters_enabled_tools() -> None:
     """Ensure build_registry only instantiates and registers enabled tools."""

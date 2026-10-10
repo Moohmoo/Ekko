@@ -46,4 +46,18 @@ CREATE TABLE IF NOT EXISTS knowledge_notes (
 CREATE INDEX IF NOT EXISTS idx_raw_signals_source ON raw_signals(source_id);
 CREATE INDEX IF NOT EXISTS idx_raw_signals_status ON raw_signals(status);
 CREATE INDEX IF NOT EXISTS idx_knowledge_notes_slug ON knowledge_notes(slug);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
+    note_id UNINDEXED,
+    title,
+    summary,
+    content,
+    tags,
+    tokenize = 'unicode61'
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_vectors USING vec0(
+    note_id TEXT PRIMARY KEY,
+    embedding float[384]
+);
 """
