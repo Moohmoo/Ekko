@@ -42,7 +42,7 @@ class IPCServer:
         engine: EkkoEngine | None = None,
     ) -> None:
         self.socket_path = Path(socket_path)
-        self.db_manager = db_manager
+        self.db_manager = db_manager or DatabaseManager()
         self.engine = engine
         self._server: asyncio.Server | None = None
 
@@ -120,8 +120,13 @@ class IPCServer:
             return
         status_val = params.get("status")
         status = SignalStatus(status_val) if status_val else None
+        source_id = params.get("source_id")
         limit = int(params.get("limit", 20))
-        signals = await self.db_manager.get_raw_signals(status=status, limit=limit)
+        signals = await self.db_manager.get_raw_signals(
+            source_id=source_id,
+            status=status,
+            limit=limit,
+        )
         serialized = [s.model_dump(mode="json") for s in signals]
         writer.write(_rpc_result(req_id, serialized).encode("utf-8"))
         await writer.drain()

@@ -22,6 +22,20 @@ class IPCClient:
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
 
+    async def __aenter__(self) -> "IPCClient":
+        """Enter async context manager and connect."""
+        await self._ensure_connection()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
+        """Exit async context manager and close connection."""
+        await self.close()
+
     async def _ensure_connection(self) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
         """Establish UNIX socket connection if not currently open."""
         if self._reader is None or self._writer is None:
@@ -37,6 +51,30 @@ class IPCClient:
             await self._writer.wait_closed()
             self._reader = None
             self._writer = None
+
+    async def ping(self) -> dict[str, Any]:
+        """Send ping RPC command."""
+        return await self.call("ping")
+
+    async def scan_inbox(
+        self,
+        status: str | None = None,
+        source_id: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        """Fetch raw signals matching criteria via JSON-RPC."""
+        params = {"status": status, "source_id": source_id, "limit": limit}
+        return await self.call("scan_inbox", params)
+
+    async def query_knowledge(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        limit: int = 5,
+    ) -> list[dict[str, Any]]:
+        """Search local knowledge notes via JSON-RPC."""
+        params = {"query": query, "mode": mode, "limit": limit}
+        return await self.call("query_knowledge", params)
 
     async def call(self, method: str, params: dict[str, Any] | None = None) -> Any:
         """Issue JSON-RPC 2.0 call and return the unwrapped result."""

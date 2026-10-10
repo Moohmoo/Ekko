@@ -147,3 +147,22 @@ async def test_ipc_server_handles_unknown_method(socket_path: Path) -> None:
 
     await client.close()
     await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_ipc_client_context_manager_and_helpers(socket_path: Path) -> None:
+    """Ensure IPCClient supports async context manager and convenience methods."""
+    server = IPCServer(socket_path=socket_path)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        ping_resp = await client.ping()
+        assert ping_resp["status"] == "ok"
+
+        inbox_resp = await client.scan_inbox(limit=5)
+        assert isinstance(inbox_resp, list)
+
+        knowledge_resp = await client.query_knowledge(query="test")
+        assert isinstance(knowledge_resp, list)
+
+    await server.stop()
