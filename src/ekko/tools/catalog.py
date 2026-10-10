@@ -6,6 +6,7 @@ from ekko.tools.hacker_news import HackerNewsTool
 from ekko.tools.note_writer import NoteWriterTool
 from ekko.tools.query_knowledge import QueryKnowledgeTool
 from ekko.tools.registry import ToolRegistry
+from ekko.tools.scan_inbox import ScanInboxTool
 from ekko.tools.system_info import SystemInfoTool
 from ekko.tools.url_reader import UrlReaderTool
 from ekko.utils.logger import get_logger
@@ -25,6 +26,7 @@ class ToolCatalog:
             self.register(ArxivTool)
             self.register(NoteWriterTool)
             self.register(QueryKnowledgeTool)
+            self.register(ScanInboxTool)
 
     def register(self, tool_cls: type[BaseTool]) -> None:
         """Register a tool class mapped to its canonical tool name."""
