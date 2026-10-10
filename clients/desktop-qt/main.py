@@ -1,7 +1,9 @@
-"""Native PySide6/QML Desktop Pod application entry point for Ekko."""
-
+import os
 from pathlib import Path
 import sys
+
+# Force X11/XCB platform to prevent Wayland textinputv3 warnings and enable absolute positioning
+os.environ["QT_QPA_PLATFORM"] = "xcb"
 
 # Ensure current script directory is in sys.path when invoked from project root
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -52,10 +54,9 @@ def main() -> None:
     screen = QGuiApplication.primaryScreen()
     if screen:
         geo = screen.availableGeometry()
-        x = geo.x() + geo.width() - 420 - 20
-        y = geo.y() + 40
-        window.setProperty("x", x)
-        window.setProperty("y", y)
+        x = geo.x() + geo.width() - 440
+        y = geo.y() + 20
+        window.setGeometry(x, y, 420, 540)
 
     # Attach focus filter for auto-hide on click outside
     focus_filter = WindowFocusFilter(window)

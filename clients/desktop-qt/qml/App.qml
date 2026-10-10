@@ -23,11 +23,11 @@ ApplicationWindow {
         onActivated: root.hide()
     }
 
-    // Main Rounded Background Card (OLED Coucou Style)
+    // Main Rounded Background Card (OLED Coucou Style: radius 28, #0c0c0e)
     Rectangle {
         id: container
         anchors.fill: parent
-        radius: 24
+        radius: 28
         color: "#0c0c0e"
         border.color: "#14ffffff"
         border.width: 1
@@ -37,42 +37,25 @@ ApplicationWindow {
             anchors.fill: parent
             spacing: 0
 
-            // Top Header (42px)
+            // Minimalist Icon Header (height 40px, padding horizontal 16px, zero text)
             Rectangle {
                 Layout.fillWidth: true
-                height: 42
-                color: "#12141a"
+                height: 40
+                color: "#11141c"
                 border.color: "#0affffff"
                 border.width: 1
 
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: 16
-                    anchors.rightMargin: 12
-                    spacing: 12
+                    anchors.rightMargin: 16
+                    spacing: 8
 
-                    // Status Indicator Dot
-                    Rectangle {
-                        width: 8
-                        height: 8
-                        radius: 4
-                        color: root.daemonConnected ? "#10b981" : "#ef4444"
-                    }
-
-                    Text {
-                        text: "Ekko"
-                        font.pixelSize: 13
-                        font.bold: true
-                        color: "#f8fafc"
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Navigation Tabs Pill
+                    // Navigation Tabs on Left (💧, 💬, ⚡)
                     Row {
                         spacing: 6
 
-                        // Home Tab
+                        // Home Tab (Goutte)
                         Rectangle {
                             width: 28
                             height: 28
@@ -90,7 +73,7 @@ ApplicationWindow {
                             }
                         }
 
-                        // Chat Tab
+                        // Chat Tab (Bulle)
                         Rectangle {
                             width: 28
                             height: 28
@@ -108,7 +91,7 @@ ApplicationWindow {
                             }
                         }
 
-                        // Echo Tab
+                        // Echo Tab (Fiches / Sparkles)
                         Rectangle {
                             width: 28
                             height: 28
@@ -130,22 +113,40 @@ ApplicationWindow {
                         }
                     }
 
-                    // Close Button
-                    Rectangle {
-                        width: 24
-                        height: 24
-                        radius: 12
-                        color: "transparent"
-                        Text {
-                            anchors.centerIn: parent
-                            text: "✕"
-                            font.pixelSize: 12
-                            color: "#94a3b8"
+                    Item { Layout.fillWidth: true }
+
+                    // Right Side: Discreet Status Dot & Close Button
+                    Row {
+                        spacing: 12
+                        Layout.alignment: Qt.AlignVCenter
+
+                        // Discreet Status Dot
+                        Rectangle {
+                            width: 7
+                            height: 7
+                            radius: 3.5
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: root.daemonConnected ? "#10b981" : "#ef4444"
                         }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.hide()
+
+                        // Close Button (fine cross 14px)
+                        Rectangle {
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: "transparent"
+                            anchors.verticalCenter: parent.verticalCenter
+                            Text {
+                                anchors.centerIn: parent
+                                text: "✕"
+                                font.pixelSize: 12
+                                color: "#94a3b8"
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.hide()
+                            }
                         }
                     }
                 }
@@ -174,23 +175,44 @@ ApplicationWindow {
                             Layout.alignment: Qt.AlignHCenter
                         }
 
-                        // Drop Area Card
+                        // Drop & Forget Area (Dotted border, Inter font, 11px #94a3b8)
                         Rectangle {
                             id: dropBox
                             Layout.fillWidth: true
-                            height: 120
+                            height: 115
                             radius: 16
-                            color: dropTarget.containsDrag ? "#1e293b" : "#131722"
-                            border.color: dropTarget.containsDrag ? "#38bdf8" : "#14ffffff"
-                            border.width: dropTarget.containsDrag ? 2 : 1
+                            color: dropTarget.containsDrag ? "#1e293b" : "#08ffffff"
+
+                            // Dotted border via Shape
+                            Shape {
+                                anchors.fill: parent
+                                ShapePath {
+                                    strokeColor: dropTarget.containsDrag ? "#38bdf8" : "#26ffffff"
+                                    strokeWidth: 1.2
+                                    strokeStyle: ShapePath.DashLine
+                                    dashPattern: [3, 3]
+                                    fillColor: "transparent"
+
+                                    startX: 16; startY: 0
+                                    PathLine { x: dropBox.width - 16; y: 0 }
+                                    PathArc { x: dropBox.width; y: 16; radiusX: 16; radiusY: 16 }
+                                    PathLine { x: dropBox.width; y: dropBox.height - 16 }
+                                    PathArc { x: dropBox.width - 16; y: dropBox.height; radiusX: 16; radiusY: 16 }
+                                    PathLine { x: 16; y: dropBox.height }
+                                    PathArc { x: 0; y: dropBox.height - 16; radiusX: 16; radiusY: 16 }
+                                    PathLine { x: 0; y: 16 }
+                                    PathArc { x: 16; y: 0; radiusX: 16; radiusY: 16 }
+                                }
+                            }
 
                             ColumnLayout {
                                 anchors.centerIn: parent
-                                spacing: 6
+                                spacing: 5
 
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
                                     text: "Déposer un fichier ou une URL"
+                                    font.family: "Inter"
                                     font.pixelSize: 13
                                     font.bold: true
                                     color: "#f8fafc"
@@ -199,8 +221,9 @@ ApplicationWindow {
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
                                     text: "Indexation automatique et instantanée"
+                                    font.family: "Inter"
                                     font.pixelSize: 11
-                                    color: "#64748b"
+                                    color: "#94a3b8"
                                 }
                             }
 
@@ -234,6 +257,7 @@ ApplicationWindow {
                             Text {
                                 anchors.centerIn: parent
                                 text: "nice +10 • VRAM 0M • socket OK"
+                                font.family: "Inter"
                                 font.pixelSize: 10
                                 color: "#64748b"
                             }
@@ -279,6 +303,7 @@ ApplicationWindow {
                                 Text {
                                     Layout.fillWidth: true
                                     text: model.title
+                                    font.family: "Inter"
                                     font.pixelSize: 12
                                     font.bold: true
                                     color: "#f8fafc"
@@ -289,6 +314,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
                                     text: model.summary
+                                    font.family: "Inter"
                                     font.pixelSize: 11
                                     color: "#94a3b8"
                                     elide: Text.ElideRight
@@ -318,7 +344,6 @@ ApplicationWindow {
         }
 
         function onResponseChunkReceived(chunk) {
-            // If current last message is not from assistant, create one
             var count = chatTab.listModel.count
             if (count > 0 && chatTab.listModel.get(count - 1).isUser) {
                 chatTab.listModel.append({
