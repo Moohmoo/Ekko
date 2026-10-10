@@ -4,13 +4,13 @@ from datetime import datetime, timezone
 import hashlib
 import xml.etree.ElementTree as ET
 
-from ekko.infrastructure.database.models import RawSignal, SignalStatus, SourceState
-from ekko.infrastructure.ingestion.config import SourceConfig
-from ekko.infrastructure.ingestion.connectors.base import BaseConnector
-from ekko.infrastructure.network.client import ResilientHttpClient
+from ekko.config.schemas import SourceConfig
+from ekko.ingestion.client import ResilientHttpClient
+from ekko.ingestion.connectors.base import BaseConnector
+from ekko.memory.models import RawSignal, SignalStatus, SourceState
 from ekko.utils.logger import get_logger
 
-logger = get_logger("infrastructure.ingestion.rss")
+logger = get_logger("ekko.ingestion.connectors.rss")
 
 ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
 

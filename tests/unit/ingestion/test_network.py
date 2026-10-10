@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from ekko.infrastructure.network.client import HttpResponseResult, ResilientHttpClient
-from ekko.infrastructure.network.rate_limiter import DomainRateLimiter
-from ekko.infrastructure.network.ssrf import SSRFValidator, SSRFViolationError
+from ekko.ingestion.client import HttpResponseResult, ResilientHttpClient
+from ekko.ingestion.rate_limiter import DomainRateLimiter
+from ekko.ingestion.ssrf import SSRFValidator, SSRFViolationError
 
 
 def test_ssrf_validator_blocks_private_and_loopback_ips() -> None:

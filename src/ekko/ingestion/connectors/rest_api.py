@@ -5,13 +5,13 @@ import hashlib
 import json
 from typing import Any
 
-from ekko.infrastructure.database.models import RawSignal, SignalStatus, SourceState
-from ekko.infrastructure.ingestion.config import SourceConfig
-from ekko.infrastructure.ingestion.connectors.base import BaseConnector
-from ekko.infrastructure.network.client import ResilientHttpClient
+from ekko.config.schemas import SourceConfig
+from ekko.ingestion.client import ResilientHttpClient
+from ekko.ingestion.connectors.base import BaseConnector
+from ekko.memory.models import RawSignal, SignalStatus, SourceState
 from ekko.utils.logger import get_logger
 
-logger = get_logger("infrastructure.ingestion.rest_api")
+logger = get_logger("ekko.ingestion.connectors.rest_api")
 
 
 def _extract_items(data: Any, json_path: str | None) -> list[dict[str, Any]]:

@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
-from ekko.infrastructure.database.models import KnowledgeNote
+from ekko.memory.models import KnowledgeNote
 from ekko.tools.query_knowledge import QueryKnowledgeInput, QueryKnowledgeTool
 
 

@@ -5,9 +5,10 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from ekko.core.models import ToolResult
-from ekko.infrastructure.database.embedder import TextEmbedder
-from ekko.infrastructure.database.manager import DatabaseManager
-from ekko.infrastructure.database.models import KnowledgeNote
+from ekko.core.ports import HybridMemoryPort
+from ekko.memory.embedder import TextEmbedder
+from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.models import KnowledgeNote
 from ekko.tools.base import BaseTool
 from ekko.utils.logger import get_logger
 
@@ -62,7 +63,7 @@ class QueryKnowledgeTool(BaseTool):
 
     def __init__(
         self,
-        db_manager: DatabaseManager | None = None,
+        db_manager: HybridMemoryPort | None = None,
         embedder: TextEmbedder | None = None,
         db_path: str = "data/ekko.db",
     ) -> None:

@@ -4,8 +4,9 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from ekko.core.models import ToolResult
-from ekko.infrastructure.database.manager import DatabaseManager
-from ekko.infrastructure.database.models import RawSignal, SignalStatus
+from ekko.core.ports import HybridMemoryPort
+from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.models import RawSignal, SignalStatus
 from ekko.tools.base import BaseTool
 from ekko.utils.logger import get_logger
 
@@ -59,7 +60,7 @@ class ScanInboxTool(BaseTool):
     )
     args_schema: type[BaseModel] = ScanInboxInput
 
-    def __init__(self, db_manager: DatabaseManager | None = None, db_path: str = "data/ekko.db") -> None:
+    def __init__(self, db_manager: HybridMemoryPort | None = None, db_path: str = "data/ekko.db") -> None:
         self.db_manager = db_manager or DatabaseManager(db_path=db_path)
 
     async def _run(

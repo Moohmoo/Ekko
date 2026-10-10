@@ -9,16 +9,16 @@ import sqlite3
 from typing import Any
 import sqlite_vec
 
-from ekko.infrastructure.database.models import (
+from ekko.memory.models import (
     KnowledgeNote,
     RawSignal,
     SignalStatus,
     SourceState,
 )
-from ekko.infrastructure.database.schema import INIT_UNIFIED_SCHEMA_SQL
+from ekko.memory.schema import INIT_UNIFIED_SCHEMA_SQL
 from ekko.utils.logger import get_logger
 
-logger = get_logger("infrastructure.database")
+logger = get_logger("memory.hybrid_store")
 
 
 def _to_iso(dt: datetime | None) -> str | None:
@@ -417,3 +417,7 @@ class DatabaseManager:
     ) -> list[tuple[KnowledgeNote, float]]:
         """Search knowledge notes using RRF fusion, lexical FTS5, or semantic vectors."""
         return await asyncio.to_thread(self._search_notes_sync, query, query_embedding, mode, limit, k)
+
+
+# Alias per ARCHITECTURE.md Section 8
+HybridStore = DatabaseManager

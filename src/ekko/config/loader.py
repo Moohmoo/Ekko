@@ -7,6 +7,7 @@ import yaml
 from ekko.config.schemas import (
     CorePromptConfig,
     PluginsConfig,
+    SourcesCatalogConfig,
     UserContextConfig,
 )
 from ekko.utils.logger import get_logger
@@ -80,3 +81,32 @@ def load_plugins_config(config_dir: Path | str) -> PluginsConfig:
     )
     _ensure_example_template(dir_path / "plugins.yaml.example", template)
     return PluginsConfig()
+
+
+EXAMPLE_SOURCES_YAML = """# Ekko V2 Declarative Sources Configuration
+sources:
+  - id: hn_tech
+    type: rest_api
+    url: "https://hn.algolia.com/api/v1/search?tags=story&numericFilters=points>150"
+    interval: "30m"
+    max_items: 20
+    json_items_path: "hits"
+  - id: arxiv_ai
+    type: rss
+    url: "https://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=lastUpdatedDate&max_results=10"
+    interval: "2h"
+    max_items: 10
+"""
+
+
+def load_sources_config(config_dir: Path | str) -> SourcesCatalogConfig:
+    """Load sources.yaml or create example template with resilient fallback."""
+    dir_path = Path(config_dir)
+    target_file = dir_path / "sources.yaml"
+    data = _read_yaml(target_file)
+    if data:
+        return SourcesCatalogConfig.model_validate(data)
+
+    _ensure_example_template(dir_path / "sources.yaml.example", EXAMPLE_SOURCES_YAML)
+    return SourcesCatalogConfig()
+

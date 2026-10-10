@@ -4,10 +4,8 @@ from pydantic import BaseModel
 import pytest
 
 from ekko.core.models import ToolResult
-from ekko.tools.arxiv import ArxivTool
 from ekko.tools.base import BaseTool
 from ekko.tools.catalog import ToolCatalog
-from ekko.tools.hacker_news import HackerNewsTool
 from ekko.tools.note_writer import NoteWriterTool
 from ekko.tools.system_info import SystemInfoTool
 from ekko.tools.url_reader import UrlReaderTool
@@ -41,22 +39,10 @@ def test_catalog_default_includes_system_info() -> None:
     assert catalog.get_class("system_info") is SystemInfoTool
 
 
-def test_catalog_default_includes_hacker_news() -> None:
-    """Ensure default catalog contains HackerNewsTool."""
-    catalog = ToolCatalog(include_defaults=True)
-    assert catalog.get_class("hacker_news") is HackerNewsTool
-
-
 def test_catalog_default_includes_url_reader() -> None:
     """Ensure default catalog contains UrlReaderTool."""
     catalog = ToolCatalog(include_defaults=True)
     assert catalog.get_class("url_reader") is UrlReaderTool
-
-
-def test_catalog_default_includes_arxiv() -> None:
-    """Ensure default catalog contains ArxivTool."""
-    catalog = ToolCatalog(include_defaults=True)
-    assert catalog.get_class("arxiv") is ArxivTool
 
 
 def test_catalog_default_includes_save_note() -> None:

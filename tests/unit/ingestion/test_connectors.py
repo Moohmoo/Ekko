@@ -3,11 +3,11 @@
 from unittest.mock import AsyncMock
 import pytest
 
-from ekko.infrastructure.database.models import SignalStatus, SourceState
-from ekko.infrastructure.ingestion.config import SourceConfig
-from ekko.infrastructure.ingestion.connectors.rest_api import RestApiConnector
-from ekko.infrastructure.ingestion.connectors.rss import RssConnector
-from ekko.infrastructure.network.client import HttpResponseResult
+from ekko.config.schemas import SourceConfig
+from ekko.ingestion.client import HttpResponseResult
+from ekko.ingestion.connectors.rest_api import RestApiConnector
+from ekko.ingestion.connectors.rss import RssConnector
+from ekko.memory.models import SignalStatus, SourceState
 
 SAMPLE_ATOM_XML = """<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">

@@ -1,8 +1,6 @@
 """ToolCatalog mapping configuration names to tool classes adhering to OCP."""
 
-from ekko.tools.arxiv import ArxivTool
 from ekko.tools.base import BaseTool
-from ekko.tools.hacker_news import HackerNewsTool
 from ekko.tools.note_writer import NoteWriterTool
 from ekko.tools.query_knowledge import QueryKnowledgeTool
 from ekko.tools.registry import ToolRegistry
@@ -21,9 +19,7 @@ class ToolCatalog:
         self._classes: dict[str, type[BaseTool]] = {}
         if include_defaults:
             self.register(SystemInfoTool)
-            self.register(HackerNewsTool)
             self.register(UrlReaderTool)
-            self.register(ArxivTool)
             self.register(NoteWriterTool)
             self.register(QueryKnowledgeTool)
             self.register(ScanInboxTool)

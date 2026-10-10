@@ -86,7 +86,7 @@ async def test_full_context_loading_and_turn_execution(tmp_path: Path) -> None:
 
 def test_load_sources_config_integration() -> None:
     """Ensure declarative sources configuration loads properly from default config dir."""
-    from ekko.infrastructure.ingestion.config import load_sources_config
+    from ekko.config.loader import load_sources_config
 
     catalog = load_sources_config("config")
     assert len(catalog.sources) >= 2

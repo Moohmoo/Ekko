@@ -1,8 +1,8 @@
 """Base abstraction for universal ingestion connectors."""
 
 from abc import ABC, abstractmethod
-from ekko.infrastructure.database.models import RawSignal, SourceState
-from ekko.infrastructure.ingestion.config import SourceConfig
+from ekko.config.schemas import SourceConfig
+from ekko.memory.models import RawSignal, SourceState
 
 
 class BaseConnector(ABC):

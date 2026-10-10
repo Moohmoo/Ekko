@@ -2,7 +2,7 @@
 
 import pytest
 
-from ekko.infrastructure.processing.compressor import (
+from ekko.ingestion.compressor import (
     ContentCompressor,
     ModelProfile,
     TRUNCATION_NOTICE,

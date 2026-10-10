@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from ekko.core.events import StepStarted, TokenChunk, TurnCompleted
-from ekko.infrastructure.database.models import KnowledgeNote, RawSignal, SignalStatus
-from ekko.interfaces.ipc.client import IPCClient
-from ekko.interfaces.ipc.server import IPCServer
+from ekko.daemon.ipc_client import IPCClient
+from ekko.daemon.server import IPCServer
+from ekko.memory.models import KnowledgeNote, RawSignal, SignalStatus
 
 
 @pytest.fixture

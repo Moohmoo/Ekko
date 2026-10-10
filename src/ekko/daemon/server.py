@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from ekko.core.engine import EkkoEngine
-from ekko.infrastructure.database.manager import DatabaseManager
-from ekko.infrastructure.database.models import SignalStatus
+from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.models import SignalStatus
 from ekko.utils.logger import get_logger
 
-logger = get_logger("interfaces.ipc.server")
+logger = get_logger("daemon.server")
 
 DEFAULT_SOCKET_PATH = Path("/tmp/ekko.sock")
 

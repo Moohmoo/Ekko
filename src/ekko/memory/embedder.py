@@ -3,7 +3,7 @@
 from typing import Any
 from ekko.utils.logger import get_logger
 
-logger = get_logger("infrastructure.database.embedder")
+logger = get_logger("ekko.memory.embedder")
 
 DEFAULT_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 EMBEDDING_DIM = 384

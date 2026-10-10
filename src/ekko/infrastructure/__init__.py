@@ -1,1 +1,0 @@
-"""Ekko infrastructure layer package."""

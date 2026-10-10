@@ -8,11 +8,11 @@ from urllib.parse import urlparse
 import httpx
 
 from ekko.core.errors import EkkoError
-from ekko.infrastructure.network.rate_limiter import DomainRateLimiter
-from ekko.infrastructure.network.ssrf import SSRFValidator
+from ekko.ingestion.rate_limiter import DomainRateLimiter
+from ekko.ingestion.ssrf import SSRFValidator
 from ekko.utils.logger import get_logger
 
-logger = get_logger("infrastructure.network")
+logger = get_logger("ekko.ingestion.client")
 
 DEFAULT_USER_AGENT = "EkkoAgent/2.0 (+https://github.com/ekko-org/ekko; polite-ingestion)"
 

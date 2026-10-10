@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ekko.core.errors import EkkoError
-from ekko.interfaces.ipc.server import DEFAULT_SOCKET_PATH
+from ekko.daemon.server import DEFAULT_SOCKET_PATH
 
 
 class IPCClientError(EkkoError):

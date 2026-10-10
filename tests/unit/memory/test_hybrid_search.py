@@ -3,8 +3,8 @@
 from pathlib import Path
 import pytest
 
-from ekko.infrastructure.database.manager import DatabaseManager
-from ekko.infrastructure.database.models import KnowledgeNote
+from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.models import KnowledgeNote
 
 
 @pytest.fixture

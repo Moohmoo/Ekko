@@ -65,3 +65,37 @@ class ToolPort(Protocol):
     async def execute(self, **kwargs: Any) -> ToolResult:
         """Execute the tool logic using provided parameters."""
         ...
+
+
+@runtime_checkable
+class HybridMemoryPort(Protocol):
+    """Port defining unified hybrid search and knowledge notes persistence."""
+
+    async def search_notes(
+        self,
+        query: str,
+        query_embedding: list[float] | None = None,
+        mode: str = "hybrid",
+        limit: int = 5,
+    ) -> list[tuple[Any, float]]:
+        """Search knowledge notes with hybrid lexical/semantic ranking."""
+        ...
+
+    async def get_raw_signals(
+        self,
+        source_id: str | None = None,
+        status: Any = None,
+        limit: int = 10,
+    ) -> list[Any]:
+        """Fetch raw signals matching source and status criteria."""
+        ...
+
+
+@runtime_checkable
+class IngestionPort(Protocol):
+    """Port defining asynchronous background ingestion coordination."""
+
+    async def run_once(self) -> dict[str, int]:
+        """Execute a single polling pass across all active ingestion sources."""
+        ...
+

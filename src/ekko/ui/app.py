@@ -12,7 +12,7 @@ from ekko.config.loader import (
 )
 from ekko.core.engine import EkkoEngine
 from ekko.core.prompt import build_system_prompt
-from ekko.infrastructure.database.manager import DatabaseManager
+from ekko.memory.hybrid_store import DatabaseManager
 from ekko.memory.sqlite_memory import SqliteMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings

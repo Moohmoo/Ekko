@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from ekko.daemon.scheduler import IngestionCoordinator, parse_interval_seconds
-from ekko.infrastructure.database.models import RawSignal, SignalStatus, SourceState
-from ekko.infrastructure.ingestion.config import SourceConfig, SourcesCatalogConfig
+from ekko.memory.models import RawSignal, SignalStatus, SourceState
+from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
 
 
 def test_parse_interval_seconds() -> None:

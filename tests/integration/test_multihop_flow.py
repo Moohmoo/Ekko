@@ -1,48 +1,65 @@
 """Integration test validating autonomous multi-hop tool chaining in EkkoEngine."""
 
 from unittest.mock import AsyncMock, patch
+from datetime import datetime
 import httpx
 import pytest
 
 from ekko.core.engine import EkkoEngine
 from ekko.core.models import ModelResponse, ToolCall
 from ekko.memory.in_memory import InMemoryMemory
-from ekko.tools.hacker_news import HackerNewsTool
+from ekko.memory.models import RawSignal, SignalStatus
 from ekko.tools.registry import ToolRegistry
+from ekko.tools.scan_inbox import ScanInboxTool
 from ekko.tools.url_reader import UrlReaderTool
 
 
 @pytest.mark.asyncio
-async def test_multihop_autonomous_chaining_hacker_news_to_url_reader() -> None:
-    """Ensure engine autonomously chains a radar tool call followed by a url_reader call.
+async def test_multihop_autonomous_chaining_scan_inbox_to_url_reader() -> None:
+    """Ensure engine autonomously chains scan_inbox followed by url_reader.
 
     Scenario:
-    1. User asks for in-depth technical analysis of the latest AI announcement on Hacker News.
-    2. Step 1 (Model): calls 'hacker_news'.
-    3. Engine executes 'hacker_news' and stores observation in memory.
+    1. User asks to inspect incoming intelligence and read the main linked article.
+    2. Step 1 (Model): calls 'scan_inbox'.
+    3. Engine executes 'scan_inbox' and returns pending raw signals.
     4. Step 2 (Model): inspects the observation, picks top URL and autonomously calls 'url_reader'.
     5. Engine executes 'url_reader' and stores observation in memory.
     6. Step 3 (Model): synthesizes extracted article body into final response without further tool calls.
     """
+    mock_db = AsyncMock()
+    mock_db.get_raw_signals.return_value = [
+        RawSignal(
+            id="sig_test_1",
+            source_id="hn_tech",
+            title="Mistral Large 4 Release and Benchmarks",
+            url="https://example.com/mistral-large-4",
+            raw_content="Mistral Large 4 announced with 128k context.",
+            clean_content="Mistral Large 4 announced with 128k context.",
+            author="dev_ai",
+            status=SignalStatus.PENDING,
+            ingested_at=datetime(2026, 10, 10, 12, 0),
+        )
+    ]
+
     registry = ToolRegistry()
-    registry.register(HackerNewsTool())
+    registry.register(ScanInboxTool(db_manager=mock_db))
     registry.register(UrlReaderTool())
 
     mock_provider = AsyncMock()
     mock_provider.generate.side_effect = [
-        # Step 1: Model calls hacker_news
+        # Step 1: Model calls scan_inbox
         ModelResponse(
             content="",
             model_name="mock-llm",
             tool_calls=[
                 ToolCall(
-                    id="call_hn_radar",
-                    name="hacker_news",
-                    arguments={"days": 7, "limit": 5},
+                    id="call_scan_inbox",
+                    name="scan_inbox",
+                    arguments={"limit": 5},
                 )
             ],
         ),
-        # Step 2: Model sees hacker_news output and decides to fetch the article body
+        # Step 2: Model sees scan_inbox output and decides to fetch article body
         ModelResponse(
             content="",
             model_name="mock-llm",
@@ -58,40 +75,12 @@ async def test_multihop_autonomous_chaining_hacker_news_to_url_reader() -> None:
         ModelResponse(
             content=(
                 "Synthèse approfondie : L'annonce Mistral Large 4 introduit un modèle de 128k "
-                "avec raisonnement multi-modal natif et des gains significatifs en inférence."
+                "avec raisonnement multi-modal avancé."
             ),
             model_name="mock-llm",
+            tool_calls=[],
         ),
     ]
-
-    mock_hn_response = httpx.Response(
-        200,
-        json={
-            "hits": [
-                {
-                    "title": "Mistral Large 4 Release and Benchmarks",
-                    "url": "https://example.com/mistral-large-4",
-                    "points": 750,
-                    "num_comments": 340,
-                    "created_at": "2026-10-09T00:00:00Z",
-                    "objectID": "888111",
-                }
-            ]
-        },
-        request=httpx.Request("GET", "https://hn.algolia.com/api/v1/search"),
-    )
-
-    mock_article_html = (
-        "<html><body><article>"
-        "<h1>Mistral Large 4</h1>"
-        "<p>Mistral Large 4 is our new frontier model with 128k context and native reasoning.</p>"
-        "</article></body></html>"
-    )
-    mock_article_response = httpx.Response(
-        200,
-        text=mock_article_html,
-        request=httpx.Request("GET", "https://example.com/mistral-large-4"),
-    )
 
     memory = InMemoryMemory()
     engine = EkkoEngine(
@@ -101,20 +90,23 @@ async def test_multihop_autonomous_chaining_hacker_news_to_url_reader() -> None:
         max_iterations=5,
     )
 
-    async def mock_get(url: str, *args, **kwargs) -> httpx.Response:
-        if "algolia" in str(url):
-            return mock_hn_response
-        return mock_article_response
+    mock_response = httpx.Response(
+        200,
+        text="<html>mock</html>",
+        request=httpx.Request("GET", "https://example.com/mistral-large-4"),
+    )
 
-    with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as patch_get, patch(
+    with patch.object(
+        httpx.AsyncClient, "get", new_callable=AsyncMock
+    ) as mock_http_get, patch(
         "ekko.tools.url_reader.trafilatura.extract"
     ) as mock_extract:
-        patch_get.side_effect = mock_get
+        mock_http_get.return_value = mock_response
         mock_extract.return_value = (
             "# Mistral Large 4\n\nMistral Large 4 is our new frontier model with 128k context."
         )
 
-        user_query = "Analyse en profondeur la dernière annonce majeure d'IA sur Hacker News."
+        user_query = "Analyse en profondeur les signaux récents de la boîte de réception."
         final_answer = await engine.process_message(user_query)
 
     # 1. Assertion on final answer
@@ -132,14 +124,14 @@ async def test_multihop_autonomous_chaining_hacker_news_to_url_reader() -> None:
     assert messages[0].role == "user"
     assert messages[0].content == user_query
 
-    # Message 1: Assistant calling hacker_news
+    # Message 1: Assistant calling scan_inbox
     assert messages[1].role == "assistant"
     assert messages[1].tool_calls is not None
-    assert messages[1].tool_calls[0].name == "hacker_news"
+    assert messages[1].tool_calls[0].name == "scan_inbox"
 
-    # Message 2: Tool result from hacker_news
+    # Message 2: Tool result from scan_inbox
     assert messages[2].role == "tool"
-    assert messages[2].tool_call_id == "call_hn_radar"
+    assert messages[2].tool_call_id == "call_scan_inbox"
     assert "Mistral Large 4 Release and Benchmarks" in messages[2].content
 
     # Message 3: Assistant calling url_reader

@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
-from ekko.infrastructure.database.models import RawSignal, SignalStatus
+from ekko.memory.models import RawSignal, SignalStatus
 from ekko.tools.catalog import ToolCatalog
 from ekko.tools.scan_inbox import ScanInboxInput, ScanInboxTool
 
