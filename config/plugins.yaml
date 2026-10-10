@@ -4,3 +4,5 @@ enabled_tools:
   - url_reader
   - arxiv
   - save_note
+  - query_knowledge
+  - scan_inbox
