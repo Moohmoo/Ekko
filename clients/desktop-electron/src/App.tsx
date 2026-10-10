@@ -1,0 +1,164 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import type { PodTab, NoteItem, ChatMessage } from './types';
+import { PodHeader } from './components/PodHeader';
+import { HomeView } from './components/HomeView';
+import { ChatView } from './components/ChatView';
+import { EchoView } from './components/EchoView';
+
+export const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<PodTab>('home');
+  const [daemonConnected, setDaemonConnected] = useState<boolean>(false);
+  const [notes, setNotes] = useState<NoteItem[]>([]);
+  const [isLoadingNotes, setIsLoadingNotes] = useState<boolean>(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Ping daemon health
+  const checkHealth = useCallback(async () => {
+    try {
+      if (window.ekkoAPI) {
+        const res = await window.ekkoAPI.ping();
+        setDaemonConnected(res.status === 'ok');
+      }
+    } catch {
+      setDaemonConnected(false);
+    }
+  }, []);
+
+  // Fetch Notes
+  const fetchNotes = useCallback(async () => {
+    if (!window.ekkoAPI) return;
+    setIsLoadingNotes(true);
+    try {
+      const raw = await window.ekkoAPI.getNotes();
+      const mapped: NoteItem[] = (raw as Record<string, unknown>[]).map((item) => ({
+        id: String(item.id || ''),
+        title: String(item.title || 'Signal brut'),
+        summary: String(item.clean_content || ''),
+        source: String(item.source_id || 'ekko'),
+        tags: [String(item.source_id || 'inbox')],
+      }));
+      setNotes(mapped);
+    } catch (e) {
+      console.warn('Failed fetching notes:', e);
+    } finally {
+      setIsLoadingNotes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkHealth();
+    const timer = setInterval(checkHealth, 5000);
+    return () => clearInterval(timer);
+  }, [checkHealth]);
+
+  // Handle Send Message
+  const handleSendMessage = async (text: string) => {
+    if (!window.ekkoAPI) return;
+
+    const userMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: 'user',
+      content: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setIsStreaming(true);
+    setErrorMessage(null);
+
+    let assistantMsgId = `bot-${Date.now()}`;
+    let accumulated = '';
+
+    const cleanup = window.ekkoAPI.onPromptChunk((chunk) => {
+      accumulated += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last && last.id === assistantMsgId) {
+          return [...prev.slice(0, -1), { ...last, content: accumulated }];
+        } else {
+          return [
+            ...prev,
+            {
+              id: assistantMsgId,
+              sender: 'ekko',
+              content: accumulated,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ];
+        }
+      });
+    });
+
+    try {
+      const fullResponse = await window.ekkoAPI.submitPrompt(text);
+      setIsStreaming(false);
+      cleanup();
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last && last.id === assistantMsgId) {
+          return [...prev.slice(0, -1), { ...last, content: fullResponse }];
+        } else {
+          return [
+            ...prev,
+            {
+              id: assistantMsgId,
+              sender: 'ekko',
+              content: fullResponse,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ];
+        }
+      });
+    } catch (e: unknown) {
+      cleanup();
+      setIsStreaming(false);
+      setErrorMessage((e as Error).message || 'Erreur lors de la réponse.');
+    }
+  };
+
+  // Handle File Drop
+  const handleFileDrop = async (filePath: string) => {
+    setActiveTab('chat');
+    await handleSendMessage(`Analyse et indexe ce document déposé : ${filePath}`);
+  };
+
+  const handleClose = () => {
+    window.ekkoAPI?.closeWindow();
+  };
+
+  return (
+    <div className="w-[440px] h-[560px] rounded-[28px] bg-[#0c0c0e] border border-white/10 shadow-2xl flex flex-col overflow-hidden text-slate-100">
+      <PodHeader
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          if (tab === 'echo') fetchNotes();
+        }}
+        daemonConnected={daemonConnected}
+        onClose={handleClose}
+      />
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {activeTab === 'home' && (
+          <HomeView onFileDrop={handleFileDrop} daemonConnected={daemonConnected} />
+        )}
+        {activeTab === 'chat' && (
+          <ChatView
+            messages={messages}
+            onSendMessage={handleSendMessage}
+            isStreaming={isStreaming}
+            daemonConnected={daemonConnected}
+            errorMessage={errorMessage}
+          />
+        )}
+        {activeTab === 'echo' && (
+          <EchoView notes={notes} onRefresh={fetchNotes} isLoading={isLoadingNotes} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default App;
