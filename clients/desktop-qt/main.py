@@ -2,8 +2,9 @@ import os
 from pathlib import Path
 import sys
 
-# Force X11/XCB platform to prevent Wayland textinputv3 warnings and enable absolute positioning
-os.environ["QT_QPA_PLATFORM"] = "xcb"
+# Use Wayland natively (with xcb fallback) and mute textinputv3 noise from GNOME
+os.environ.setdefault("QT_QPA_PLATFORM", "wayland;xcb")
+os.environ.setdefault("QT_LOGGING_RULES", "qt.qpa.wayland.textinput=false;*.debug=false")
 
 # Ensure current script directory is in sys.path when invoked from project root
 sys.path.insert(0, str(Path(__file__).resolve().parent))
