@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { ShieldCheck, Cpu, HardDrive, RefreshCw } from 'lucide-react';
 import type { BYOMProfile, DaemonStatus } from '../../types';
 
-interface SettingsTabProps {
+interface SettingsViewProps {
   currentProfile: BYOMProfile;
   onSelectProfile: (profile: BYOMProfile) => void;
   daemonStatus: DaemonStatus;
   onTestPing: () => Promise<void>;
 }
 
-export const SettingsTab: React.FC<SettingsTabProps> = ({
+export const SettingsView: React.FC<SettingsViewProps> = ({
   currentProfile,
   onSelectProfile,
   daemonStatus,
@@ -26,9 +26,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   return (
-    <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1 text-xs">
+    <div className="flex-1 flex flex-col p-4 overflow-y-auto space-y-3.5 text-xs">
       {/* BYOM Profile Grid */}
-      <div className="bg-slate-900/70 p-3 rounded-xl border border-white/5 space-y-2">
+      <div className="bg-white/[0.03] p-3.5 rounded-2xl border border-white/[0.06] space-y-2">
         <span className="font-semibold text-slate-200 block text-[11.5px]">
           Profil Modèle Actuel (BYOM)
         </span>
@@ -36,10 +36,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           {/* Micro */}
           <button
             onClick={() => onSelectProfile('micro')}
-            className={`p-2 rounded-lg text-left transition-all duration-200 border ${
+            className={`p-2.5 rounded-xl text-left transition-all duration-200 border cursor-pointer ${
               currentProfile === 'micro'
                 ? 'border-cyan-400 bg-cyan-950/40 text-cyan-200 shadow-sm'
-                : 'border-white/5 bg-black/20 hover:border-white/20 text-slate-400'
+                : 'border-white/[0.05] bg-black/20 hover:border-white/20 text-slate-400'
             }`}
           >
             <span className="font-bold block text-[11px]">Micro (1-3B)</span>
@@ -49,23 +49,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           {/* Standard */}
           <button
             onClick={() => onSelectProfile('standard')}
-            className={`p-2 rounded-lg text-left transition-all duration-200 border ${
+            className={`p-2.5 rounded-xl text-left transition-all duration-200 border cursor-pointer ${
               currentProfile === 'standard'
                 ? 'border-cyan-400 bg-cyan-950/40 text-cyan-200 shadow-sm'
-                : 'border-white/5 bg-black/20 hover:border-white/20 text-slate-400'
+                : 'border-white/[0.05] bg-black/20 hover:border-white/20 text-slate-400'
             }`}
           >
             <span className="font-bold block text-[11px]">Standard (7-14B)</span>
-            <span className="text-[9.5px] opacity-75">Qwen2.5-7B (VRAM 8G)</span>
+            <span className="text-[9.5px] opacity-75">Mistral-7B (VRAM 8G)</span>
           </button>
 
           {/* Large */}
           <button
             onClick={() => onSelectProfile('large')}
-            className={`p-2 rounded-lg text-left transition-all duration-200 border ${
+            className={`p-2.5 rounded-xl text-left transition-all duration-200 border cursor-pointer ${
               currentProfile === 'large'
                 ? 'border-cyan-400 bg-cyan-950/40 text-cyan-200 shadow-sm'
-                : 'border-white/5 bg-black/20 hover:border-white/20 text-slate-400'
+                : 'border-white/[0.05] bg-black/20 hover:border-white/20 text-slate-400'
             }`}
           >
             <span className="font-bold block text-[11px]">Large / API</span>
@@ -75,7 +75,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       </div>
 
       {/* Hardware Confinement Policies */}
-      <div className="bg-slate-900/70 p-3 rounded-xl border border-white/5 space-y-2">
+      <div className="bg-white/[0.03] p-3.5 rounded-2xl border border-white/[0.06] space-y-2.5">
         <span className="font-semibold text-slate-200 flex items-center gap-1.5 text-[11.5px]">
           <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
           Politique de Confinement Matériel
@@ -83,7 +83,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
         <label className="flex items-center justify-between text-slate-300 cursor-pointer text-[11px]">
           <div className="flex items-center gap-2">
-            <HardDrive className="w-3 h-3 text-slate-500" />
+            <HardDrive className="w-3.5 h-3.5 text-slate-500" />
             <span>Décharge VRAM immédiate (keep_alive: 0)</span>
           </div>
           <input
@@ -96,7 +96,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
         <label className="flex items-center justify-between text-slate-300 cursor-pointer text-[11px]">
           <div className="flex items-center gap-2">
-            <Cpu className="w-3 h-3 text-slate-500" />
+            <Cpu className="w-3.5 h-3.5 text-slate-500" />
             <span>Priorité réduite processus (nice +10)</span>
           </div>
           <input
@@ -108,10 +108,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </label>
       </div>
 
-      {/* IPC Socket Health */}
-      <div className="bg-slate-900/70 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+      {/* Unix Socket Health */}
+      <div className="bg-white/[0.03] p-3.5 rounded-2xl border border-white/[0.06] flex items-center justify-between">
         <div>
-          <span className="font-mono text-[10px] text-slate-500 block">
+          <span className="font-mono text-[9.5px] text-slate-500 block">
             Socket IPC Unix Local
           </span>
           <span className="font-mono text-cyan-300 text-[11px]">
@@ -132,13 +132,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   : 'bg-amber-400'
               }`}
             />
-            {daemonStatus.connected ? 'En ligne' : 'Déconnecté'}
+            {daemonStatus.connected ? 'Connecté' : 'Déconnecté'}
           </span>
 
           <button
             onClick={handlePing}
             disabled={isPinging}
-            className="p-1 rounded bg-white/5 hover:bg-white/10 text-slate-300 transition-colors"
+            className="p-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-300 transition-colors cursor-pointer"
             title="Tester le ping IPC"
           >
             <RefreshCw
@@ -151,4 +151,4 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   );
 };
 
-export default SettingsTab;
+export default SettingsView;

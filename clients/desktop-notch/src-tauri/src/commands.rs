@@ -52,26 +52,28 @@ pub async fn submit_prompt(
 }
 
 #[tauri::command]
-pub async fn set_notch_expanded(expanded: bool, app: AppHandle) -> Result<(), String> {
+pub async fn hide_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
-        let (width, height) = if expanded {
-            (380.0, 440.0)
-        } else {
-            (260.0, 32.0)
-        };
         window
-            .set_size(tauri::LogicalSize::new(width, height))
-            .map_err(|e| format!("Failed to resize window: {}", e))?;
+            .hide()
+            .map_err(|e| format!("Failed to hide window: {}", e))?;
     }
     Ok(())
 }
 
 #[tauri::command]
-pub async fn set_notch_size(width: f64, height: f64, app: AppHandle) -> Result<(), String> {
+pub async fn toggle_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
-        window
-            .set_size(tauri::LogicalSize::new(width, height))
-            .map_err(|e| format!("Failed to resize window: {}", e))?;
+        if window.is_visible().unwrap_or(false) {
+            window
+                .hide()
+                .map_err(|e| format!("Failed to hide window: {}", e))?;
+        } else {
+            window
+                .show()
+                .map_err(|e| format!("Failed to show window: {}", e))?;
+            let _ = window.set_focus();
+        }
     }
     Ok(())
 }

@@ -6,7 +6,8 @@ export type MascotState =
   | 'drawer'
   | 'dizzy';
 
-export type TabType = 'echo' | 'assistant' | 'settings';
+export type PodTab = 'home' | 'chat' | 'echo' | 'settings';
+export type TabType = PodTab;
 
 export type BYOMProfile = 'micro' | 'standard' | 'large';
 

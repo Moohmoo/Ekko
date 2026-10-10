@@ -1,29 +1,29 @@
 /**
- * Tauri v2 IPC communication service with fallback for browser development.
+ * Tauri v2 IPC communication service for System Tray Popover Pod.
  */
 
 const isTauri = (): boolean => {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 };
 
-export async function setNotchExpanded(expanded: boolean): Promise<void> {
+export async function hideWindow(): Promise<void> {
   if (isTauri()) {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('set_notch_expanded', { expanded });
+      await invoke('hide_window');
     } catch (e) {
-      console.warn('[Tauri] Failed to set notch expansion:', e);
+      console.warn('[Tauri] Failed to hide window:', e);
     }
   }
 }
 
-export async function setNotchSize(width: number, height: number): Promise<void> {
+export async function toggleWindow(): Promise<void> {
   if (isTauri()) {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('set_notch_size', { width, height });
+      await invoke('toggle_window');
     } catch (e) {
-      console.warn('[Tauri] Failed to set notch size:', e);
+      console.warn('[Tauri] Failed to toggle window:', e);
     }
   }
 }
