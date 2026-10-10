@@ -12,6 +12,7 @@ pub fn run() {
             commands::query_knowledge,
             commands::submit_prompt,
             commands::set_notch_expanded,
+            commands::set_notch_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ekko Desktop Notch application");

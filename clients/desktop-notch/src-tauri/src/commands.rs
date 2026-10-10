@@ -65,3 +65,14 @@ pub async fn set_notch_expanded(expanded: bool, app: AppHandle) -> Result<(), St
     }
     Ok(())
 }
+
+#[tauri::command]
+pub async fn set_notch_size(width: f64, height: f64, app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window
+            .set_size(tauri::LogicalSize::new(width, height))
+            .map_err(|e| format!("Failed to resize window: {}", e))?;
+    }
+    Ok(())
+}
+
