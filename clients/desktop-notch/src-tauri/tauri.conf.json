@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ekko Notch",
+  "version": "0.1.0",
+  "identifier": "com.ekko.desktop.notch",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Ekko Notch",
+        "label": "main",
+        "width": 260,
+        "height": 32,
+        "minWidth": 240,
+        "minHeight": 32,
+        "maxWidth": 420,
+        "maxHeight": 520,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}

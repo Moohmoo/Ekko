@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "default",
+  "description": "Default capabilities for Ekko desktop notch window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-center",
+    "core:event:default"
+  ]
+}

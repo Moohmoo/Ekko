@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ekko Desktop Notch</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="notch-app" class="notch-container collapsed">
+    <!-- Top HUD Capsule (32px height) -->
+    <header id="notch-capsule" class="notch-capsule" title="Cliquez pour ouvrir le tiroir Ekko">
+      <div id="drop-zone" class="drop-zone">
+        <div class="mascot-wrapper" id="mascot-container">
+          <!-- Animated Blue Drop SVG Mascot -->
+          <svg class="mascot-svg" id="mascot-svg" viewBox="0 0 40 40" width="24" height="24">
+            <defs>
+              <linearGradient id="dropGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#60a5fa" />
+                <stop offset="100%" stop-color="#2563eb" />
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            <!-- Drop Body -->
+            <path class="drop-body" d="M20 5 C20 5 9 19 9 26 A11 11 0 0 0 31 26 C31 19 20 5 20 5 Z" fill="url(#dropGradient)" filter="url(#glow)" />
+            <!-- Face features -->
+            <g class="mascot-face" id="mascot-face">
+              <!-- Default: Veille / Idle -->
+              <circle class="eye eye-left" cx="16" cy="23" r="1.5" fill="#ffffff" />
+              <circle class="eye eye-right" cx="24" cy="23" r="1.5" fill="#ffffff" />
+              <path class="mouth" d="M18 27 Q20 28 22 27" stroke="#ffffff" stroke-width="1.2" fill="none" stroke-linecap="round" />
+            </g>
+          </svg>
+        </div>
+
+        <div class="notch-info">
+          <span class="notch-title">Ekko</span>
+          <span class="notch-status" id="notch-status">Veille</span>
+        </div>
+
+        <div class="drop-hint" id="drop-hint">Drop & Forget</div>
+
+        <button class="toggle-btn" id="toggle-drawer-btn" aria-label="Déplier le tiroir">
+          <span class="chevron" id="drawer-chevron">▼</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Expandable Drawer Panel -->
+    <main id="notch-drawer" class="notch-drawer">
+      <!-- Tab Navigation -->
+      <nav class="drawer-nav">
+        <button class="nav-tab active" data-tab="tab-echo">Écho</button>
+        <button class="nav-tab" data-tab="tab-assistant">Assistant</button>
+        <button class="nav-tab" data-tab="tab-settings">Réglages</button>
+      </nav>
+
+      <!-- Tab 1: Écho (Signals & Digests) -->
+      <section id="tab-echo" class="tab-pane active">
+        <div class="pane-header">
+          <h3>Signaux récents</h3>
+          <button class="action-btn small" id="refresh-signals-btn">Rafraîchir</button>
+        </div>
+        <div id="signals-list" class="signals-list">
+          <div class="loading-state">Chargement des signaux depuis la boîte de réception...</div>
+        </div>
+      </section>
+
+      <!-- Tab 2: Assistant (Interactive Dialogue & PKM Query) -->
+      <section id="tab-assistant" class="tab-pane">
+        <div class="chat-container">
+          <div id="chat-messages" class="chat-messages">
+            <div class="chat-msg assistant">
+              <span class="msg-bubble">Bonjour ! Déposez un document ou interrogez votre mémoire PKM.</span>
+            </div>
+          </div>
+          <form id="chat-form" class="chat-input-form">
+            <input type="text" id="chat-input" placeholder="Posez une question ou cherchez dans vos notes..." autocomplete="off" />
+            <button type="submit" id="send-btn" class="send-btn">Envoyer</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Tab 3: Réglages (BYOM & Ingestion Settings) -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="settings-group">
+          <h4>Statut Connexion</h4>
+          <div class="setting-row">
+            <span>Socket UNIX IPC</span>
+            <span class="badge" id="ipc-badge">Vérification...</span>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h4>Profil Inférence (BYOM)</h4>
+          <div class="radio-cards">
+            <label class="radio-card">
+              <input type="radio" name="byom_profile" value="micro" checked />
+              <div class="card-content">
+                <strong>Micro (1-3B)</strong>
+                <small>Triage continu CPU/iGPU (&lt;3 Go)</small>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="byom_profile" value="standard" />
+              <div class="card-content">
+                <strong>Standard (7-14B)</strong>
+                <small>Synthèse PKM locale GPU</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h4>Polite Polling</h4>
+          <div class="setting-row">
+            <span>Collecte d'arrière-plan</span>
+            <input type="checkbox" id="polite-polling-toggle" checked />
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

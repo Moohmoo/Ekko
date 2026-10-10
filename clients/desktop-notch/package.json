@@ -1,0 +1,14 @@
+{
+  "name": "ekko-desktop-notch",
+  "version": "0.1.0",
+  "description": "Ekko V2 Ambient Desktop Notch and Cognitive Buffer",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "preview": "python3 -m http.server 5173 --directory src"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
