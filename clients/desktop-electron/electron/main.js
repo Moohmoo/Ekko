@@ -36,7 +36,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt } from './ipc-bridge';
+var __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.DIST = path.join(__dirname, '../dist');
 process.env.VITE_PUBLIC = app.isPackaged
     ? process.env.DIST

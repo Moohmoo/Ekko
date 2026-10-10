@@ -1,6 +1,9 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt } from './ipc-bridge';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 process.env.DIST = path.join(__dirname, '../dist');
 process.env.VITE_PUBLIC = app.isPackaged

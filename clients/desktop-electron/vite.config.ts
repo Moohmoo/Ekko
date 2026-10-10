@@ -9,6 +9,9 @@ export default defineConfig({
     electron([
       {
         entry: 'electron/main.ts',
+        onstart(options) {
+          options.startup(['--no-sandbox']);
+        },
         vite: {
           build: {
             outDir: 'dist-electron',
