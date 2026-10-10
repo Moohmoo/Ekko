@@ -5,11 +5,12 @@ import pytest
 from ekko.infrastructure.processing.compressor import (
     ContentCompressor,
     ModelProfile,
+    TRUNCATION_NOTICE,
 )
 
 
-def test_calculate_budget_per_model_profile() -> None:
-    """Ensure dynamic token and character budgets are assigned per BYOM profile."""
+def test_calculate_budget_per_model_profile_and_custom() -> None:
+    """Ensure dynamic token budgets are assigned per profile or overridden by custom_budget."""
     compressor = ContentCompressor()
 
     micro_budget = compressor.calculate_budget(ModelProfile.MICRO)
@@ -20,6 +21,9 @@ def test_calculate_budget_per_model_profile() -> None:
     assert micro_budget == 2048
     assert std_budget == 8192
     assert large_budget == 32768
+
+    custom_budget = compressor.calculate_budget(ModelProfile.MICRO, custom_budget=16000)
+    assert custom_budget == 16000
 
 
 def test_heuristic_pruning_removes_boilerplate_and_references() -> None:
@@ -67,15 +71,34 @@ Privacy Policy | Terms of Service | All rights reserved 2026.
     assert "Privacy Policy" not in cleaned
 
 
-def test_truncate_to_budget() -> None:
-    """Ensure content is truncated with clean notice when exceeding profile budget."""
+def test_truncate_to_budget_with_neutral_notice_and_custom_override() -> None:
+    """Ensure content is truncated with neutral notice or custom notice/budget."""
     compressor = ContentCompressor()
 
     long_text = "Word " * 2000
-    truncated = compressor.truncate_to_budget(long_text, ModelProfile.MICRO)
 
+    # Default neutral marker
+    truncated = compressor.truncate_to_budget(long_text, ModelProfile.MICRO)
     assert len(truncated) < len(long_text)
-    assert "[... Contenu tronqué pour respecter le budget de tokens ...]" in truncated
+    assert "[... Content truncated to match token budget ...]" in truncated
+
+    # Custom notice override
+    custom_notice = "\n\n[... Truncated for display ...]"
+    truncated_custom = compressor.truncate_to_budget(
+        long_text,
+        ModelProfile.MICRO,
+        notice=custom_notice,
+    )
+    assert custom_notice in truncated_custom
+    assert "[... Content truncated" not in truncated_custom
+
+    # Custom budget override
+    truncated_budget = compressor.truncate_to_budget(
+        long_text,
+        ModelProfile.MICRO,
+        custom_budget=100,  # 100 tokens * 4 = 400 chars
+    )
+    assert len(truncated_budget) <= 400 + len(TRUNCATION_NOTICE)
 
 
 def test_chunk_text_preserves_paragraph_boundaries() -> None:

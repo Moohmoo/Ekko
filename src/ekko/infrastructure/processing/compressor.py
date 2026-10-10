@@ -3,7 +3,7 @@
 from enum import Enum
 import re
 
-TRUNCATION_NOTICE = "\n\n[... Contenu tronqué pour respecter le budget de tokens ...]"
+TRUNCATION_NOTICE = "\n\n[... Content truncated to match token budget ...]"
 
 # Patterns identifying sections to prune
 NOISY_SECTION_HEADERS = [
@@ -52,8 +52,14 @@ def _split_into_paragraphs(text: str) -> list[str]:
 class ContentCompressor:
     """Compresses raw text via heuristic pruning, token budgeting, and chunking."""
 
-    def calculate_budget(self, profile: ModelProfile | str = ModelProfile.STANDARD) -> int:
-        """Return the maximum token budget for the given model profile."""
+    def calculate_budget(
+        self,
+        profile: ModelProfile | str = ModelProfile.STANDARD,
+        custom_budget: int | None = None,
+    ) -> int:
+        """Return the token budget for the profile or explicit custom budget."""
+        if custom_budget is not None and custom_budget > 0:
+            return custom_budget
         key = ModelProfile(profile) if isinstance(profile, str) else profile
         return PROFILE_TOKEN_BUDGETS.get(key, 8192)
 
@@ -77,12 +83,15 @@ class ContentCompressor:
         text: str,
         profile: ModelProfile | str = ModelProfile.STANDARD,
         chars_per_token: int = 4,
+        notice: str | None = None,
+        custom_budget: int | None = None,
     ) -> str:
-        """Truncate text if it exceeds the character limit for the target profile."""
-        max_chars = self.calculate_budget(profile) * chars_per_token
+        """Truncate text if it exceeds character limit for target profile or custom budget."""
+        max_chars = self.calculate_budget(profile, custom_budget=custom_budget) * chars_per_token
         if len(text) <= max_chars:
             return text
-        return text[:max_chars].rstrip() + TRUNCATION_NOTICE
+        truncation_marker = notice if notice is not None else TRUNCATION_NOTICE
+        return text[:max_chars].rstrip() + truncation_marker
 
     def chunk_text(
         self,
