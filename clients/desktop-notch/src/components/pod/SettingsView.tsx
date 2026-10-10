@@ -22,7 +22,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handlePing = async () => {
     setIsPinging(true);
     await onTestPing();
-    setTimeout(() => setIsPinging(false), 500);
+    setTimeout(() => setIsPinging(false), 400);
   };
 
   return (
@@ -122,14 +122,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center gap-2">
           <span
             className={`flex items-center gap-1 text-[10.5px] font-mono ${
-              daemonStatus.connected ? 'text-emerald-400' : 'text-amber-400'
+              daemonStatus.connected ? 'text-emerald-400' : 'text-rose-400'
             }`}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
+              className={`w-2 h-2 rounded-full ${
                 daemonStatus.connected
-                  ? 'bg-emerald-400 animate-pulse'
-                  : 'bg-amber-400'
+                  ? 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
+                  : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]'
               }`}
             />
             {daemonStatus.connected ? 'Connecté' : 'Déconnecté'}
@@ -139,7 +139,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             onClick={handlePing}
             disabled={isPinging}
             className="p-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-300 transition-colors cursor-pointer"
-            title="Tester le ping IPC"
+            title="Tester la connexion au socket"
+            aria-label="Tester la connexion au socket"
           >
             <RefreshCw
               className={`w-3 h-3 ${isPinging ? 'animate-spin text-cyan-400' : ''}`}

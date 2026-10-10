@@ -13,7 +13,7 @@ pub fn run() {
             if let Some(icon) = app.default_window_icon() {
                 let _tray = TrayIconBuilder::new()
                     .icon(icon.clone())
-                    .tooltip("Ekko - Cognitive Buffer")
+                    .tooltip("Ekko - Tampon Cognitif Ambiant")
                     .on_tray_icon_event(|tray, event| {
                         if let TrayIconEvent::Click {
                             button: MouseButton::Left,
@@ -26,6 +26,14 @@ pub fn run() {
                                 if window.is_visible().unwrap_or(false) {
                                     let _ = window.hide();
                                 } else {
+                                    if let Ok(Some(monitor)) = window.current_monitor() {
+                                        let size = monitor.size();
+                                        let scale = monitor.scale_factor();
+                                        let logical_w = size.width as f64 / scale;
+                                        let target_x = (logical_w - 420.0 - 16.0).max(16.0);
+                                        let target_y = 36.0;
+                                        let _ = window.set_position(tauri::LogicalPosition::new(target_x, target_y));
+                                    }
                                     let _ = window.show();
                                     let _ = window.set_focus();
                                 }
@@ -37,6 +45,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::check_daemon_status,
+            commands::submit_prompt_to_daemon,
+            commands::get_daemon_notes,
+            commands::ingest_file_path,
             commands::ping,
             commands::scan_inbox,
             commands::query_knowledge,

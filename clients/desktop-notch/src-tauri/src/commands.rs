@@ -5,8 +5,76 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
 
 #[tauri::command]
+pub async fn check_daemon_status() -> Result<bool, String> {
+    match ipc::send_jsonrpc_request("ping", json!({})).await {
+        Ok(res) => {
+            let is_ok = res.get("status").and_then(|s| s.as_str()) == Some("ok");
+            Ok(is_ok)
+        }
+        Err(_) => Ok(false),
+    }
+}
+
+#[tauri::command]
 pub async fn ping() -> Result<Value, String> {
-    ipc::call_rpc(DEFAULT_SOCKET_PATH, "ping", json!({})).await
+    ipc::send_jsonrpc_request("ping", json!({})).await
+}
+
+#[tauri::command]
+pub async fn submit_prompt_to_daemon(
+    prompt: String,
+    session_id: Option<String>,
+    app: AppHandle,
+) -> Result<String, String> {
+    let session = session_id.unwrap_or_else(|| "desktop_popover".to_string());
+    let mut accumulated_tokens = String::new();
+
+    ipc::stream_prompt(DEFAULT_SOCKET_PATH, &prompt, &session, |event| {
+        if let Some(delta) = event.get("delta").and_then(|v| v.as_str()) {
+            accumulated_tokens.push_str(delta);
+        }
+        let _ = app.emit("engine-event", event);
+        Ok(())
+    })
+    .await?;
+
+    if accumulated_tokens.trim().is_empty() {
+        Ok("Réponse reçue du daemon sans contenu texte additionnel.".to_string())
+    } else {
+        Ok(accumulated_tokens)
+    }
+}
+
+#[tauri::command]
+pub async fn get_daemon_notes(limit: Option<u32>) -> Result<Vec<Value>, String> {
+    let params = json!({
+        "limit": limit.unwrap_or(20)
+    });
+    let result = ipc::send_jsonrpc_request("scan_inbox", params).await?;
+    match result {
+        Value::Array(arr) => Ok(arr),
+        _ => Ok(vec![]),
+    }
+}
+
+#[tauri::command]
+pub async fn ingest_file_path(
+    path: String,
+    app: AppHandle,
+) -> Result<Value, String> {
+    let prompt = format!("Analyse, résume et sauvegarde dans mes notes le document suivant : {}", path);
+    let session = "desktop_ingest".to_string();
+
+    ipc::stream_prompt(DEFAULT_SOCKET_PATH, &prompt, &session, |event| {
+        let _ = app.emit("engine-event", event);
+        Ok(())
+    })
+    .await?;
+
+    Ok(json!({
+        "status": "ingested",
+        "path": path
+    }))
 }
 
 #[tauri::command]
@@ -20,7 +88,7 @@ pub async fn scan_inbox(
         "source_id": source_id,
         "limit": limit.unwrap_or(10),
     });
-    ipc::call_rpc(DEFAULT_SOCKET_PATH, "scan_inbox", params).await
+    ipc::send_jsonrpc_request("scan_inbox", params).await
 }
 
 #[tauri::command]
@@ -34,7 +102,7 @@ pub async fn query_knowledge(
         "mode": mode.unwrap_or_else(|| "hybrid".to_string()),
         "limit": limit.unwrap_or(5),
     });
-    ipc::call_rpc(DEFAULT_SOCKET_PATH, "query_knowledge", params).await
+    ipc::send_jsonrpc_request("query_knowledge", params).await
 }
 
 #[tauri::command]
@@ -69,6 +137,14 @@ pub async fn toggle_window(app: AppHandle) -> Result<(), String> {
                 .hide()
                 .map_err(|e| format!("Failed to hide window: {}", e))?;
         } else {
+            if let Ok(Some(monitor)) = window.current_monitor() {
+                let size = monitor.size();
+                let scale_factor = monitor.scale_factor();
+                let logical_w = size.width as f64 / scale_factor;
+                let target_x = (logical_w - 420.0 - 16.0).max(16.0);
+                let target_y = 36.0;
+                let _ = window.set_position(tauri::LogicalPosition::new(target_x, target_y));
+            }
             window
                 .show()
                 .map_err(|e| format!("Failed to show window: {}", e))?;
@@ -77,4 +153,3 @@ pub async fn toggle_window(app: AppHandle) -> Result<(), String> {
     }
     Ok(())
 }
-

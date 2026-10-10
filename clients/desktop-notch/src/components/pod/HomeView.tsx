@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowDownToLine, Cpu, Check } from 'lucide-react';
+import { ArrowDownToLine, Cpu, Check, AlertCircle } from 'lucide-react';
 import { EkkoMascot } from '../mascot/EkkoMascot';
 import type { MascotState } from '../../types';
 
@@ -12,6 +12,7 @@ interface HomeViewProps {
     vramUsageMb: number;
     isOnline: boolean;
   };
+  errorMessage?: string | null;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -19,6 +20,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onMascotClick,
   onDropPayload,
   telemetry,
+  errorMessage,
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [recentDropName, setRecentDropName] = useState<string | null>(null);
@@ -42,7 +44,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
     let content = '';
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      content = e.dataTransfer.files[0].name;
+      const file = e.dataTransfer.files[0];
+      // In Tauri / WebKit, file object has a non-standard path property containing the absolute file path
+      const filePath = (file as unknown as { path?: string }).path;
+      content = filePath || file.name;
     } else {
       content = e.dataTransfer.getData('text/plain') || 'Document déposé';
     }
@@ -53,11 +58,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   const getStateDescription = () => {
+    if (!telemetry.isOnline) {
+      return 'Daemon déconnecté · Lancez `uv run ekko daemon`';
+    }
     switch (mascotState) {
       case 'idle':
         return 'En veille active · Veilleur d’angles morts';
       case 'ingestion':
-        return 'Absorption et distillation en cours...';
+        return 'Transmission au daemon et distillation...';
       case 'investigation':
         return 'Analyse des signaux et synthèse PKM...';
       case 'alert':
@@ -70,13 +78,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-between p-5 select-none">
+    <div className="flex-1 flex flex-col items-center justify-between p-5 select-none h-full">
       {/* Top Tagline */}
       <div className="text-center">
         <h2 className="text-xs font-semibold tracking-wider text-slate-300 uppercase">
           Tampon Cognitif Ambiant
         </h2>
-        <p className="text-[11px] text-slate-400 mt-0.5">
+        <p className={`text-[11px] mt-0.5 ${telemetry.isOnline ? 'text-slate-400' : 'text-rose-400 font-medium'}`}>
           {getStateDescription()}
         </p>
       </div>
@@ -124,12 +132,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
+      {/* Error banner if drop failed */}
+      {errorMessage && (
+        <div className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10.5px] text-rose-300 bg-rose-950/40 py-1.5 px-3 rounded-xl border border-rose-800/40 font-mono">
+          <AlertCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+          <span className="truncate">{errorMessage}</span>
+        </div>
+      )}
+
       {/* Bottom Telemetry Chip */}
       <div className="mt-3 flex items-center justify-center gap-2 text-[10px] font-mono text-slate-500">
         <span className="flex items-center gap-1 text-slate-400">
           <span
             className="w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: telemetry.isOnline ? '#10b981' : '#f59e0b' }}
+            style={{
+              backgroundColor: telemetry.isOnline ? '#10b981' : '#f43f5e',
+              boxShadow: telemetry.isOnline
+                ? '0 0 8px rgba(16, 185, 129, 0.6)'
+                : '0 0 8px rgba(244, 63, 94, 0.6)',
+            }}
           />
           {telemetry.isOnline ? 'Daemon local actif' : 'Hors ligne'}
         </span>

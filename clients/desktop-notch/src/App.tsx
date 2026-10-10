@@ -7,9 +7,11 @@ import { ChatView } from './components/pod/ChatView';
 import { EchoView } from './components/pod/EchoView';
 import { SettingsView } from './components/pod/SettingsView';
 import {
+  checkDaemonStatus,
+  submitPromptToDaemon,
+  getDaemonNotes,
+  ingestFilePath,
   hideWindow,
-  pingDaemon,
-  submitPrompt,
 } from './services/tauri';
 
 // Synthesizer Web Audio API helper
@@ -43,7 +45,7 @@ function playAudioChime(type: 'plop' | 'alert', muted: boolean): void {
       osc.stop(ctx.currentTime + 0.2);
     }
   } catch {
-    // Ignore audio errors if audio context blocked by browser policy
+    // Ignore audio errors if blocked
   }
 }
 
@@ -52,50 +54,70 @@ export const App: React.FC = () => {
   const [mascotState, setMascotState] = useState<MascotState>('idle');
   const [currentProfile, setCurrentProfile] = useState<BYOMProfile>('micro');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  const [isLoadingNotes, setIsLoadingNotes] = useState<boolean>(false);
   const [audioMuted, setAudioMuted] = useState<boolean>(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [homeError, setHomeError] = useState<string | null>(null);
 
   const [daemonStatus, setDaemonStatus] = useState<DaemonStatus>({
-    connected: true,
+    connected: false,
     niceness: 'nice +10',
     vramUsageMb: 0,
     socketPath: '/tmp/ekko.sock',
     activeSources: 6,
   });
 
-  const [notes, setNotes] = useState<DistilledNote[]>([
-    {
-      id: 'note-1',
-      title: 'Attention Decay & Context Compression in Agentic LLMs',
-      summary:
-        'Synthèse Map-Reduce : réduction de 70% de la VRAM requise sans perte d’évocation sur contextes 128k.',
-      tags: ['ai-arch', 'compression', 'arxiv'],
-      source: 'arXiv · 2409.Attention',
-      sourceType: 'arxiv',
-      createdAt: '12m',
-      obsidianSaved: true,
-    },
-    {
-      id: 'note-2',
-      title: 'Rust vs Tauri v2 IPC Throughput & Memory Bounds',
-      summary:
-        'Benchmarks de bande passante sur socket UNIX. Élimination du surcoût JSON pour les flux volumineux.',
-      tags: ['tauri', 'rust-ipc'],
-      source: 'Drop · Benchmarks.md',
-      sourceType: 'drop',
-      createdAt: 'Hier',
-      obsidianSaved: true,
-    },
-  ]);
+  const [notes, setNotes] = useState<DistilledNote[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'msg-init',
-      sender: 'ekko',
-      content:
-        'Bonjour ! Je veille sur tes 6 flux déclarés. 2 ruptures ont été consolidées aujourd’hui. Que souhaites-tu explorer ?',
-      timestamp: 'Maintenant',
-    },
-  ]);
+  // Real daemon health check
+  const handleCheckDaemon = useCallback(async () => {
+    const isOnline = await checkDaemonStatus();
+    setDaemonStatus((prev) => ({
+      ...prev,
+      connected: isOnline,
+    }));
+    return isOnline;
+  }, []);
+
+  // Fetch real notes from daemon
+  const handleFetchNotes = useCallback(async () => {
+    setIsLoadingNotes(true);
+    try {
+      const realNotes = await getDaemonNotes();
+      setNotes(realNotes);
+    } catch (e) {
+      console.warn('Failed fetching daemon notes:', e);
+    } finally {
+      setIsLoadingNotes(false);
+    }
+  }, []);
+
+  // On mount: check daemon and load initial data
+  useEffect(() => {
+    handleCheckDaemon().then((isOnline) => {
+      if (isOnline) {
+        handleFetchNotes();
+        setMessages([
+          {
+            id: 'msg-init',
+            sender: 'ekko',
+            content: 'Bonjour ! Je suis connecté au daemon local. Que souhaites-tu explorer ou analyser ?',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      } else {
+        setMessages([
+          {
+            id: 'msg-offline',
+            sender: 'ekko',
+            content: '⚠️ Daemon hors ligne. Pour connecter Ekko, lancez dans un terminal :\n`uv run ekko daemon`',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      }
+    });
+  }, [handleCheckDaemon, handleFetchNotes]);
 
   // Mascot poke interaction
   const handleMascotClick = useCallback(() => {
@@ -104,35 +126,26 @@ export const App: React.FC = () => {
     setTimeout(() => setMascotState('idle'), 2000);
   }, [audioMuted]);
 
-  // Drop & Forget action
-  const handleDropPayload = useCallback((payload: string) => {
+  // Real Drop & Forget action
+  const handleDropPayload = useCallback(async (payload: string) => {
     playAudioChime('plop', audioMuted);
     setMascotState('ingestion');
+    setHomeError(null);
 
-    setTimeout(() => {
-      const newNote: DistilledNote = {
-        id: `note-${Date.now()}`,
-        title: payload.startsWith('http') ? `Ingestion Web: ${payload}` : `Document: ${payload}`,
-        summary:
-          'Signal absorbé et distillé en tâche de fond par le pipeline local. Fiche Markdown générée dans Obsidian.',
-        tags: ['ingestion', 'drop-and-forget'],
-        source: 'Drop & Forget',
-        sourceType: 'drop',
-        createdAt: 'À l’instant',
-        obsidianSaved: true,
-      };
-
-      setNotes((prev) => [newNote, ...prev]);
+    try {
+      await ingestFilePath(payload);
       setMascotState('alert');
       playAudioChime('alert', audioMuted);
+      await handleFetchNotes();
+      setTimeout(() => setMascotState('idle'), 1600);
+    } catch {
+      setHomeError('Daemon hors ligne. Lancez `uv run ekko daemon`.');
+      setMascotState('dizzy');
+      setTimeout(() => setMascotState('idle'), 2000);
+    }
+  }, [audioMuted, handleFetchNotes]);
 
-      setTimeout(() => {
-        setMascotState('idle');
-      }, 1600);
-    }, 1200);
-  }, [audioMuted]);
-
-  // Submit prompt in ChatView
+  // Real submit prompt in ChatView
   const handleSendMessage = useCallback(async (text: string) => {
     const userMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -143,22 +156,28 @@ export const App: React.FC = () => {
 
     setMessages((prev) => [...prev, userMsg]);
     setIsStreaming(true);
+    setChatError(null);
     setMascotState('investigation');
 
-    await submitPrompt(text);
-
-    setTimeout(() => {
+    try {
+      const response = await submitPromptToDaemon(text);
       setIsStreaming(false);
       setMascotState('idle');
+
       const botMsg: ChatMessage = {
         id: `msg-${Date.now() + 1}`,
         sender: 'ekko',
-        content: `D’après ma mémoire hybride (SQLite-vec + FTS5), voici les points saillants concernant "${text}" :\n\n• Fiche Obsidian synchronisée dans le PKM local.\n• Confinement matériel respecté : 0 Mo VRAM résiduelle.`,
+        content: response,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, botMsg]);
       playAudioChime('alert', audioMuted);
-    }, 1600);
+    } catch {
+      setIsStreaming(false);
+      setMascotState('dizzy');
+      setChatError('Daemon hors ligne. Lancez `uv run ekko daemon`.');
+      setTimeout(() => setMascotState('idle'), 2000);
+    }
   }, [audioMuted]);
 
   // Copy note as Markdown
@@ -166,20 +185,6 @@ export const App: React.FC = () => {
     const markdown = `# ${note.title}\n\n${note.summary}\n\nTags: ${note.tags.map((t) => `#${t}`).join(' ')}\nSource: ${note.source}\n`;
     navigator.clipboard?.writeText(markdown);
   }, []);
-
-  // Ping daemon
-  const handleTestPing = useCallback(async () => {
-    const res = await pingDaemon();
-    setDaemonStatus((prev) => ({
-      ...prev,
-      connected: res.status === 'ok',
-    }));
-  }, []);
-
-  // Periodic daemon check
-  useEffect(() => {
-    handleTestPing();
-  }, [handleTestPing]);
 
   const springTabTransition = {
     type: 'spring' as const,
@@ -189,8 +194,8 @@ export const App: React.FC = () => {
 
   return (
     <div className="w-full h-full min-h-screen flex items-center justify-center bg-transparent p-0 m-0 overflow-hidden select-none">
-      {/* Centered Fixed Pod Container (440x560px Style Coucou) */}
-      <main className="w-[440px] h-[560px] rounded-[28px] bg-[#0c0c0e]/95 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden text-slate-100">
+      {/* Centered Fixed Pod Container (420x540px Style Coucou) */}
+      <main className="w-[420px] h-[540px] rounded-[28px] bg-[#0c0c0e]/95 backdrop-blur-2xl border border-white/10 shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden text-slate-100">
         {/* Minimalist 44px Icon Header */}
         <PodHeader
           activeTab={activeTab}
@@ -211,7 +216,7 @@ export const App: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={springTabTransition}
-                className="flex-1 flex flex-col overflow-hidden"
+                className="flex-1 flex flex-col overflow-hidden h-full"
               >
                 <HomeView
                   mascotState={mascotState}
@@ -222,6 +227,7 @@ export const App: React.FC = () => {
                     vramUsageMb: daemonStatus.vramUsageMb,
                     isOnline: daemonStatus.connected,
                   }}
+                  errorMessage={homeError}
                 />
               </motion.div>
             )}
@@ -233,13 +239,15 @@ export const App: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={springTabTransition}
-                className="flex-1 flex flex-col overflow-hidden"
+                className="flex-1 flex flex-col overflow-hidden h-full"
               >
                 <ChatView
                   messages={messages}
                   onSendMessage={handleSendMessage}
                   isStreaming={isStreaming}
                   currentProfile={currentProfile}
+                  daemonConnected={daemonStatus.connected}
+                  errorMessage={chatError}
                 />
               </motion.div>
             )}
@@ -251,9 +259,14 @@ export const App: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={springTabTransition}
-                className="flex-1 flex flex-col overflow-hidden"
+                className="flex-1 flex flex-col overflow-hidden h-full"
               >
-                <EchoView notes={notes} onCopyNote={handleCopyNote} />
+                <EchoView
+                  notes={notes}
+                  onCopyNote={handleCopyNote}
+                  onRefreshNotes={handleFetchNotes}
+                  isLoading={isLoadingNotes}
+                />
               </motion.div>
             )}
 
@@ -264,13 +277,15 @@ export const App: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={springTabTransition}
-                className="flex-1 flex flex-col overflow-hidden"
+                className="flex-1 flex flex-col overflow-hidden h-full"
               >
                 <SettingsView
                   currentProfile={currentProfile}
                   onSelectProfile={setCurrentProfile}
                   daemonStatus={daemonStatus}
-                  onTestPing={handleTestPing}
+                  onTestPing={async () => {
+                    await handleCheckDaemon();
+                  }}
                 />
               </motion.div>
             )}
