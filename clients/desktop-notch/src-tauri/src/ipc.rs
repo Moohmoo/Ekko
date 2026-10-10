@@ -115,15 +115,21 @@ where
         }
 
         if let Ok(event) = serde_json::from_str::<Value>(&line_in) {
-            let event_type = event
-                .get("type")
-                .or_else(|| event.get("event"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let is_completed = {
+                let event_type = event
+                    .get("type")
+                    .or_else(|| event.get("event"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                matches!(
+                    event_type,
+                    "turn_completed" | "TurnCompleted" | "engine_error" | "EngineError"
+                )
+            };
 
             on_event(event)?;
 
-            if matches!(event_type, "turn_completed" | "TurnCompleted" | "engine_error" | "EngineError") {
+            if is_completed {
                 break;
             }
         }
