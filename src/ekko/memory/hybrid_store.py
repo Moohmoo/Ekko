@@ -53,7 +53,7 @@ def _row_to_knowledge_note(row: sqlite3.Row) -> KnowledgeNote:
     )
 
 
-class DatabaseManager:
+class HybridStore:
     """Manages asynchronous access to unified SQLite tables and hybrid vector search."""
 
     def __init__(self, db_path: str | Path = "data/ekko.db", auto_init: bool = True) -> None:
@@ -418,6 +418,3 @@ class DatabaseManager:
         """Search knowledge notes using RRF fusion, lexical FTS5, or semantic vectors."""
         return await asyncio.to_thread(self._search_notes_sync, query, query_embedding, mode, limit, k)
 
-
-# Alias per ARCHITECTURE.md Section 8
-HybridStore = DatabaseManager

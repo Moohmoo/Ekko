@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import pytest
 
-from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.models import (
     KnowledgeNote,
     RawSignal,
@@ -20,14 +20,14 @@ def db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def db_manager(db_path: Path) -> DatabaseManager:
-    """Provide an initialized DatabaseManager instance."""
-    manager = DatabaseManager(db_path=db_path)
+def db_manager(db_path: Path) -> HybridStore:
+    """Provide an initialized HybridStore instance."""
+    manager = HybridStore(db_path=db_path)
     manager.init_schema()
     return manager
 
 
-def test_init_schema_creates_tables_and_wal(db_manager: DatabaseManager, db_path: Path) -> None:
+def test_init_schema_creates_tables_and_wal(db_manager: HybridStore, db_path: Path) -> None:
     """Ensure database initialization creates expected tables and sets WAL mode."""
     assert db_path.exists()
     assert db_manager.is_wal_mode() is True
@@ -39,7 +39,7 @@ def test_init_schema_creates_tables_and_wal(db_manager: DatabaseManager, db_path
 
 
 @pytest.mark.asyncio
-async def test_upsert_and_get_source_state(db_manager: DatabaseManager) -> None:
+async def test_upsert_and_get_source_state(db_manager: HybridStore) -> None:
     """Ensure source state can be created, retrieved, and updated."""
     state = SourceState(
         id="hn_tech",
@@ -75,7 +75,7 @@ async def test_upsert_and_get_source_state(db_manager: DatabaseManager) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_source_states(db_manager: DatabaseManager) -> None:
+async def test_list_source_states(db_manager: HybridStore) -> None:
     """Ensure listing source states returns all registered states."""
     s1 = SourceState(id="s1", source_type="rss", url_or_path="https://feed1.xml")
     s2 = SourceState(id="s2", source_type="rest_api", url_or_path="https://api2.json")
@@ -89,7 +89,7 @@ async def test_list_source_states(db_manager: DatabaseManager) -> None:
 
 
 @pytest.mark.asyncio
-async def test_save_and_query_raw_signals(db_manager: DatabaseManager) -> None:
+async def test_save_and_query_raw_signals(db_manager: HybridStore) -> None:
     """Ensure raw signals can be saved and queried by source and status."""
     # Source state prerequisite for foreign key
     await db_manager.upsert_source_state(
@@ -137,7 +137,7 @@ async def test_save_and_query_raw_signals(db_manager: DatabaseManager) -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_signal_status(db_manager: DatabaseManager) -> None:
+async def test_update_signal_status(db_manager: HybridStore) -> None:
     """Ensure signal status transition updates cleanly."""
     await db_manager.upsert_source_state(
         SourceState(id="src_test", source_type="rss", url_or_path="https://test.xml")
@@ -157,7 +157,7 @@ async def test_update_signal_status(db_manager: DatabaseManager) -> None:
 
 
 @pytest.mark.asyncio
-async def test_save_and_get_knowledge_note(db_manager: DatabaseManager) -> None:
+async def test_save_and_get_knowledge_note(db_manager: HybridStore) -> None:
     """Ensure knowledge notes can be saved, fetched by slug, and listed."""
     note = KnowledgeNote(
         id="note_1",

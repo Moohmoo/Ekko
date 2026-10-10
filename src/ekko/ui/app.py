@@ -12,7 +12,7 @@ from ekko.config.loader import (
 )
 from ekko.core.engine import EkkoEngine
 from ekko.core.prompt import build_system_prompt
-from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.sqlite_memory import SqliteMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings
@@ -23,8 +23,18 @@ from ekko.logger import setup_logger
 
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
-    """Parse CLI arguments for target session and flags."""
+    """Parse CLI arguments for target session, daemon subcommand and flags."""
     parser = argparse.ArgumentParser(description="Ekko Modern CLI")
+    subparsers = parser.add_subparsers(dest="command")
+
+    daemon_parser = subparsers.add_parser("daemon", help="Run Ekko background daemon and IPC server")
+    daemon_parser.add_argument(
+        "--interval",
+        type=float,
+        default=60.0,
+        help="Polling interval in seconds (default: 60.0)",
+    )
+
     parser.add_argument(
         "--session",
         "-s",
@@ -96,8 +106,14 @@ async def run_app(
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Bootstrap application settings, dependencies, and launch modern REPL."""
+    """Bootstrap application settings, dependencies, and launch modern REPL or daemon."""
     parsed = parse_args(argv)
+    if getattr(parsed, "command", None) == "daemon":
+        from ekko.daemon.service import run_daemon
+
+        asyncio.run(run_daemon(poll_interval=parsed.interval))
+        return
+
     settings = Settings()
     setup_logger(settings)
 
@@ -106,7 +122,7 @@ def main(argv: list[str] | None = None) -> None:
     plugins_config = load_plugins_config(settings.config_dir)
 
     system_prompt = build_system_prompt(core_prompt, user_context)
-    db_manager = DatabaseManager(db_path=settings.sqlite_db_path)
+    db_manager = HybridStore(db_path=settings.sqlite_db_path)
     catalog = ToolCatalog(include_defaults=True)
     tools = catalog.build_registry(plugins_config.enabled_tools, db_manager=db_manager)
 

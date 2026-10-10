@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ekko.core.engine import EkkoEngine
-from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.models import SignalStatus
 from ekko.logger import get_logger
 
@@ -38,11 +38,11 @@ class IPCServer:
     def __init__(
         self,
         socket_path: Path | str = DEFAULT_SOCKET_PATH,
-        db_manager: DatabaseManager | None = None,
+        db_manager: HybridStore | None = None,
         engine: EkkoEngine | None = None,
     ) -> None:
         self.socket_path = Path(socket_path)
-        self.db_manager = db_manager or DatabaseManager()
+        self.db_manager = db_manager or HybridStore()
         self.engine = engine
         self._server: asyncio.Server | None = None
 

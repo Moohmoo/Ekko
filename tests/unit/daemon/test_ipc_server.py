@@ -51,7 +51,7 @@ async def test_ipc_server_ping_method(socket_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_ipc_server_scan_inbox(socket_path: Path) -> None:
-    """Ensure scan_inbox queries DatabaseManager and returns signals."""
+    """Ensure scan_inbox queries HybridStore and returns signals."""
     mock_db = MagicMock()
     sample_signal = RawSignal(
         id="sig_test",

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from ekko.core.models import ToolResult
 from ekko.core.ports import HybridMemoryPort
 from ekko.memory.embedder import TextEmbedder
-from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.models import KnowledgeNote
 from ekko.tools.base import BaseTool
 from ekko.logger import get_logger
@@ -67,7 +67,7 @@ class QueryKnowledgeTool(BaseTool):
         embedder: TextEmbedder | None = None,
         db_path: str = "data/ekko.db",
     ) -> None:
-        self.db_manager = db_manager or DatabaseManager(db_path=db_path)
+        self.db_manager = db_manager or HybridStore(db_path=db_path)
         self.embedder = embedder or TextEmbedder()
 
     async def _run(
@@ -76,7 +76,7 @@ class QueryKnowledgeTool(BaseTool):
         mode: Literal["hybrid", "lexical", "semantic"] = "hybrid",
         limit: int = 5,
     ) -> ToolResult:
-        """Execute hybrid search against DatabaseManager and format results."""
+        """Execute hybrid search against HybridStore and format results."""
         logger.debug("Executing knowledge query '%s' with mode '%s'", query, mode)
         query_vec: list[float] | None = None
 

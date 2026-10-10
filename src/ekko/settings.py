@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     log_file: str | None = Field(default="logs/ekko.log")
     config_dir: str = Field(default="config")
     sqlite_db_path: str = Field(default="data/ekko.db")
+    ipc_socket_path: str = Field(default="/tmp/ekko.sock")
 
     @property
     def active_model(self) -> str:

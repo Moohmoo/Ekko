@@ -3,7 +3,7 @@
 from pathlib import Path
 import pytest
 
-from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.models import KnowledgeNote
 
 
@@ -14,15 +14,15 @@ def db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def db_manager(db_path: Path) -> DatabaseManager:
-    """Provide an initialized DatabaseManager."""
-    manager = DatabaseManager(db_path=db_path)
+def db_manager(db_path: Path) -> HybridStore:
+    """Provide an initialized HybridStore."""
+    manager = HybridStore(db_path=db_path)
     manager.init_schema()
     return manager
 
 
 @pytest.mark.asyncio
-async def test_hybrid_search_indexes_fts_and_vectors(db_manager: DatabaseManager) -> None:
+async def test_hybrid_search_indexes_fts_and_vectors(db_manager: HybridStore) -> None:
     """Ensure saving a note indexes into both FTS5 and sqlite-vec tables."""
     # Synthetic 384-dimensional unit vectors
     vec_ai = [0.1] * 384
@@ -86,7 +86,7 @@ async def test_hybrid_search_indexes_fts_and_vectors(db_manager: DatabaseManager
 
 
 @pytest.mark.asyncio
-async def test_hybrid_search_rrf_scoring_order(db_manager: DatabaseManager) -> None:
+async def test_hybrid_search_rrf_scoring_order(db_manager: HybridStore) -> None:
     """Ensure RRF score ranks items matching both lexical and semantic modalities first."""
     vec1 = [0.5] * 384
     vec2 = [0.2] * 384

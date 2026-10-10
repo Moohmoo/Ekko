@@ -151,7 +151,7 @@ def test_main_initialization_with_real_settings() -> None:
                                 with patch("ekko.ui.app.ToolCatalog"):
                                     with patch("ekko.ui.app.LLMRouter"):
                                         with patch("ekko.ui.app.SqliteMemory"):
-                                            with patch("ekko.ui.app.DatabaseManager"):
+                                            with patch("ekko.ui.app.HybridStore"):
                                                 with patch("ekko.ui.app.run_app", new_callable=AsyncMock) as mock_run_app:
                                                     main()
 

@@ -11,7 +11,7 @@ from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
 from ekko.ingestion.connectors.base import BaseConnector
 from ekko.ingestion.connectors.rest_api import RestApiConnector
 from ekko.ingestion.connectors.rss import RssConnector
-from ekko.memory.hybrid_store import DatabaseManager
+from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.models import RawSignal, SourceState
 from ekko.logger import get_logger
 
@@ -44,7 +44,7 @@ class IngestionCoordinator:
 
     def __init__(
         self,
-        db_manager: DatabaseManager,
+        db_manager: HybridStore,
         catalog: SourcesCatalogConfig | None = None,
         rss_connector: BaseConnector | None = None,
         rest_connector: BaseConnector | None = None,
