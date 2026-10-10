@@ -30,6 +30,8 @@ logs/
 notes/
 config/user_context.yaml
 !config/user_context.yaml.example
+config/sources.yaml
+!config/sources.yaml.example
 
 
 

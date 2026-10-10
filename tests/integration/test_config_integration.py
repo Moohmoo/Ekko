@@ -82,3 +82,14 @@ async def test_full_context_loading_and_turn_execution(tmp_path: Path) -> None:
     system_count = sum(1 for m in call_2_messages if m.role == "system")
     assert system_count == 1
     assert call_2_messages[0].role == "system"
+
+
+def test_load_sources_config_integration() -> None:
+    """Ensure declarative sources configuration loads properly from default config dir."""
+    from ekko.infrastructure.ingestion.config import load_sources_config
+
+    catalog = load_sources_config("config")
+    assert len(catalog.sources) >= 2
+    source_ids = {s.id for s in catalog.sources}
+    assert "hn_tech" in source_ids
+    assert "arxiv_ai" in source_ids
