@@ -10,7 +10,7 @@ from ekko.config.schemas import (
     SourcesCatalogConfig,
     UserContextConfig,
 )
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("config.loader")
 

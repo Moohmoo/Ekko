@@ -2,7 +2,7 @@
 
 from typing import Any
 from ekko.core.ports import ToolPort
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("tools.registry")
 

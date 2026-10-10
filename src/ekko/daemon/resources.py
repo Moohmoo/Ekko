@@ -2,7 +2,7 @@
 
 import os
 from typing import Any
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("daemon.resources")
 

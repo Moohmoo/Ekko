@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from ekko.settings import Settings
-from ekko.utils.logger import get_logger, setup_logger
+from ekko.logger import get_logger, setup_logger
 
 
 def test_settings_has_logging_defaults() -> None:

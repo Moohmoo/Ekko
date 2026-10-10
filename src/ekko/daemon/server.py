@@ -9,7 +9,7 @@ from typing import Any
 from ekko.core.engine import EkkoEngine
 from ekko.memory.hybrid_store import DatabaseManager
 from ekko.memory.models import SignalStatus
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("daemon.server")
 

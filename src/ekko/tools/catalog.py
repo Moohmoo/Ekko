@@ -11,7 +11,7 @@ from ekko.tools.read_resource import ReadResourceTool
 from ekko.tools.registry import ToolRegistry
 from ekko.tools.scan_inbox import ScanInboxTool
 from ekko.tools.system_info import SystemInfoTool
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("tools.catalog")
 

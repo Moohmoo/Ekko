@@ -10,7 +10,7 @@ from ekko.memory.embedder import TextEmbedder
 from ekko.memory.hybrid_store import DatabaseManager
 from ekko.memory.models import KnowledgeNote
 from ekko.tools.base import BaseTool
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("tools.query_knowledge")
 

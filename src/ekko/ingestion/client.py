@@ -10,7 +10,7 @@ import httpx
 from ekko.core.errors import EkkoError
 from ekko.ingestion.rate_limiter import DomainRateLimiter
 from ekko.ingestion.ssrf import SSRFValidator
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("ekko.ingestion.client")
 

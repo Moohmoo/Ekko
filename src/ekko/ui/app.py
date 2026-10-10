@@ -19,7 +19,7 @@ from ekko.settings import Settings
 from ekko.tools.catalog import ToolCatalog
 from ekko.ui.input import CLIInputHandler, CommandType, ToolbarMetadata
 from ekko.ui.renderer import CLIRenderer
-from ekko.utils.logger import setup_logger
+from ekko.logger import setup_logger
 
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:

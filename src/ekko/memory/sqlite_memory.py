@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sqlite3
 from ekko.core.models import Message, ToolCall
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("memory.sqlite")
 

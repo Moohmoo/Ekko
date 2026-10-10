@@ -10,7 +10,7 @@ import trafilatura
 from ekko.core.models import ToolResult
 from ekko.ingestion.ssrf import SSRFValidator, SSRFViolationError
 from ekko.tools.base import BaseTool
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("tools.read_resource")
 

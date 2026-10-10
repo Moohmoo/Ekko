@@ -1,7 +1,7 @@
 """CPU text embedding service encapsulating FastEmbed (bge-small-en-v1.5)."""
 
 from typing import Any
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("ekko.memory.embedder")
 

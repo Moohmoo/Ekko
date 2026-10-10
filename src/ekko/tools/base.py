@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from ekko.core.models import ToolResult
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("tools")
 

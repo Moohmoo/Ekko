@@ -7,7 +7,7 @@ import litellm
 
 from ekko.core.errors import ProviderError
 from ekko.core.models import Message, ModelResponse, ToolCall
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("providers.litellm")
 

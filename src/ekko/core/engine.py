@@ -16,7 +16,7 @@ from ekko.core.events import (
 )
 from ekko.core.models import Message, ToolCall, ToolResult
 from ekko.core.ports import LLMProviderPort, MemoryPort
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("core.engine")
 

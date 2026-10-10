@@ -12,7 +12,7 @@ from ekko.core.models import ToolResult
 from ekko.core.ports import HybridMemoryPort
 from ekko.memory.models import KnowledgeNote
 from ekko.tools.base import BaseTool
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("tools.note_writer")
 

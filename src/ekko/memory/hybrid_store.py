@@ -16,7 +16,7 @@ from ekko.memory.models import (
     SourceState,
 )
 from ekko.memory.schema import INIT_UNIFIED_SCHEMA_SQL
-from ekko.utils.logger import get_logger
+from ekko.logger import get_logger
 
 logger = get_logger("memory.hybrid_store")
 
