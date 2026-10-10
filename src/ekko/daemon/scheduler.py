@@ -111,9 +111,9 @@ class IngestionCoordinator:
 
         try:
             signals, updated_state = await connector.fetch_signals(source, state=state)
+            await self.db_manager.upsert_source_state(updated_state)
             if signals:
                 await self.db_manager.save_raw_signals(signals)
-            await self.db_manager.upsert_source_state(updated_state)
             return signals
         except Exception as exc:
             await self._handle_polling_error(source, state, now, exc)
