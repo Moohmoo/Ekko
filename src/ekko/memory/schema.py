@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS raw_signals (
     author TEXT,
     published_at TEXT,
     ingested_at TEXT DEFAULT (datetime('now')),
-    status TEXT NOT NULL CHECK(status IN ('pending', 'retained', 'discarded', 'archived')),
+    status TEXT NOT NULL CHECK(status IN ('pending', 'processed', 'failed', 'retained', 'discarded', 'archived')),
     FOREIGN KEY (source_id) REFERENCES source_states(id) ON DELETE CASCADE
 );
 

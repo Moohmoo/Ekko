@@ -7,6 +7,7 @@ import signal
 from ekko.config.loader import load_core_prompt, load_plugins_config, load_user_context
 from ekko.core.engine import EkkoEngine
 from ekko.core.prompt import build_system_prompt
+from ekko.daemon.distiller import SignalDistiller
 from ekko.daemon.resources import ResourceManager
 from ekko.daemon.scheduler import IngestionCoordinator
 from ekko.daemon.server import DEFAULT_SOCKET_PATH, IPCServer
@@ -67,6 +68,18 @@ async def _run_services(
         logger.info("Daemon components cleanly stopped.")
 
 
+def _compose_coordinator(settings: Settings, store: HybridStore) -> IngestionCoordinator:
+    """Create IngestionCoordinator wired with autonomous SignalDistiller."""
+    provider = LLMRouter(settings=settings).get_provider()
+    notes_dir = getattr(settings, "notes_dir", "data/notes")
+    distiller = SignalDistiller(store=store, llm_provider=provider, notes_dir=notes_dir)
+    return IngestionCoordinator(
+        db_manager=store,
+        config_dir=settings.config_dir,
+        distiller=distiller,
+    )
+
+
 async def run_daemon(
     settings: Settings | None = None,
     socket_path: Path | str | None = None,
@@ -80,8 +93,8 @@ async def run_daemon(
     ResourceManager().apply_process_niceness(increment=10)
     store = HybridStore(db_path=active_settings.sqlite_db_path)
     engine = _build_engine(active_settings, store)
+    coordinator = _compose_coordinator(active_settings, store)
 
-    coordinator = IngestionCoordinator(db_manager=store, config_dir=active_settings.config_dir)
     sock = Path(socket_path or getattr(active_settings, "ipc_socket_path", DEFAULT_SOCKET_PATH))
     server = IPCServer(socket_path=sock, db_manager=store, engine=engine)
 

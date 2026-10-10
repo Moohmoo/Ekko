@@ -105,3 +105,23 @@ async def test_scheduler_handles_network_failure_defensively() -> None:
     saved_state: SourceState = mock_db.upsert_source_state.call_args[0][0]
     assert saved_state.consecutive_errors == 1
     assert saved_state.backoff_until is not None
+
+
+@pytest.mark.asyncio
+async def test_scheduler_triggers_distiller_after_polling() -> None:
+    """Ensure run_once calls distill_batch when a distiller is provided."""
+    mock_db = MagicMock()
+    mock_distiller = MagicMock()
+    mock_distiller.distill_batch = AsyncMock(return_value=3)
+
+    coordinator = IngestionCoordinator(
+        db_manager=mock_db,
+        catalog=SourcesCatalogConfig(sources=[]),
+        distiller=mock_distiller,
+    )
+
+    results = await coordinator.run_once()
+
+    assert results["distilled"] == 3
+    mock_distiller.distill_batch.assert_awaited_once()
+

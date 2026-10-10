@@ -8,6 +8,7 @@ from typing import Any
 
 from ekko.config.loader import load_sources_config
 from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
+from ekko.daemon.distiller import SignalDistiller
 from ekko.ingestion.connectors.base import BaseConnector
 from ekko.ingestion.connectors.rest_api import RestApiConnector
 from ekko.ingestion.connectors.rss import RssConnector
@@ -49,11 +50,13 @@ class IngestionCoordinator:
         rss_connector: BaseConnector | None = None,
         rest_connector: BaseConnector | None = None,
         config_dir: Path | str = "config",
+        distiller: SignalDistiller | None = None,
     ) -> None:
         self.db_manager = db_manager
         self.catalog = catalog or load_sources_config(config_dir)
         self.rss_connector = rss_connector or RssConnector()
         self.rest_connector = rest_connector or RestApiConnector()
+        self.distiller = distiller
         self._running = False
         self._loop_task: asyncio.Task[None] | None = None
 
@@ -117,11 +120,15 @@ class IngestionCoordinator:
             return []
 
     async def run_once(self) -> dict[str, int]:
-        """Execute a single evaluation pass across all catalog sources."""
+        """Execute evaluation pass across sources and distill pending signals."""
         results: dict[str, int] = {}
         for source in self.catalog.sources:
             signals = await self.poll_source(source)
             results[source.id] = len(signals)
+
+        if self.distiller:
+            results["distilled"] = await self.distiller.distill_batch()
+
         return results
 
     async def _run_loop(self, poll_interval_seconds: float) -> None:

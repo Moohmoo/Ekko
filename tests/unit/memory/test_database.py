@@ -155,6 +155,16 @@ async def test_update_signal_status(db_manager: HybridStore) -> None:
     assert len(signals) == 1
     assert signals[0].id == "sig_update"
 
+    # Test mark_signal_status with processed and failed string status
+    await db_manager.mark_signal_status("sig_update", "processed")
+    assert (await db_manager.get_raw_signals(status=SignalStatus.PROCESSED))[0].id == "sig_update"
+
+    await db_manager.mark_signal_status("sig_update", "failed")
+    assert (await db_manager.get_raw_signals(status=SignalStatus.FAILED))[0].id == "sig_update"
+
+    # Test get_pending_signals
+    assert len(await db_manager.get_pending_signals()) == 0
+
 
 @pytest.mark.asyncio
 async def test_save_and_get_knowledge_note(db_manager: HybridStore) -> None:

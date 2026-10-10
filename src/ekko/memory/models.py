@@ -11,6 +11,8 @@ class SignalStatus(str, Enum):
     """Lifecycle status of an ingested raw signal."""
 
     PENDING = "pending"
+    PROCESSED = "processed"
+    FAILED = "failed"
     RETAINED = "retained"
     DISCARDED = "discarded"
     ARCHIVED = "archived"

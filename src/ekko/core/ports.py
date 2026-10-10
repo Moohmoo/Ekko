@@ -90,6 +90,14 @@ class HybridMemoryPort(Protocol):
         """Fetch raw signals matching source and status criteria."""
         ...
 
+    async def get_pending_signals(self, limit: int = 5) -> list[Any]:
+        """Retrieve un-distilled raw signals in pending status."""
+        ...
+
+    async def mark_signal_status(self, signal_id: str, status: str) -> None:
+        """Update the processing status of a raw signal."""
+        ...
+
     async def save_knowledge_note(
         self,
         note: Any,
