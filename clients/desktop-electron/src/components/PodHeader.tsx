@@ -1,20 +1,21 @@
 import React from 'react';
-import type { PodTab } from '../types';
+import type { PodTab } from '../core/types';
+import { useDaemonStore } from '../core/stores/useDaemonStore';
 import { Droplet, MessageSquare, Layers, X } from 'lucide-react';
 
 interface PodHeaderProps {
   activeTab: PodTab;
   onSelectTab: (tab: PodTab) => void;
-  daemonConnected: boolean;
   onClose: () => void;
 }
 
 export const PodHeader: React.FC<PodHeaderProps> = ({
   activeTab,
   onSelectTab,
-  daemonConnected,
   onClose,
 }) => {
+  const isOnline = useDaemonStore((state) => state.isOnline);
+
   return (
     <div className="h-10 px-4 flex items-center justify-between border-b border-white/[0.04] bg-[#11141c]/50">
       {/* Navigation Tabs */}
@@ -59,10 +60,10 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
       {/* Status Dot & Close Button */}
       <div className="flex items-center gap-3">
         <span
-          className={`w-2 h-2 rounded-full ${
-            daemonConnected ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-red-400'
+          className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+            isOnline ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-red-400'
           }`}
-          title={daemonConnected ? 'Daemon connecté' : 'Daemon déconnecté'}
+          title={isOnline ? 'Daemon connecté' : 'Daemon déconnecté'}
         />
 
         <button

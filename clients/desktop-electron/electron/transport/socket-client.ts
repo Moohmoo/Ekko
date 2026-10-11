@@ -1,6 +1,6 @@
 import net from 'node:net';
 
-const DEFAULT_SOCKET_PATH = '/tmp/ekko.sock';
+export const DEFAULT_SOCKET_PATH = '/tmp/ekko.sock';
 
 export interface JSONRPCResponse<T = unknown> {
   jsonrpc: '2.0';
@@ -13,7 +13,8 @@ export interface JSONRPCResponse<T = unknown> {
 }
 
 /**
- * Send single request to the Ekko UNIX domain socket with robust buffering, timeout, and logging.
+ * Send a single JSON-RPC 2.0 request over the UNIX domain socket.
+ * Accumulates buffer until newline and logs operations with [IPC:REQ], [IPC:RES], [IPC:ERR].
  */
 export function sendJsonRpc<T = unknown>(
   method: string,
@@ -21,7 +22,7 @@ export function sendJsonRpc<T = unknown>(
   socketPath: string = DEFAULT_SOCKET_PATH
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    console.log(`[IPC] Connecting to ${socketPath} for method '${method}'...`);
+    console.log(`[IPC:REQ] Connecting to ${socketPath} -> ${method}`);
     const client = net.createConnection(socketPath);
     const payload = JSON.stringify({
       jsonrpc: '2.0',
@@ -35,7 +36,7 @@ export function sendJsonRpc<T = unknown>(
     client.setTimeout(3000);
 
     client.on('connect', () => {
-      console.log(`[IPC] Connected to socket! Sending request: ${method}`);
+      console.log(`[IPC:REQ] Connected. Writing payload for ${method}`);
       client.write(payload);
     });
 
@@ -43,36 +44,38 @@ export function sendJsonRpc<T = unknown>(
       buffer += chunk.toString();
       if (buffer.includes('\n')) {
         const line = buffer.split('\n')[0];
-        console.log(`[IPC] Received response line for ${method}: ${line.slice(0, 100)}...`);
+        console.log(`[IPC:RES] ${method} returned: ${line.slice(0, 120)}`);
         client.end();
         try {
           const parsed = JSON.parse(line) as JSONRPCResponse<T>;
           if (parsed.error) {
+            console.error(`[IPC:ERR] JSON-RPC Error in ${method}:`, parsed.error.message);
             reject(new Error(parsed.error.message));
           } else {
             resolve(parsed.result as T);
           }
         } catch (err) {
+          console.error(`[IPC:ERR] Parse error in ${method}:`, err);
           reject(err);
         }
       }
     });
 
     client.on('timeout', () => {
-      console.warn(`[IPC] Timeout (3s) waiting for socket response to '${method}'`);
+      console.warn(`[IPC:ERR] Timeout (3000ms) waiting for ${method}`);
       client.destroy();
       reject(new Error('TIMEOUT'));
     });
 
     client.on('error', (err) => {
-      console.warn(`[IPC] Socket error for '${method}':`, err.message);
+      console.warn(`[IPC:ERR] Socket connection error for ${method}:`, err.message);
       reject(new Error('DAEMON_OFFLINE'));
     });
   });
 }
 
 /**
- * Stream prompt execution over UNIX domain socket, invoking chunk and completion callbacks.
+ * Stream prompt execution over UNIX domain socket line-by-line (NDJSON EngineEvents).
  */
 export function streamPrompt(
   prompt: string,
@@ -81,7 +84,7 @@ export function streamPrompt(
   onError: (error: string) => void,
   socketPath: string = DEFAULT_SOCKET_PATH
 ): void {
-  console.log(`[IPC] Streaming prompt to ${socketPath}...`);
+  console.log(`[IPC:REQ] streamPrompt started on ${socketPath}`);
   const client = net.createConnection(socketPath);
   let fullText = '';
   let buffer = '';
@@ -96,7 +99,7 @@ export function streamPrompt(
   }) + '\n';
 
   client.on('connect', () => {
-    console.log('[IPC] Connected for streamPrompt, writing payload');
+    console.log('[IPC:REQ] Connected for streamPrompt, transmitting payload');
     client.write(payload);
   });
 
@@ -110,6 +113,7 @@ export function streamPrompt(
       try {
         const evt = JSON.parse(line);
         if (evt.error) {
+          console.error('[IPC:ERR] Engine reported error:', evt.error.message);
           onError(evt.error.message || 'Moteur indisponible');
           client.end();
           return;
@@ -121,35 +125,36 @@ export function streamPrompt(
           onChunk(evt.delta || '');
         } else if (type === 'turn_completed' || type === 'TurnCompleted') {
           const finalAns = evt.response || fullText;
+          console.log(`[IPC:RES] streamPrompt completed (${finalAns.length} chars)`);
           onComplete(finalAns);
           client.end();
           return;
         } else if (type === 'engine_error' || type === 'EngineError') {
+          console.error('[IPC:ERR] EngineError:', evt.message);
           onError(evt.message || 'Erreur moteur');
           client.end();
           return;
         }
       } catch {
-        // partial line
+        // Line was fragmented, will be completed on next chunk
       }
     }
   });
 
   client.on('end', () => {
-    console.log('[IPC] Stream completed, total length:', fullText.length);
     if (fullText) {
       onComplete(fullText);
     }
   });
 
   client.on('timeout', () => {
-    console.warn('[IPC] Stream timeout');
+    console.warn('[IPC:ERR] Stream prompt timeout (60s)');
     client.destroy();
     onError('TIMEOUT');
   });
 
   client.on('error', (err) => {
-    console.warn('[IPC] Stream socket error:', err.message);
+    console.warn('[IPC:ERR] Stream prompt socket error:', err.message);
     onError('DAEMON_OFFLINE');
   });
 }

@@ -1,13 +1,14 @@
 import net from 'node:net';
-var DEFAULT_SOCKET_PATH = '/tmp/ekko.sock';
+export var DEFAULT_SOCKET_PATH = '/tmp/ekko.sock';
 /**
- * Send single request to the Ekko UNIX domain socket with robust buffering, timeout, and logging.
+ * Send a single JSON-RPC 2.0 request over the UNIX domain socket.
+ * Accumulates buffer until newline and logs operations with [IPC:REQ], [IPC:RES], [IPC:ERR].
  */
 export function sendJsonRpc(method, params, socketPath) {
     if (params === void 0) { params = {}; }
     if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
     return new Promise(function (resolve, reject) {
-        console.log("[IPC] Connecting to ".concat(socketPath, " for method '").concat(method, "'..."));
+        console.log("[IPC:REQ] Connecting to ".concat(socketPath, " -> ").concat(method));
         var client = net.createConnection(socketPath);
         var payload = JSON.stringify({
             jsonrpc: '2.0',
@@ -18,18 +19,19 @@ export function sendJsonRpc(method, params, socketPath) {
         var buffer = '';
         client.setTimeout(3000);
         client.on('connect', function () {
-            console.log("[IPC] Connected to socket! Sending request: ".concat(method));
+            console.log("[IPC:REQ] Connected. Writing payload for ".concat(method));
             client.write(payload);
         });
         client.on('data', function (chunk) {
             buffer += chunk.toString();
             if (buffer.includes('\n')) {
                 var line = buffer.split('\n')[0];
-                console.log("[IPC] Received response line for ".concat(method, ": ").concat(line.slice(0, 100), "..."));
+                console.log("[IPC:RES] ".concat(method, " returned: ").concat(line.slice(0, 120)));
                 client.end();
                 try {
                     var parsed = JSON.parse(line);
                     if (parsed.error) {
+                        console.error("[IPC:ERR] JSON-RPC Error in ".concat(method, ":"), parsed.error.message);
                         reject(new Error(parsed.error.message));
                     }
                     else {
@@ -37,27 +39,28 @@ export function sendJsonRpc(method, params, socketPath) {
                     }
                 }
                 catch (err) {
+                    console.error("[IPC:ERR] Parse error in ".concat(method, ":"), err);
                     reject(err);
                 }
             }
         });
         client.on('timeout', function () {
-            console.warn("[IPC] Timeout (3s) waiting for socket response to '".concat(method, "'"));
+            console.warn("[IPC:ERR] Timeout (3000ms) waiting for ".concat(method));
             client.destroy();
             reject(new Error('TIMEOUT'));
         });
         client.on('error', function (err) {
-            console.warn("[IPC] Socket error for '".concat(method, "':"), err.message);
+            console.warn("[IPC:ERR] Socket connection error for ".concat(method, ":"), err.message);
             reject(new Error('DAEMON_OFFLINE'));
         });
     });
 }
 /**
- * Stream prompt execution over UNIX domain socket, invoking chunk and completion callbacks.
+ * Stream prompt execution over UNIX domain socket line-by-line (NDJSON EngineEvents).
  */
 export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
     if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
-    console.log("[IPC] Streaming prompt to ".concat(socketPath, "..."));
+    console.log("[IPC:REQ] streamPrompt started on ".concat(socketPath));
     var client = net.createConnection(socketPath);
     var fullText = '';
     var buffer = '';
@@ -69,7 +72,7 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
         id: Date.now(),
     }) + '\n';
     client.on('connect', function () {
-        console.log('[IPC] Connected for streamPrompt, writing payload');
+        console.log('[IPC:REQ] Connected for streamPrompt, transmitting payload');
         client.write(payload);
     });
     client.on('data', function (data) {
@@ -83,6 +86,7 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
             try {
                 var evt = JSON.parse(line);
                 if (evt.error) {
+                    console.error('[IPC:ERR] Engine reported error:', evt.error.message);
                     onError(evt.error.message || 'Moteur indisponible');
                     client.end();
                     return;
@@ -94,34 +98,35 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
                 }
                 else if (type === 'turn_completed' || type === 'TurnCompleted') {
                     var finalAns = evt.response || fullText;
+                    console.log("[IPC:RES] streamPrompt completed (".concat(finalAns.length, " chars)"));
                     onComplete(finalAns);
                     client.end();
                     return;
                 }
                 else if (type === 'engine_error' || type === 'EngineError') {
+                    console.error('[IPC:ERR] EngineError:', evt.message);
                     onError(evt.message || 'Erreur moteur');
                     client.end();
                     return;
                 }
             }
             catch (_a) {
-                // partial line
+                // Line was fragmented, will be completed on next chunk
             }
         }
     });
     client.on('end', function () {
-        console.log('[IPC] Stream completed, total length:', fullText.length);
         if (fullText) {
             onComplete(fullText);
         }
     });
     client.on('timeout', function () {
-        console.warn('[IPC] Stream timeout');
+        console.warn('[IPC:ERR] Stream prompt timeout (60s)');
         client.destroy();
         onError('TIMEOUT');
     });
     client.on('error', function (err) {
-        console.warn('[IPC] Stream socket error:', err.message);
+        console.warn('[IPC:ERR] Stream prompt socket error:', err.message);
         onError('DAEMON_OFFLINE');
     });
 }

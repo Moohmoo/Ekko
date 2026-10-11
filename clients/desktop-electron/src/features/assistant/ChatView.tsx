@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import type { ChatMessage } from '../types';
+import type { ChatMessage } from '../../core/types';
+import { useDaemonStore } from '../../core/stores/useDaemonStore';
 import { Send, AlertCircle } from 'lucide-react';
 
 interface ChatViewProps {
   messages: ChatMessage[];
   onSendMessage: (text: string) => Promise<void>;
   isStreaming: boolean;
-  daemonConnected: boolean;
   errorMessage: string | null;
 }
 
@@ -14,9 +14,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   messages,
   onSendMessage,
   isStreaming,
-  daemonConnected,
   errorMessage,
 }) => {
+  const isOnline = useDaemonStore((state) => state.isOnline);
   const [input, setInput] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -29,8 +29,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden p-3.5 gap-2.5">
-      {/* Offline / Error Banner */}
-      {(!daemonConnected || errorMessage) && (
+      {/* Offline / Error Banner derived from Zustand */}
+      {(!isOnline || errorMessage) && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-500/30 text-red-200 text-xs">
           <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
           <span className="truncate">
@@ -82,12 +82,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Demander à Ekko..."
-          disabled={!daemonConnected || isStreaming}
+          disabled={!isOnline || isStreaming}
           className="flex-1 bg-transparent border-none outline-none text-xs text-slate-100 placeholder:text-slate-500 disabled:opacity-50"
         />
         <button
           type="submit"
-          disabled={!input.trim() || isStreaming || !daemonConnected}
+          disabled={!input.trim() || isStreaming || !isOnline}
           className="w-7 h-7 rounded-full bg-sky-500 hover:bg-sky-400 disabled:bg-slate-700 disabled:opacity-40 flex items-center justify-center text-slate-900 transition-colors shrink-0"
         >
           <Send className="w-3.5 h-3.5" />

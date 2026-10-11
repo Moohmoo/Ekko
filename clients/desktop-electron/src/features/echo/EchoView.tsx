@@ -1,5 +1,5 @@
 import React from 'react';
-import type { NoteItem } from '../types';
+import type { NoteItem } from '../../core/types';
 import { Layers, Copy, Check } from 'lucide-react';
 
 interface EchoViewProps {

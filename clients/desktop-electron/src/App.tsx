@@ -1,37 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import type { PodTab, NoteItem, ChatMessage } from './types';
+import React, { useState, useCallback } from 'react';
+import type { PodTab, NoteItem, ChatMessage } from './core/types';
+import { useDaemonHeartbeat } from './core/hooks/useDaemonHeartbeat';
 import { PodHeader } from './components/PodHeader';
-import { HomeView } from './components/HomeView';
-import { ChatView } from './components/ChatView';
-import { EchoView } from './components/EchoView';
+import { HomeView } from './features/home/HomeView';
+import { ChatView } from './features/assistant/ChatView';
+import { EchoView } from './features/echo/EchoView';
 
 export const App: React.FC = () => {
+  // Mount 2s polling heartbeat from Zustand store
+  useDaemonHeartbeat();
+
   const [activeTab, setActiveTab] = useState<PodTab>('home');
-  const [daemonConnected, setDaemonConnected] = useState<boolean>(false);
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [isLoadingNotes, setIsLoadingNotes] = useState<boolean>(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Ping daemon health
-  const checkHealth = useCallback(async () => {
-    try {
-      if (!window.ekkoAPI) {
-        console.warn('[Frontend] window.ekkoAPI is undefined! Preload script may not have executed.');
-        setDaemonConnected(false);
-        return;
-      }
-      const res = await window.ekkoAPI.ping();
-      console.log('[Frontend] Daemon ping response:', res);
-      setDaemonConnected(res && res.status === 'ok');
-    } catch (err) {
-      console.warn('[Frontend] Ping failed:', err);
-      setDaemonConnected(false);
-    }
-  }, []);
-
-  // Fetch Notes
+  // Fetch Notes on demand
   const fetchNotes = useCallback(async () => {
     if (!window.ekkoAPI) return;
     setIsLoadingNotes(true);
@@ -46,17 +32,11 @@ export const App: React.FC = () => {
       }));
       setNotes(mapped);
     } catch (e) {
-      console.warn('Failed fetching notes:', e);
+      console.warn('[Frontend] Failed fetching notes:', e);
     } finally {
       setIsLoadingNotes(false);
     }
   }, []);
-
-  useEffect(() => {
-    checkHealth();
-    const timer = setInterval(checkHealth, 5000);
-    return () => clearInterval(timer);
-  }, [checkHealth]);
 
   // Handle Send Message
   const handleSendMessage = async (text: string) => {
@@ -73,7 +53,7 @@ export const App: React.FC = () => {
     setIsStreaming(true);
     setErrorMessage(null);
 
-    let assistantMsgId = `bot-${Date.now()}`;
+    const assistantMsgId = `bot-${Date.now()}`;
     let accumulated = '';
 
     const cleanup = window.ekkoAPI.onPromptChunk((chunk) => {
@@ -141,20 +121,16 @@ export const App: React.FC = () => {
           setActiveTab(tab);
           if (tab === 'echo') fetchNotes();
         }}
-        daemonConnected={daemonConnected}
         onClose={handleClose}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {activeTab === 'home' && (
-          <HomeView onFileDrop={handleFileDrop} daemonConnected={daemonConnected} />
-        )}
+        {activeTab === 'home' && <HomeView onFileDrop={handleFileDrop} />}
         {activeTab === 'chat' && (
           <ChatView
             messages={messages}
             onSendMessage={handleSendMessage}
             isStreaming={isStreaming}
-            daemonConnected={daemonConnected}
             errorMessage={errorMessage}
           />
         )}

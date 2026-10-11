@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sendJsonRpc, streamPrompt } from './ipc-bridge';
+import { sendJsonRpc, streamPrompt } from './transport/socket-client';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Mascot } from './Mascot';
+import { Mascot } from '../../components/Mascot';
+import { useDaemonStore } from '../../core/stores/useDaemonStore';
 import { UploadCloud } from 'lucide-react';
 
 interface HomeViewProps {
   onFileDrop: (filePath: string) => Promise<void>;
-  daemonConnected: boolean;
 }
 
-export const HomeView: React.FC<HomeViewProps> = ({ onFileDrop, daemonConnected }) => {
+export const HomeView: React.FC<HomeViewProps> = ({ onFileDrop }) => {
+  const isOnline = useDaemonStore((state) => state.isOnline);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -25,7 +26,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onFileDrop, daemonConnected 
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      // In Electron renderer, File objects have a .path property with absolute path
       const filePath = (file as unknown as { path?: string }).path || file.name;
       await onFileDrop(filePath);
     }
@@ -63,14 +63,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ onFileDrop, daemonConnected 
         </div>
       </div>
 
-      {/* Telemetry Badge */}
+      {/* Telemetry Badge connected directly to Zustand */}
       <div className="mt-4 px-3 py-1 rounded-full bg-white/[0.03] border border-white/5 text-[10px] text-slate-500 flex items-center gap-2">
         <span
-          className={`w-1.5 h-1.5 rounded-full ${
-            daemonConnected ? 'bg-emerald-400' : 'bg-red-400'
+          className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+            isOnline ? 'bg-emerald-400' : 'bg-red-400'
           }`}
         />
-        <span>nice +10 • VRAM 0M • {daemonConnected ? 'socket OK' : 'déconnecté'}</span>
+        <span>nice +10 • VRAM 0M • {isOnline ? 'socket OK' : 'déconnecté'}</span>
       </div>
     </div>
   );
