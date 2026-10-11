@@ -28,7 +28,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
   };
 
   return (
-    <div className="h-10 px-4 flex items-center justify-between border-b border-white/[0.04] bg-[#11141c]/50 select-none">
+    <div className="h-9 px-1 flex items-center justify-between select-none shrink-0">
       {/* Navigation Tabs (Left) */}
       <div className="flex items-center gap-1">
         <button
