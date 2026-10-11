@@ -179,6 +179,23 @@ ipcMain.handle('daemon:ingest_file', function (_event, filePath) { return __awai
         }
     });
 }); });
+ipcMain.handle('daemon:get_pending_signals', function () { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, sendJsonRpc('get_pending_signals', { limit: 5 })];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); });
+ipcMain.handle('daemon:resolve_signal', function (_event_1, _a) { return __awaiter(void 0, [_event_1, _a], void 0, function (_event, _b) {
+    var signalId = _b.signalId, action = _b.action;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0: return [4 /*yield*/, sendJsonRpc('resolve_signal', { signal_id: signalId, action: action })];
+            case 1: return [2 /*return*/, _c.sent()];
+        }
+    });
+}); });
 ipcMain.handle('daemon:submit_prompt', function (event, prompt) { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         switch (_a.label) {

@@ -1,8 +1,19 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
+export interface Signal {
+  id: string;
+  title: string;
+  source_type: string;
+  source_url: string;
+  summary: string;
+  created_at: string;
+}
+
 export interface EkkoAPI {
   ping: () => Promise<{ status: string; timestamp: string } | null>;
   getNotes: () => Promise<unknown[]>;
+  getPendingSignals: () => Promise<Signal[]>;
+  resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{ status: string; signal_id?: string; action?: string }>;
   submitPrompt: (prompt: string) => Promise<string>;
   ingestFile: (filePath: string) => Promise<{ status: string; filename?: string; message?: string; note?: { id: string; title: string; slug: string; summary: string; source?: string } }>;
   getDroppedFilePath: (file: File) => string;
@@ -14,6 +25,9 @@ export interface EkkoAPI {
 const api: EkkoAPI = {
   ping: () => ipcRenderer.invoke('daemon:ping'),
   getNotes: () => ipcRenderer.invoke('daemon:get_notes'),
+  getPendingSignals: () => ipcRenderer.invoke('daemon:get_pending_signals'),
+  resolveSignal: (signalId: string, action: 'archive' | 'discard') =>
+    ipcRenderer.invoke('daemon:resolve_signal', { signalId, action }),
   submitPrompt: (prompt: string) => ipcRenderer.invoke('daemon:submit_prompt', prompt),
   ingestFile: (filePath: string) => ipcRenderer.invoke('daemon:ingest_file', filePath),
   getDroppedFilePath: (file: File) => {

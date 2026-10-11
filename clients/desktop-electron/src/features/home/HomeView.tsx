@@ -3,6 +3,7 @@ import { Mascot } from './Mascot';
 import { useDropStore } from '../../core/stores/useDropStore';
 import { useEchoStore } from '../../core/stores/useEchoStore';
 import { useViewStore } from '../../core/stores/useViewStore';
+import { useSignalStore } from '../../core/stores/useSignalStore';
 import {
   SURFACES,
   SURFACE_CARD,
@@ -15,6 +16,8 @@ import {
   Loader2,
   Zap,
   ArrowRight,
+  X,
+  Check,
 } from 'lucide-react';
 
 /**
@@ -43,6 +46,23 @@ export const HomeView: React.FC = () => {
   } = useDropStore();
 
   const { latestNote, fetchNotes } = useEchoStore();
+  const currentSignal = useSignalStore((state) => state.currentSignal);
+  const dismissCurrent = useSignalStore((state) => state.dismissCurrent);
+  const isSignalLoading = useSignalStore((state) => state.isLoading);
+
+  // Derived mascot emotion prioritizing active drag/ingestion/error, then blindspot alert, then idle
+  const displayEmotion =
+    dropStatus === 'hover'
+      ? 'hover_drop'
+      : dropStatus === 'processing'
+      ? 'ingesting'
+      : dropStatus === 'ready'
+      ? 'ready'
+      : dropStatus === 'error'
+      ? 'error'
+      : currentSignal !== null
+      ? 'alert'
+      : mascotEmotion;
 
   useEffect(() => {
     fetchNotes();
@@ -125,7 +145,7 @@ export const HomeView: React.FC = () => {
         {/* Soft radial shine */}
         <div className="absolute inset-0 bg-radial from-sky-400/[0.04] via-transparent to-transparent pointer-events-none" />
 
-        <Mascot emotion={mascotEmotion} />
+        <Mascot emotion={displayEmotion} />
       </div>
 
       {/* Volet Droit — Espace réactif métamorphe */}
@@ -173,6 +193,57 @@ export const HomeView: React.FC = () => {
             <span className="text-[9px] text-slate-400">
               PDF, Markdown (.md) ou texte brut (.txt) uniquement
             </span>
+          </div>
+        ) : currentSignal ? (
+          /* État Veilleur : Alerte Proactive d'Angle Mort (UC-1) */
+          <div className={`w-full h-full rounded-xl ${SURFACES.alertCard} flex flex-col justify-between p-3 select-none relative overflow-hidden transition-all shadow-[0_4px_20px_rgba(245,158,11,0.06)]`}>
+            {/* Header: Badge ambre + source */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300">
+                <Zap className="w-3 h-3 text-amber-400" />
+                <span className="text-[10px] font-semibold tracking-wide uppercase">
+                  Angle mort identifié
+                </span>
+              </div>
+              <span className="text-[10px] text-amber-400/80 font-medium truncate max-w-[130px] uppercase tracking-wider">
+                {currentSignal.source_type}
+              </span>
+            </div>
+
+            {/* Content: Titre éclatant + synthèse */}
+            <div className="flex flex-col gap-1 my-0.5">
+              <h3 className="text-sm font-medium text-white line-clamp-2 leading-snug">
+                {currentSignal.title}
+              </h3>
+              {currentSignal.summary && (
+                <p className="text-xs text-white/60 line-clamp-2 leading-relaxed">
+                  {currentSignal.summary}
+                </p>
+              )}
+            </div>
+
+            {/* Actions: Écarter (secondaire) & Retenir (primaire) */}
+            <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/[0.04]">
+              <button
+                onClick={() => dismissCurrent('discard')}
+                disabled={isSignalLoading}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors text-xs font-medium cursor-pointer"
+                title="Écarter cette découverte"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Écarter</span>
+              </button>
+
+              <button
+                onClick={() => dismissCurrent('archive')}
+                disabled={isSignalLoading}
+                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-all text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
+                title="Conserver et intégrer au PKM"
+              >
+                <Check className="w-3.5 h-3.5 text-amber-400" />
+                <span>Retenir</span>
+              </button>
+            </div>
           </div>
         ) : (
           /* État 1 : Au repos (Option A — Split 65/35) */

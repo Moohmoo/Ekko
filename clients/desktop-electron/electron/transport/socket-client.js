@@ -7,7 +7,7 @@ export var DEFAULT_SOCKET_PATH = '/tmp/ekko.sock';
 export function sendJsonRpc(method, params, socketPath) {
     if (params === void 0) { params = {}; }
     if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
-    var isSilent = method === 'ping' || method === 'scan_notes';
+    var isSilent = method === 'ping' || method === 'scan_notes' || method === 'get_pending_signals';
     return new Promise(function (resolve, reject) {
         if (!isSilent) {
             console.log("[IPC:REQ] Connecting to ".concat(socketPath, " -> ").concat(method));

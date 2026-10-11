@@ -21,7 +21,7 @@ export function sendJsonRpc<T = unknown>(
   params: Record<string, unknown> = {},
   socketPath: string = DEFAULT_SOCKET_PATH
 ): Promise<T> {
-  const isSilent = method === 'ping' || method === 'scan_notes';
+  const isSilent = method === 'ping' || method === 'scan_notes' || method === 'get_pending_signals';
 
   return new Promise((resolve, reject) => {
     if (!isSilent) {

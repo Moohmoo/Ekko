@@ -75,6 +75,15 @@ class HybridStore:
         """Initialize unified database tables, FTS5 index, and vec0 virtual tables."""
         with self._get_connection() as conn:
             conn.executescript(INIT_UNIFIED_SCHEMA_SQL)
+            cols = {row["name"] for row in conn.execute("PRAGMA table_info(raw_signals);").fetchall()}
+            if "source_type" not in cols:
+                conn.execute("ALTER TABLE raw_signals ADD COLUMN source_type TEXT;")
+            if "source_url" not in cols:
+                conn.execute("ALTER TABLE raw_signals ADD COLUMN source_url TEXT;")
+            if "summary" not in cols:
+                conn.execute("ALTER TABLE raw_signals ADD COLUMN summary TEXT;")
+            if "created_at" not in cols:
+                conn.execute("ALTER TABLE raw_signals ADD COLUMN created_at TEXT;")
         logger.debug("Unified SQLite schema initialized at %s", self.db_path)
 
     def is_wal_mode(self) -> bool:
@@ -273,6 +282,56 @@ class HybridStore:
         """Update signal processing status with string or enum value."""
         target_status = status if isinstance(status, SignalStatus) else SignalStatus(status)
         await self.update_signal_status(signal_id, target_status)
+
+    def _get_retained_signals_sync(self, limit: int = 5) -> list[dict[str, Any]]:
+        """Fetch pending retained signals for UC-1 proactive alert."""
+        sql = """
+        SELECT id, title, COALESCE(source_type, source_id, 'veille') as source_type,
+               COALESCE(source_url, url, '') as source_url,
+               COALESCE(summary, raw_content, clean_content, '') as summary,
+               COALESCE(created_at, ingested_at) as created_at
+        FROM raw_signals
+        WHERE status = 'retained'
+        ORDER BY COALESCE(created_at, ingested_at) DESC
+        LIMIT ?;
+        """
+        with self._get_connection() as conn:
+            rows = conn.execute(sql, (limit,)).fetchall()
+            return [
+                {
+                    "id": row["id"],
+                    "title": row["title"],
+                    "source_type": row["source_type"],
+                    "source_url": row["source_url"],
+                    "summary": row["summary"],
+                    "created_at": str(row["created_at"]),
+                }
+                for row in rows
+            ]
+
+    async def get_retained_signals(self, limit: int = 5) -> list[dict[str, Any]]:
+        """Retrieve retained signals asynchronously for UC-1 proactive alerts."""
+        return await asyncio.to_thread(self._get_retained_signals_sync, limit)
+
+    def _resolve_signal_sync(self, signal_id: str, action: str) -> bool:
+        """Resolve signal by ID with 'archive' -> 'archived' or 'discard' -> 'discarded'."""
+        status_map = {"archive": "archived", "discard": "discarded"}
+        new_status = status_map.get(action)
+        if not new_status:
+            raise ValueError(f"Invalid action '{action}'. Must be 'archive' or 'discard'.")
+
+        sql_check = "SELECT id FROM raw_signals WHERE id = ?;"
+        sql_update = "UPDATE raw_signals SET status = ? WHERE id = ?;"
+        with self._get_connection() as conn:
+            exists = conn.execute(sql_check, (signal_id,)).fetchone()
+            if not exists:
+                return False
+            conn.execute(sql_update, (new_status, signal_id))
+            return True
+
+    async def resolve_signal(self, signal_id: str, action: str) -> bool:
+        """Resolve signal asynchronously."""
+        return await asyncio.to_thread(self._resolve_signal_sync, signal_id, action)
 
     def _save_knowledge_note_sync(
         self,

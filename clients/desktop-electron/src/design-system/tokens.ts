@@ -24,9 +24,14 @@ export const COLORS = {
   coralGradientTop: '#e11d48',
   coralGradientMid: '#9f1239',
   coralGradientBottom: '#4c0519',
+  // Proactive Blindspot Alert tokens (warm amber)
+  amberGlow: 'rgba(245, 158, 11, 0.20)',
+  amberAccent: '#f59e0b',
+  surfaceAlert: 'rgba(245, 158, 11, 0.04)',
+  borderAlert: 'rgba(245, 158, 11, 0.25)',
 } as const;
 
-export type MascotEmotion = 'idle' | 'welcome' | 'hover_drop' | 'ingesting' | 'ready' | 'error';
+export type MascotEmotion = 'idle' | 'welcome' | 'hover_drop' | 'ingesting' | 'ready' | 'error' | 'alert';
 
 export const LAYOUT = {
   podWidth: 620,
@@ -71,6 +76,7 @@ export const SURFACES = {
   dropzoneProcessing: 'border border-sky-500/30 bg-sky-500/[0.03]',
   dropzoneReady: 'border border-emerald-500/30 bg-emerald-500/[0.04]',
   dropzoneError: 'border border-red-500/30 bg-red-500/[0.04]',
+  alertCard: 'bg-amber-500/[0.04] border border-amber-500/25',
   headerTabActive: 'bg-white/[0.08] text-sky-400',
   headerTabInactive: 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]',
 } as const;

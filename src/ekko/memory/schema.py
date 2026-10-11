@@ -18,15 +18,19 @@ CREATE TABLE IF NOT EXISTS source_states (
 
 CREATE TABLE IF NOT EXISTS raw_signals (
     id TEXT PRIMARY KEY,
-    source_id TEXT NOT NULL,
+    source_id TEXT,
+    source_type TEXT,
+    source_url TEXT,
     external_id TEXT,
     url TEXT,
     title TEXT NOT NULL,
     raw_content TEXT,
     clean_content TEXT,
+    summary TEXT,
     author TEXT,
     published_at TEXT,
     ingested_at TEXT DEFAULT (datetime('now')),
+    created_at TEXT DEFAULT (datetime('now')),
     status TEXT NOT NULL CHECK(status IN ('pending', 'processed', 'failed', 'retained', 'discarded', 'archived')),
     FOREIGN KEY (source_id) REFERENCES source_states(id) ON DELETE CASCADE
 );

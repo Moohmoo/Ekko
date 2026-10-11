@@ -15,16 +15,25 @@ interface MascotProps {
 
 export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = '' }) => {
   // Halo Glow variation based on emotion
-  const haloScale = emotion === 'hover_drop' ? [1.1, 1.25, 1.1] : [0.95, 1.05, 0.95];
+  const haloScale =
+    emotion === 'hover_drop'
+      ? [1.1, 1.25, 1.1]
+      : emotion === 'alert'
+      ? [1.05, 1.2, 1.05]
+      : [0.95, 1.05, 0.95];
   const haloOpacity =
     emotion === 'hover_drop'
       ? [0.35, 0.5, 0.35]
       : emotion === 'error'
       ? [0.8, 1.0, 0.8]
+      : emotion === 'alert'
+      ? [0.4, 0.65, 0.4]
       : [0.15, 0.25, 0.15];
   const haloColor =
     emotion === 'error'
       ? COLORS.coralGlow
+      : emotion === 'alert'
+      ? COLORS.amberGlow
       : emotion === 'ready'
       ? COLORS.emeraldOnline
       : COLORS.cyanGlow;
@@ -38,7 +47,7 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
           opacity: haloOpacity,
         }}
         transition={{
-          duration: emotion === 'hover_drop' ? 1.5 : 3,
+          duration: emotion === 'hover_drop' ? 1.5 : emotion === 'alert' ? 2 : 3,
           repeat: Infinity,
           ease: 'easeInOut',
         }}
@@ -66,6 +75,11 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                 y: 0,
                 scale: 1,
               }
+            : emotion === 'alert'
+            ? {
+                y: [0, -4, 0],
+                scale: [1, 1.03, 1],
+              }
             : {
                 y: [0, -3, 0],
                 scale: [1, 1.02, 1],
@@ -78,6 +92,8 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
             ? { duration: 1.0, repeat: Infinity, ease: 'easeInOut' }
             : emotion === 'error'
             ? { duration: 0.3, ease: 'easeInOut' }
+            : emotion === 'alert'
+            ? { duration: 2.0, repeat: Infinity, ease: 'easeInOut' }
             : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
         }
         className="relative z-10 w-[74px] h-[88px] flex items-center justify-center"
@@ -93,6 +109,8 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                 stopColor={
                   emotion === 'error'
                     ? COLORS.coralGradientTop
+                    : emotion === 'alert'
+                    ? COLORS.amberAccent
                     : emotion === 'ready'
                     ? COLORS.emeraldLight
                     : COLORS.cyanGlow
@@ -103,6 +121,8 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                 stopColor={
                   emotion === 'error'
                     ? COLORS.coralGradientMid
+                    : emotion === 'alert'
+                    ? COLORS.cyanAccent
                     : emotion === 'ready'
                     ? COLORS.emeraldOnline
                     : COLORS.cyanAccent
@@ -134,6 +154,8 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
             stroke={
               emotion === 'error'
                 ? COLORS.coralAccent
+                : emotion === 'alert'
+                ? COLORS.amberAccent
                 : emotion === 'ready'
                 ? COLORS.emeraldLight
                 : COLORS.cyanAccent
@@ -141,26 +163,44 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
             strokeWidth="1.2"
           />
 
+          {/* Attentive Eyebrows for Alert emotion */}
+          {emotion === 'alert' && (
+            <g stroke={COLORS.eyeDark} strokeWidth="1.3" strokeLinecap="round" fill="none">
+              <path d="M 36 53 Q 40 49 44 52" />
+              <path d="M 56 52 Q 60 49 64 53" />
+            </g>
+          )}
+
           {/* Expressive Eyes */}
           <g fill={COLORS.eyeDark}>
             <ellipse
               cx="40"
               cy="62"
-              rx={emotion === 'hover_drop' ? 4.5 : 3.5}
-              ry={emotion === 'hover_drop' ? 6 : emotion === 'error' ? 2.2 : 5}
+              rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
+              ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
             />
             {emotion !== 'error' && (
-              <circle cx="39" cy="60" r={emotion === 'hover_drop' ? 1.6 : 1.2} fill={COLORS.white} />
+              <circle
+                cx="39"
+                cy="60"
+                r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
+                fill={COLORS.white}
+              />
             )}
 
             <ellipse
               cx="60"
               cy="62"
-              rx={emotion === 'hover_drop' ? 4.5 : 3.5}
-              ry={emotion === 'hover_drop' ? 6 : emotion === 'error' ? 2.2 : 5}
+              rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
+              ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
             />
             {emotion !== 'error' && (
-              <circle cx="59" cy="60" r={emotion === 'hover_drop' ? 1.6 : 1.2} fill={COLORS.white} />
+              <circle
+                cx="59"
+                cy="60"
+                r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
+                fill={COLORS.white}
+              />
             )}
           </g>
 
@@ -171,6 +211,17 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
               fill="none"
               stroke={COLORS.eyeDark}
               strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          )}
+
+          {/* Attentive Curtailed Smile for Alert */}
+          {emotion === 'alert' && (
+            <path
+              d="M 46 72 Q 50 75 54 72"
+              fill="none"
+              stroke={COLORS.eyeDark}
+              strokeWidth="1.4"
               strokeLinecap="round"
             />
           )}
@@ -197,7 +248,14 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
             repeat: emotion === 'error' ? 0 : Infinity,
             ease: 'easeInOut',
           }}
-          style={{ backgroundColor: emotion === 'error' ? COLORS.coralAccent : COLORS.cyanAccent }}
+          style={{
+            backgroundColor:
+              emotion === 'error'
+                ? COLORS.coralAccent
+                : emotion === 'alert'
+                ? COLORS.amberAccent
+                : COLORS.cyanAccent,
+          }}
           className="absolute -left-2 top-[44px] w-2.5 h-2.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.4)]"
         />
 
@@ -239,11 +297,19 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                   ease: 'easeInOut',
                 }
           }
-          style={{ backgroundColor: emotion === 'error' ? COLORS.coralAccent : COLORS.cyanAccent }}
+          style={{
+            backgroundColor:
+              emotion === 'error'
+                ? COLORS.coralAccent
+                : emotion === 'alert'
+                ? COLORS.amberAccent
+                : COLORS.cyanAccent,
+          }}
           className="absolute -right-2 top-[44px] w-2.5 h-2.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.5)] origin-bottom"
         />
       </motion.div>
     </div>
   );
 };
+
 

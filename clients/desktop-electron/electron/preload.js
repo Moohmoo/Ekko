@@ -2,6 +2,10 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron';
 var api = {
     ping: function () { return ipcRenderer.invoke('daemon:ping'); },
     getNotes: function () { return ipcRenderer.invoke('daemon:get_notes'); },
+    getPendingSignals: function () { return ipcRenderer.invoke('daemon:get_pending_signals'); },
+    resolveSignal: function (signalId, action) {
+        return ipcRenderer.invoke('daemon:resolve_signal', { signalId: signalId, action: action });
+    },
     submitPrompt: function (prompt) { return ipcRenderer.invoke('daemon:submit_prompt', prompt); },
     ingestFile: function (filePath) { return ipcRenderer.invoke('daemon:ingest_file', filePath); },
     getDroppedFilePath: function (file) {

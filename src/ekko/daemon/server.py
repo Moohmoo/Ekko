@@ -109,6 +109,10 @@ class IPCServer:
             await self._handle_query_knowledge(req_id, params, writer)
         elif method == "ingest_file":
             await self._handle_ingest_file(req_id, params, writer)
+        elif method == "get_pending_signals":
+            await self._handle_get_pending_signals(req_id, params, writer)
+        elif method == "resolve_signal":
+            await self._handle_resolve_signal(req_id, params, writer)
         elif method == "submit_prompt":
             await self._handle_submit_prompt(req_id, params, writer)
         else:
@@ -287,3 +291,58 @@ class IPCServer:
             line = json.dumps(event.model_dump(mode="json")) + "\n"
             writer.write(line.encode("utf-8"))
             await writer.drain()
+
+    async def _handle_get_pending_signals(
+        self,
+        req_id: Any,
+        params: dict[str, Any],
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Query retained raw signals for UC-1 proactive alert display."""
+        if not self.db_manager:
+            writer.write(_rpc_result(req_id, []).encode("utf-8"))
+            await writer.drain()
+            return
+        limit = int(params.get("limit", 5))
+        signals = await self.db_manager.get_retained_signals(limit=limit)
+        writer.write(_rpc_result(req_id, signals).encode("utf-8"))
+        await writer.drain()
+
+    async def _handle_resolve_signal(
+        self,
+        req_id: Any,
+        params: dict[str, Any],
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Resolve a signal by setting its status to archived or discarded."""
+        signal_id = params.get("signal_id")
+        action = params.get("action")
+        if not signal_id:
+            writer.write(_rpc_error(req_id, -32602, "Missing 'signal_id' parameter").encode("utf-8"))
+            await writer.drain()
+            return
+        if action not in ("archive", "discard"):
+            writer.write(
+                _rpc_error(
+                    req_id,
+                    -32602,
+                    f"Invalid action '{action}'. Must be 'archive' or 'discard'.",
+                ).encode("utf-8")
+            )
+            await writer.drain()
+            return
+
+        if not self.db_manager:
+            writer.write(_rpc_error(req_id, -32000, "Database manager not available").encode("utf-8"))
+            await writer.drain()
+            return
+
+        found = await self.db_manager.resolve_signal(signal_id, action)
+        if not found:
+            writer.write(_rpc_error(req_id, -32001, f"Signal introuvable : '{signal_id}'").encode("utf-8"))
+            await writer.drain()
+            return
+
+        reply = {"status": "ok", "signal_id": signal_id, "action": action}
+        writer.write(_rpc_result(req_id, reply).encode("utf-8"))
+        await writer.drain()
