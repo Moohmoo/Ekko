@@ -101,12 +101,25 @@ function createWindow() {
   });
 }
 
+// State tracker for daemon connectivity transitions
+let isDaemonConnected: boolean | null = null;
+
 // IPC Handlers
 ipcMain.handle('daemon:ping', async () => {
-  console.log('[Main] Received daemon:ping invocation from renderer');
-  const res = await sendJsonRpc<{ status: string; timestamp: string }>('ping');
-  console.log('[Main] Returning daemon:ping result to renderer:', res);
-  return res;
+  try {
+    const res = await sendJsonRpc<{ status: string; timestamp: string }>('ping');
+    if (isDaemonConnected !== true) {
+      isDaemonConnected = true;
+      console.log('[Daemon] Connecté au socket local /tmp/ekko.sock');
+    }
+    return res;
+  } catch (err) {
+    if (isDaemonConnected !== false) {
+      isDaemonConnected = false;
+      console.warn('[Daemon:WARN] Liaison perdue avec le daemon');
+    }
+    return null;
+  }
 });
 
 ipcMain.handle('daemon:get_notes', async () => {

@@ -121,18 +121,31 @@ function createWindow() {
         // Keep window visible or allow user to toggle
     });
 }
+// State tracker for daemon connectivity transitions
+var isDaemonConnected = null;
 // IPC Handlers
 ipcMain.handle('daemon:ping', function () { return __awaiter(void 0, void 0, void 0, function () {
-    var res;
+    var res, err_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                console.log('[Main] Received daemon:ping invocation from renderer');
+                _a.trys.push([0, 2, , 3]);
                 return [4 /*yield*/, sendJsonRpc('ping')];
             case 1:
                 res = _a.sent();
-                console.log('[Main] Returning daemon:ping result to renderer:', res);
+                if (isDaemonConnected !== true) {
+                    isDaemonConnected = true;
+                    console.log('[Daemon] Connecté au socket local /tmp/ekko.sock');
+                }
                 return [2 /*return*/, res];
+            case 2:
+                err_1 = _a.sent();
+                if (isDaemonConnected !== false) {
+                    isDaemonConnected = false;
+                    console.warn('[Daemon:WARN] Liaison perdue avec le daemon');
+                }
+                return [2 /*return*/, null];
+            case 3: return [2 /*return*/];
         }
     });
 }); });

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 export interface EkkoAPI {
-  ping: () => Promise<{ status: string; timestamp: string }>;
+  ping: () => Promise<{ status: string; timestamp: string } | null>;
   getNotes: () => Promise<unknown[]>;
   submitPrompt: (prompt: string) => Promise<string>;
   ingestFile: (filePath: string) => Promise<string>;

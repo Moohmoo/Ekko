@@ -7,8 +7,11 @@ export var DEFAULT_SOCKET_PATH = '/tmp/ekko.sock';
 export function sendJsonRpc(method, params, socketPath) {
     if (params === void 0) { params = {}; }
     if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
+    var isPing = method === 'ping';
     return new Promise(function (resolve, reject) {
-        console.log("[IPC:REQ] Connecting to ".concat(socketPath, " -> ").concat(method));
+        if (!isPing) {
+            console.log("[IPC:REQ] Connecting to ".concat(socketPath, " -> ").concat(method));
+        }
         var client = net.createConnection(socketPath);
         var payload = JSON.stringify({
             jsonrpc: '2.0',
@@ -19,14 +22,18 @@ export function sendJsonRpc(method, params, socketPath) {
         var buffer = '';
         client.setTimeout(3000);
         client.on('connect', function () {
-            console.log("[IPC:REQ] Connected. Writing payload for ".concat(method));
+            if (!isPing) {
+                console.log("[IPC:REQ] Connected. Writing payload for ".concat(method));
+            }
             client.write(payload);
         });
         client.on('data', function (chunk) {
             buffer += chunk.toString();
             if (buffer.includes('\n')) {
                 var line = buffer.split('\n')[0];
-                console.log("[IPC:RES] ".concat(method, " returned: ").concat(line.slice(0, 120)));
+                if (!isPing) {
+                    console.log("[IPC:RES] ".concat(method, " returned: ").concat(line.slice(0, 120)));
+                }
                 client.end();
                 try {
                     var parsed = JSON.parse(line);
@@ -45,12 +52,14 @@ export function sendJsonRpc(method, params, socketPath) {
             }
         });
         client.on('timeout', function () {
-            console.warn("[IPC:ERR] Timeout (3000ms) waiting for ".concat(method));
+            console.error("[IPC:ERR] Timeout (3000ms) waiting for ".concat(method));
             client.destroy();
             reject(new Error('TIMEOUT'));
         });
         client.on('error', function (err) {
-            console.warn("[IPC:ERR] Socket connection error for ".concat(method, ":"), err.message);
+            if (!isPing) {
+                console.error("[IPC:ERR] Socket connection error for ".concat(method, ":"), err.message);
+            }
             reject(new Error('DAEMON_OFFLINE'));
         });
     });

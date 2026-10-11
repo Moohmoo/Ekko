@@ -21,8 +21,12 @@ export function sendJsonRpc<T = unknown>(
   params: Record<string, unknown> = {},
   socketPath: string = DEFAULT_SOCKET_PATH
 ): Promise<T> {
+  const isPing = method === 'ping';
+
   return new Promise((resolve, reject) => {
-    console.log(`[IPC:REQ] Connecting to ${socketPath} -> ${method}`);
+    if (!isPing) {
+      console.log(`[IPC:REQ] Connecting to ${socketPath} -> ${method}`);
+    }
     const client = net.createConnection(socketPath);
     const payload = JSON.stringify({
       jsonrpc: '2.0',
@@ -36,7 +40,9 @@ export function sendJsonRpc<T = unknown>(
     client.setTimeout(3000);
 
     client.on('connect', () => {
-      console.log(`[IPC:REQ] Connected. Writing payload for ${method}`);
+      if (!isPing) {
+        console.log(`[IPC:REQ] Connected. Writing payload for ${method}`);
+      }
       client.write(payload);
     });
 
@@ -44,7 +50,9 @@ export function sendJsonRpc<T = unknown>(
       buffer += chunk.toString();
       if (buffer.includes('\n')) {
         const line = buffer.split('\n')[0];
-        console.log(`[IPC:RES] ${method} returned: ${line.slice(0, 120)}`);
+        if (!isPing) {
+          console.log(`[IPC:RES] ${method} returned: ${line.slice(0, 120)}`);
+        }
         client.end();
         try {
           const parsed = JSON.parse(line) as JSONRPCResponse<T>;
@@ -62,13 +70,15 @@ export function sendJsonRpc<T = unknown>(
     });
 
     client.on('timeout', () => {
-      console.warn(`[IPC:ERR] Timeout (3000ms) waiting for ${method}`);
+      console.error(`[IPC:ERR] Timeout (3000ms) waiting for ${method}`);
       client.destroy();
       reject(new Error('TIMEOUT'));
     });
 
     client.on('error', (err) => {
-      console.warn(`[IPC:ERR] Socket connection error for ${method}:`, err.message);
+      if (!isPing) {
+        console.error(`[IPC:ERR] Socket connection error for ${method}:`, err.message);
+      }
       reject(new Error('DAEMON_OFFLINE'));
     });
   });
