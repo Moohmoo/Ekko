@@ -12,11 +12,11 @@ interface MascotProps {
 export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = '' }) => {
   // Halo Glow variation based on emotion
   const haloScale = emotion === 'hover_drop' ? [1.1, 1.25, 1.1] : [0.95, 1.05, 0.95];
-  const haloOpacity = emotion === 'hover_drop' ? [0.3, 0.45, 0.3] : [0.15, 0.25, 0.15];
+  const haloOpacity = emotion === 'hover_drop' ? [0.35, 0.5, 0.35] : [0.15, 0.25, 0.15];
   const haloColor = emotion === 'ready' ? COLORS.emeraldOnline : COLORS.cyanGlow;
 
   return (
-    <div className={`relative w-36 h-36 flex items-center justify-center ${className}`}>
+    <div className={`relative flex items-center justify-center ${className}`}>
       {/* Cyan Pulsing Ambient Glow */}
       <motion.div
         animate={{
@@ -29,25 +29,25 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
           ease: 'easeInOut',
         }}
         style={{ backgroundColor: haloColor }}
-        className="absolute w-28 h-28 rounded-full blur-xl pointer-events-none transition-colors duration-500"
+        className="absolute w-24 h-24 rounded-full blur-xl pointer-events-none transition-colors duration-500"
       />
 
-      {/* Main Body Animation */}
+      {/* Main Body Animation (Calibrated ~88px height for pure breathing Coucou minimalism) */}
       <motion.div
         animate={
           emotion === 'welcome'
             ? {
-                y: [0, -6, 0],
+                y: [0, -5, 0],
                 rotate: [-2, 2, -2],
                 scale: [1, 1.03, 1],
               }
             : emotion === 'ingesting'
             ? {
-                y: [0, -2, 4, 0],
-                scale: [1, 0.98, 1.04, 1],
+                y: [0, -2, 3, 0],
+                scale: [1, 0.98, 1.03, 1],
               }
             : {
-                y: [0, -4, 0],
+                y: [0, -3, 0],
                 scale: [1, 1.02, 1],
               }
         }
@@ -58,11 +58,11 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
             ? { duration: 1.0, repeat: Infinity, ease: 'easeInOut' }
             : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
         }
-        className="relative z-10 w-28 h-32 flex items-center justify-center"
+        className="relative z-10 w-[74px] h-[88px] flex items-center justify-center"
       >
         <svg
           viewBox="0 0 100 120"
-          className="w-full h-full drop-shadow-[0_8px_16px_rgba(0,242,254,0.15)]"
+          className="w-full h-full drop-shadow-[0_6px_14px_rgba(0,242,254,0.18)]"
         >
           <defs>
             <linearGradient id="ekkoMascotGradient" x1="50%" y1="0%" x2="50%" y2="100%">
@@ -119,7 +119,7 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
         {/* Detached Left Satellite Hand */}
         <motion.div
           animate={{
-            y: [-3, 3, -3],
+            y: [-2, 2, -2],
           }}
           transition={{
             duration: 2,
@@ -127,7 +127,7 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
             ease: 'easeInOut',
           }}
           style={{ backgroundColor: COLORS.cyanAccent }}
-          className="absolute -left-2 top-[60px] w-3.5 h-3.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.4)]"
+          className="absolute -left-2 top-[44px] w-2.5 h-2.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.4)]"
         />
 
         {/* Detached Right Satellite Hand with Greeting Wave during Welcome */}
@@ -135,13 +135,13 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
           animate={
             emotion === 'welcome'
               ? {
-                  y: [-16, -6, -16],
-                  x: [4, 10, 4],
+                  y: [-12, -4, -12],
+                  x: [3, 7, 3],
                   rotate: [15, -25, 15],
-                  scale: [1, 1.2, 1],
+                  scale: [1, 1.15, 1],
                 }
               : {
-                  y: [3, -3, 3],
+                  y: [2, -2, 2],
                   x: 0,
                   rotate: 0,
                   scale: 1,
@@ -162,7 +162,7 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                 }
           }
           style={{ backgroundColor: COLORS.cyanAccent }}
-          className="absolute -right-2 top-[60px] w-3.5 h-3.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.5)] origin-bottom"
+          className="absolute -right-2 top-[44px] w-2.5 h-2.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.5)] origin-bottom"
         />
       </motion.div>
     </div>

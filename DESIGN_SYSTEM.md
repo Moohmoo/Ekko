@@ -79,13 +79,14 @@ La mascotte incarne le tampon cognitif sous la forme d'une goutte d'eau fluide e
 
 ## 4. Organisation du Home & Métamorphose de Survol (Stage Unique)
 
-À l'intérieur du Stage unique (620×230 px), l'espace est organisé en un layout split horizontal sans sous-boîtes opaques, structuré par un séparateur vertical fin (`border-r border-white/[0.06]`) :
+À l'intérieur du Stage unique (620×230 px), l'espace est organisé en un layout split horizontal sans sous-boîtes opaques, structuré par la respiration de l'espace négatif (`gap-4`) sans barre de séparation verticale :
 
-### 4.1 Volet Gauche — Mascotte Continue (38 % / ~220 px)
-- Mascotte Ekko centrée sur le fond naturel du Stage (aucun contour ni boîte additionnelle).
-- Halo d'ambiance cyan pulsé `#00f2fe`.
-- Espace inférieur généreux : micro-statut textuel en une ligne (ex. "Tampon actif") logé avec un padding suffisant (`pb-2`), sans aucun rognage ni débordement d'arc noir.
-- Zéro texte parasite, présence vivante pure.
+### 4.1 Volet Gauche — Mascotte Vectorielle Épurée (~36 % / ~215 px)
+- Mascotte Ekko flottant au centre géométrique et optique du tiers gauche (`flex items-center justify-center h-full`).
+- Halo d'ambiance cyan pulsé `#00f2fe` et mains satellites détachées sans aucun écrêtage ni bordure de contrainte.
+- Gabarit SVG calibré (~88 px de hauteur) offrant une respiration élégante et équilibrée avec ~42 px de marge en haut et en bas.
+- **Zéro étiquette textuelle :** La mascotte communique son état exclusivement par ses expressions vectorielles (regard, sourire, déglutition, pulsations vives). L'intégralité du retour textuel opérationnel est pris en charge par le volet droit.
+- Zéro texte parasite, présence vivante pure et minimaliste.
 
 ### 4.2 Volet Droit — Espace Réactif Métamorphe (62 % / ~360 px)
 Le volet droit bascule dynamiquement entre l'état de repos et l'état de capture :

@@ -64,39 +64,4 @@ export const SURFACES = {
   dropzoneError: 'border border-red-500/30 bg-red-500/[0.04]',
   headerTabActive: 'bg-white/[0.08] text-sky-400',
   headerTabInactive: 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]',
-  badgeContainer: 'bg-white/[0.04] border border-white/[0.06]',
-} as const;
-
-/**
- * Semantic status colors and badge configurations (stable, non-overflowing badge)
- */
-export const STATUS_COLORS = {
-  idleDot: 'bg-sky-400/70',
-  hoverDot: 'bg-sky-300',
-  processingDot: 'bg-sky-400 animate-ping',
-  readyDot: 'bg-emerald-400',
-  errorDot: 'bg-red-400',
-} as const;
-
-export const STATUS_CONFIG = {
-  idle: {
-    label: 'Tampon actif',
-    dotClass: STATUS_COLORS.idleDot,
-  },
-  hover: {
-    label: 'Réception...',
-    dotClass: STATUS_COLORS.hoverDot,
-  },
-  processing: {
-    label: 'Distillation...',
-    dotClass: STATUS_COLORS.processingDot,
-  },
-  ready: {
-    label: 'Mémorisé ✓',
-    dotClass: STATUS_COLORS.readyDot,
-  },
-  error: {
-    label: 'Erreur',
-    dotClass: STATUS_COLORS.errorDot,
-  },
 } as const;

@@ -7,7 +7,6 @@ import {
   SURFACES,
   SURFACE_CARD,
   SURFACE_CARD_HOVER,
-  STATUS_CONFIG,
 } from '../../design-system/tokens';
 import {
   UploadCloud,
@@ -106,20 +105,6 @@ export const HomeView: React.FC = () => {
     }
   };
 
-  // Derive stable status badge under mascot
-  const statusKey =
-    dropStatus === 'hover'
-      ? 'hover'
-      : dropStatus === 'processing'
-      ? 'processing'
-      : dropStatus === 'ready'
-      ? 'ready'
-      : dropStatus === 'error'
-      ? 'error'
-      : 'idle';
-
-  const currentStatus = STATUS_CONFIG[statusKey];
-
   return (
     <div
       onDragOver={handleDragOver}
@@ -135,24 +120,12 @@ export const HomeView: React.FC = () => {
         className="hidden"
       />
 
-      {/* Volet Gauche (36 %) — Mascotte continue sans séparateur vertical */}
-      <div className="w-[36%] h-full flex flex-col items-center justify-between relative shrink-0">
+      {/* Volet Gauche (~36 % / ~215 px) — Mascotte vectorielle purement centrée & sans badge textuel */}
+      <div className="w-[36%] h-full flex items-center justify-center relative shrink-0">
         {/* Soft radial shine */}
         <div className="absolute inset-0 bg-radial from-sky-400/[0.04] via-transparent to-transparent pointer-events-none" />
 
-        <div className="flex-1 flex items-center justify-center transform scale-[0.70] origin-center">
-          <Mascot emotion={mascotEmotion} />
-        </div>
-
-        {/* Badge d'état sous la mascotte à gabarit stable (sans texte long ni coupure) */}
-        <div className="flex items-center justify-center shrink-0">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] shrink-0 h-6">
-            <span className={`w-1.5 h-1.5 rounded-full ${currentStatus.dotClass}`} />
-            <span className="text-[10px] text-slate-300 font-medium tracking-tight whitespace-nowrap">
-              {currentStatus.label}
-            </span>
-          </div>
-        </div>
+        <Mascot emotion={mascotEmotion} />
       </div>
 
       {/* Volet Droit — Espace réactif métamorphe */}
