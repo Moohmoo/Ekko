@@ -30,16 +30,16 @@ Le Pod abandonne les formats verticaux rigides au profit d'un format horizontal 
 - **Mode Étendu (Chat, Écho, Réglages) :** `620px` (largeur) × `460px` (hauteur).
   - Déploiement fluide vers le bas pour accueillir le flux conversationnel, la liste des notes PKM ou la configuration.
 
-### 2.2 Conception à Double Coque (Surface Coucou)
-- **Coque extérieure :**
+### 2.2 Conception à Double Coque Top-Docked (Surface Coucou)
+- **Coque extérieure (Encoche / Îlot sommital) :**
   - Fond noir absolu `#0c0c0e`.
-  - Courbure prononcée `rounded-[28px]`.
-  - Bordure subtile `border border-white/[0.08]`.
-  - Ombre portée diffuse `shadow-2xl` avec confinement transparent (`backgroundColor: '#00000000'`).
+  - Ancrage sommital sans bordure ni courbure supérieure : `rounded-t-none rounded-b-[26px]`.
+  - Bordures : `border-x border-b border-white/[0.08] border-t-0` (continuité absolue avec le bandeau supérieur de l'OS).
+  - Ombre portée diffuse vers le bas `shadow-2xl` avec confinement transparent (`backgroundColor: '#00000000'`).
 - **Cartouche intérieure (Panneau flottant) :**
   - Fond `#141824` / `#161b26` surélevé.
   - Rayon `rounded-2xl` (`16px`) créant un relief élégant et doux.
-  - Padding interne calibré (12px à 16px) pour maximiser la densité sans effet d'étouffement.
+  - Padding interne calibré (12px) pour maximiser la densité sans effet d'étouffement.
 
 ### 2.3 Bandeau Supérieur Permanent (Header 40px)
 Hauteur fixe de `40px` assurant la navigation rapide et le contrôle de l'application :
@@ -72,29 +72,29 @@ La mascotte incarne le tampon cognitif sous la forme d'une goutte d'eau fluide e
 
 ---
 
-## 4. Spécification de la Grille Bento du Home (Layout Split)
+## 4. Organisation du Home Épuré (Split 40/60)
 
-En mode Home (620×230 px), l'espace est organisé en un layout split horizontal optimisé :
+En mode Home (620×230 px), l'espace est organisé en un layout split horizontal épuré de tout jargon de monitoring :
 
-### 4.1 Volet Gauche — Capsule Mascotte (40 % / ~240 px)
-- Conteneur vertical centré accueillant la mascotte vectorielle.
+### 4.1 Volet Gauche — Capsule Mascotte (40 % / ~230 px)
+- Conteneur vertical surélevé `#141824` accueillant la mascotte vectorielle.
 - Halo d'ambiance cyan pulsé `#00f2fe`.
-- Indicateur textuel discret de statut sous la mascotte (ex. *"Prêt à absorber"*, *"Veille active"*).
+- Micro-statut discret sous la mascotte (`idle`, `hover_drop`, `ingesting`, `ready`).
+- Zéro texte parasite, présence vivante pure.
 
-### 4.2 Volet Droit — Grille Bento 2×2 (60 % / ~360 px)
-Une matrice de 4 tuiles ultra-denses fournissant un tableau de bord immédiat :
-1. **Tuile 1 (Drop & Forget in-place) :**
-   - Cadre récepteur avec bordure en pointillés (`border-dashed border-sky-400/30`).
-   - Glisser-déposer in-place : survol réactif animant la mascotte en `hover_drop`.
-   - Pendant l'ingestion, le cadre se transforme directement en jauge de progression in-place (pourcentage puis badge de distillation) sans quitter la vue Home.
-2. **Tuile 2 (Veilleurs) :**
-   - Moniteur d'activité des flux déclarés : pastilles d'état compactes pour arXiv, HackerNews et flux RSS.
-   - Indicateur visuel d'activité récente (dernier poll, items scannés).
-3. **Tuile 3 (Dernier Écho) :**
-   - Pill horizontal compact résumant la dernière fiche distillée stockée dans la base de connaissances (`knowledge_notes`).
+### 4.2 Volet Droit — Espace Épuré en 2 Blocs Aérés (60 % / ~350 px)
+Le volet droit élimine le bruit technique pour se concentrer sur l'absorption et la mémoire immédiate :
+1. **Bloc 1 : Grande Zone "Drop & Forget" (environ 65 % de la hauteur droite) :**
+   - Cadre généreux avec bordure en pointillés discrets (`border-dashed border-white/10 hover:border-sky-400/40 hover:bg-white/[0.02]`).
+   - Icône centrale d'upload et libellé clair : *"Glisser un document ou une URL"*.
+   - Au survol : contour illuminé en bleu ciel et mascotte en `hover_drop`.
+   - Au dépôt : transformation in-place en barre de progression épurée puis badge émeraude à la complétion. Zéro redirection vers le chat.
+2. **Bloc 2 : Carte "Dernier Écho" (environ 35 % de la hauteur droite) :**
+   - Capsule horizontale élégante `#141824` / `#161b26` avec bordure subtile.
+   - Aperçu en une ligne sobre de la dernière fiche distillée par le daemon (issue de `useEchoStore`).
    - Clic ouvrant directement le détail dans l'onglet Écho.
-4. **Tuile 4 (Télémétrie & Ressources) :**
-   - Badges système compacts : VRAM GPU déchargée (`VRAM 0M`), priorité CPU (`nice +10`), et socket IPC actif (`/tmp/ekko.sock`).
+3. **Déport Télémétrie :**
+   - Les informations techniques (VRAM, `nice +10`, veilleurs, `/tmp/ekko.sock`) sont exclusivement affichées dans l'onglet Réglages (⚙️).
 
 ---
 

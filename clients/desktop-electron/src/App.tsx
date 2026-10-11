@@ -8,6 +8,7 @@ import { WelcomeView } from './features/welcome/WelcomeView';
 import { HomeView } from './features/home/HomeView';
 import { ChatView } from './features/assistant/ChatView';
 import { EchoView } from './features/echo/EchoView';
+import { SettingsView } from './features/settings/SettingsView';
 import { SPRING_SNAPPY, SPRING_BOUNCY } from './design-system/tokens';
 
 export const App: React.FC = () => {
@@ -122,7 +123,7 @@ export const App: React.FC = () => {
       transition={SPRING_BOUNCY}
       className={`w-[620px] ${
         isCompact ? 'h-[230px]' : 'h-[460px]'
-      } rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-2xl flex flex-col p-3 text-slate-100 transition-[height] duration-300 select-none overflow-hidden`}
+      } rounded-t-none rounded-b-[26px] bg-[#0c0c0e] border-x border-b border-white/[0.08] border-t-0 shadow-2xl flex flex-col p-3 text-slate-100 transition-[height] duration-300 select-none overflow-hidden`}
     >
       <PodHeader
         activeTab={viewMode}
@@ -199,25 +200,9 @@ export const App: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={SPRING_SNAPPY}
-              className="flex-1 p-3 flex flex-col gap-3 text-xs overflow-y-auto"
+              className="flex-1 flex flex-col overflow-hidden"
             >
-              <div className="p-3.5 rounded-2xl bg-[#141824] border border-white/[0.08] flex flex-col gap-2.5">
-                <span className="font-semibold text-slate-200 text-xs">
-                  Configuration & Télémétrie
-                </span>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Socket UNIX :</span>
-                  <span className="font-mono text-slate-300">/tmp/ekko.sock</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Priorité CPU :</span>
-                  <span className="text-emerald-400 font-medium">nice +10</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Confinement GPU :</span>
-                  <span className="text-sky-400 font-medium">keep_alive: 0</span>
-                </div>
-              </div>
+              <SettingsView />
             </motion.div>
           )}
         </AnimatePresence>
