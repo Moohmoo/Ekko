@@ -16,6 +16,17 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
 }) => {
   const isOnline = useDaemonStore((state) => state.isOnline);
 
+  const handleClose = () => {
+    if (window.ekkoAPI?.closeWindow) {
+      window.ekkoAPI.closeWindow();
+    } else {
+      console.warn('[PodHeader] window.ekkoAPI non disponible pour fermer.');
+    }
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
     <div className="h-10 px-4 flex items-center justify-between border-b border-white/[0.04] bg-[#11141c]/50">
       {/* Navigation Tabs */}
@@ -67,7 +78,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
         />
 
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="p-1 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
           title="Fermer"
         >

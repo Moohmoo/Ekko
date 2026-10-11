@@ -89,8 +89,25 @@ function createWindow() {
             preload: preloadPath,
             nodeIntegration: false,
             contextIsolation: true,
+            sandbox: false, // Essential to allow require('electron') in preload.cjs
         },
     });
+    // Explicit preload-error listener for terminal observability
+    win.webContents.on('preload-error', function (_event, preloadErrPath, error) {
+        console.error('[Main:FATAL] Preload execution error in:', preloadErrPath);
+        console.error(error);
+    });
+    // Native keyboard shortcut fallback for closing window (Escape or Ctrl+Q)
+    win.webContents.on('before-input-event', function (_event, input) {
+        if (input.key === 'Escape' || (input.control && input.key.toLowerCase() === 'q')) {
+            console.log('[Main] Escape/Ctrl+Q pressed, closing window.');
+            win === null || win === void 0 ? void 0 : win.close();
+        }
+    });
+    // Automatically open detached DevTools in dev mode
+    if (process.env.NODE_ENV !== 'production' || !app.isPackaged) {
+        win.webContents.openDevTools({ mode: 'detach' });
+    }
     if (VITE_DEV_SERVER_URL) {
         console.log('[Main] Loading dev server URL:', VITE_DEV_SERVER_URL);
         win.loadURL(VITE_DEV_SERVER_URL);
