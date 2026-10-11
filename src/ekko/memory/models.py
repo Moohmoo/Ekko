@@ -36,7 +36,7 @@ class RawSignal(BaseModel):
     """Raw signal ingested from an external source before semantic distillation."""
 
     id: str
-    source_id: str
+    source_id: str | None = None
     title: str
     external_id: str | None = None
     url: str | None = None

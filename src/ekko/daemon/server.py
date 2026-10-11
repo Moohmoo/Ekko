@@ -308,6 +308,45 @@ class IPCServer:
         writer.write(_rpc_result(req_id, signals).encode("utf-8"))
         await writer.drain()
 
+    async def _distill_signal_async(self, signal_data: dict[str, Any]) -> None:
+        """Background asynchronous cognitive distillation and note persistence for archived signal."""
+        try:
+            if not self.distiller:
+                logger.warning(
+                    "Distiller not available for background distillation of signal %s",
+                    signal_data.get("id"),
+                )
+                return
+
+            signal_id = str(signal_data.get("id", ""))
+            title = str(signal_data.get("title", "") or "Signal")
+            source_type = str(
+                signal_data.get("source_type")
+                or signal_data.get("source_id")
+                or "proactive_signal"
+            )
+            source_url = str(signal_data.get("source_url") or signal_data.get("url") or "")
+            raw_content = str(
+                signal_data.get("raw_content")
+                or signal_data.get("clean_content")
+                or signal_data.get("summary")
+                or title
+            )
+
+            signal = RawSignal(
+                id=signal_id,
+                source_id=source_type,
+                title=title,
+                url=source_url or None,
+                raw_content=raw_content[:12000],
+                clean_content=raw_content[:12000],
+                status=SignalStatus.ARCHIVED,
+            )
+            note = await self.distiller._distill_single_signal(signal)
+            logger.info("Signal %s successfully distilled in background into note %s", signal_id, note.slug)
+        except Exception as exc:
+            logger.error("Background distillation failed for signal %s: %s", signal_data.get("id"), exc)
+
     async def _handle_resolve_signal(
         self,
         req_id: Any,
@@ -337,12 +376,28 @@ class IPCServer:
             await writer.drain()
             return
 
-        found = await self.db_manager.resolve_signal(signal_id, action)
-        if not found:
+        signal_data = await self.db_manager.get_raw_signal_by_id(signal_id)
+        if not signal_data:
             writer.write(_rpc_error(req_id, -32001, f"Signal introuvable : '{signal_id}'").encode("utf-8"))
             await writer.drain()
             return
 
-        reply = {"status": "ok", "signal_id": signal_id, "action": action}
+        await self.db_manager.resolve_signal(signal_id, action)
+
+        if action == "archive":
+            asyncio.create_task(self._distill_signal_async(signal_data))
+            reply = {
+                "status": "ok",
+                "signal_id": signal_id,
+                "action": "archived",
+                "message": "Signal archivé et distillation lancée",
+            }
+        else:
+            reply = {
+                "status": "ok",
+                "signal_id": signal_id,
+                "action": "discarded",
+            }
+
         writer.write(_rpc_result(req_id, reply).encode("utf-8"))
         await writer.drain()

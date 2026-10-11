@@ -241,9 +241,9 @@ class HybridStore:
             return [
                 RawSignal(
                     id=row["id"],
-                    source_id=row["source_id"],
+                    source_id=row["source_id"] or row["source_type"],
                     external_id=row["external_id"],
-                    url=row["url"],
+                    url=row["url"] or row["source_url"],
                     title=row["title"],
                     raw_content=row["raw_content"],
                     clean_content=row["clean_content"],
@@ -312,6 +312,17 @@ class HybridStore:
     async def get_retained_signals(self, limit: int = 5) -> list[dict[str, Any]]:
         """Retrieve retained signals asynchronously for UC-1 proactive alerts."""
         return await asyncio.to_thread(self._get_retained_signals_sync, limit)
+
+    def _get_raw_signal_by_id_sync(self, signal_id: str) -> dict[str, Any] | None:
+        """Fetch raw signal record by ID synchronously."""
+        sql = "SELECT * FROM raw_signals WHERE id = ?;"
+        with self._get_connection() as conn:
+            row = conn.execute(sql, (signal_id,)).fetchone()
+            return dict(row) if row else None
+
+    async def get_raw_signal_by_id(self, signal_id: str) -> dict[str, Any] | None:
+        """Fetch raw signal record by ID asynchronously."""
+        return await asyncio.to_thread(self._get_raw_signal_by_id_sync, signal_id)
 
     def _resolve_signal_sync(self, signal_id: str, action: str) -> bool:
         """Resolve signal by ID with 'archive' -> 'archived' or 'discard' -> 'discarded'."""

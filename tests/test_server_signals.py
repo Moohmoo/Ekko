@@ -1,9 +1,13 @@
 """Unit tests for JSON-RPC 2.0 signal management methods in IPCServer."""
 
 import asyncio
+import json
 from pathlib import Path
+from unittest.mock import AsyncMock
 import pytest
 
+from ekko.core.models import ModelResponse
+from ekko.daemon.distiller import SignalDistiller
 from ekko.daemon.ipc_client import IPCClient
 from ekko.daemon.server import IPCServer
 from ekko.memory.hybrid_store import HybridStore
@@ -89,7 +93,8 @@ async def test_resolve_signal_archive(socket_path: Path, db_store: HybridStore) 
         res = await client.call("resolve_signal", {"signal_id": "sig_arch_1", "action": "archive"})
         assert res["status"] == "ok"
         assert res["signal_id"] == "sig_arch_1"
-        assert res["action"] == "archive"
+        assert res["action"] == "archived"
+        assert res["message"] == "Signal archivé et distillation lancée"
 
         # Signal should no longer be pending
         pending = await client.call("get_pending_signals")
@@ -121,11 +126,79 @@ async def test_resolve_signal_discard(socket_path: Path, db_store: HybridStore) 
     async with IPCClient(socket_path=socket_path) as client:
         res = await client.call("resolve_signal", {"signal_id": "sig_disc_1", "action": "discard"})
         assert res["status"] == "ok"
-        assert res["action"] == "discard"
+        assert res["action"] == "discarded"
 
     with db_store._get_connection() as conn:
         row = conn.execute("SELECT status FROM raw_signals WHERE id = ?", ("sig_disc_1",)).fetchone()
         assert row["status"] == "discarded"
+
+    await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_resolve_signal_archive_triggers_background_distillation(
+    socket_path: Path, db_store: HybridStore, tmp_path: Path
+) -> None:
+    """Archiving a signal triggers background distillation, creating note in DB and on disk."""
+    notes_dir = tmp_path / "notes"
+    mock_llm = AsyncMock()
+    mock_llm.generate.return_value = ModelResponse(
+        content=json.dumps({
+            "title": "SQLite WAL2 Insights",
+            "summary": "Deep dive into WAL2 concurrency advantages.",
+            "key_points": ["Point 1: concurrency", "Point 2: checkpoints"],
+            "tags": ["sqlite", "wal2"],
+        }),
+        model_name="mock-model",
+    )
+    distiller = SignalDistiller(store=db_store, llm_provider=mock_llm, notes_dir=notes_dir)
+
+    with db_store._get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO raw_signals (id, source_type, source_url, title, raw_content, status)
+            VALUES (?, ?, ?, ?, ?, ?);
+            """,
+            (
+                "sig_bg_1",
+                "hackernews",
+                "https://news.ycombinator.com/item?id=9999",
+                "SQLite WAL2 Article",
+                "Detailed content about WAL2 concurrency.",
+                "retained",
+            ),
+        )
+
+    server = IPCServer(socket_path=socket_path, db_manager=db_store, distiller=distiller)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        res = await client.call("resolve_signal", {"signal_id": "sig_bg_1", "action": "archive"})
+        assert res["status"] == "ok"
+        assert res["action"] == "archived"
+        assert res["message"] == "Signal archivé et distillation lancée"
+
+    # Allow background task to complete
+    await asyncio.sleep(0.1)
+
+    # Verify status in raw_signals
+    with db_store._get_connection() as conn:
+        row = conn.execute("SELECT status FROM raw_signals WHERE id = ?", ("sig_bg_1",)).fetchone()
+        assert row["status"] == "archived"
+
+    # Verify note in SQLite knowledge_notes
+    notes = await db_store.list_knowledge_notes(limit=5)
+    assert len(notes) >= 1
+    distilled = next((n for n in notes if n.title == "SQLite WAL2 Insights"), None)
+    assert distilled is not None
+    assert distilled.summary == "Deep dive into WAL2 concurrency advantages."
+    assert "sqlite" in distilled.tags
+
+    # Verify physical markdown note file on disk
+    md_files = list(notes_dir.glob("*.md"))
+    assert len(md_files) == 1
+    content = md_files[0].read_text(encoding="utf-8")
+    assert "SQLite WAL2 Insights" in content
 
     await server.stop()
 
