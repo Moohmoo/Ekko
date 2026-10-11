@@ -130,19 +130,22 @@ ipcMain.handle('daemon:ping', async () => {
 });
 
 ipcMain.handle('daemon:get_notes', async () => {
+  try {
+    const notes = await sendJsonRpc<unknown[]>('scan_notes', { limit: 20 });
+    if (Array.isArray(notes) && notes.length > 0) {
+      return notes;
+    }
+  } catch (_e) {
+    // fallback to scan_inbox
+  }
   return await sendJsonRpc<unknown[]>('scan_inbox', { limit: 20 });
 });
 
 ipcMain.handle('daemon:ingest_file', async (_event, filePath: string) => {
-  const prompt = `Analyse et indexe ce document déposé : ${filePath}`;
-  return await new Promise((resolve, reject) => {
-    streamPrompt(
-      prompt,
-      () => {},
-      (res) => resolve(res),
-      (err) => reject(new Error(err))
-    );
-  });
+  return await sendJsonRpc<{ status: string; note: { id: string; title: string; slug: string; summary: string } }>(
+    'ingest_file',
+    { file_path: filePath }
+  );
 });
 
 ipcMain.handle('daemon:submit_prompt', async (event, prompt: string) => {

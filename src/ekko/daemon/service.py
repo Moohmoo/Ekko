@@ -96,7 +96,12 @@ async def run_daemon(
     coordinator = _compose_coordinator(active_settings, store)
 
     sock = Path(socket_path or getattr(active_settings, "ipc_socket_path", DEFAULT_SOCKET_PATH))
-    server = IPCServer(socket_path=sock, db_manager=store, engine=engine)
+    server = IPCServer(
+        socket_path=sock,
+        db_manager=store,
+        engine=engine,
+        distiller=coordinator.distiller,
+    )
 
     evt = stop_event or asyncio.Event()
     if stop_event is None:

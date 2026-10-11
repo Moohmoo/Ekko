@@ -166,3 +166,35 @@ async def test_ipc_client_context_manager_and_helpers(socket_path: Path) -> None
         assert isinstance(knowledge_resp, list)
 
     await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_ipc_server_ingest_file(socket_path: Path, tmp_path: Path) -> None:
+    """Ensure ingest_file method extracts, distills, and returns note metadata."""
+    sample_file = tmp_path / "sample_note.md"
+    sample_file.write_text("# Test Document\n\nThis is sample text for distillation.", encoding="utf-8")
+
+    mock_distiller = MagicMock()
+    mock_distiller._distill_single_signal = AsyncMock(
+        return_value=KnowledgeNote(
+            id="note_test_doc",
+            slug="2026-10-11_test-doc",
+            title="Test Doc",
+            summary="A short summary",
+            content="Full note content",
+            tags=["test"],
+            sources=[str(sample_file)],
+        )
+    )
+
+    server = IPCServer(socket_path=socket_path, distiller=mock_distiller)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        res = await client.call("ingest_file", {"file_path": str(sample_file)})
+        assert res["status"] == "ok"
+        assert res["note"]["title"] == "Test Doc"
+        assert res["note"]["slug"] == "2026-10-11_test-doc"
+
+    await server.stop()
+

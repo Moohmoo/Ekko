@@ -6,6 +6,8 @@ import { useViewStore } from '../../core/stores/useViewStore';
 import {
   UploadCloud,
   CheckCircle2,
+  AlertCircle,
+  Loader2,
   Zap,
   ArrowRight,
 } from 'lucide-react';
@@ -15,10 +17,10 @@ export const HomeView: React.FC = () => {
 
   const {
     dropStatus,
-    progress,
     fileName,
     mascotEmotion,
     statusMessage,
+    errorMessage,
     setHover,
     ingestFileInPlace,
   } = useDropStore();
@@ -46,7 +48,6 @@ export const HomeView: React.FC = () => {
       const file = e.dataTransfer.files[0];
       const filePath = (file as unknown as { path?: string }).path || file.name;
       await ingestFileInPlace(filePath);
-      await fetchNotes();
     }
   };
 
@@ -71,6 +72,8 @@ export const HomeView: React.FC = () => {
                 ? 'bg-sky-400 animate-ping'
                 : mascotEmotion === 'hover_drop'
                 ? 'bg-sky-300'
+                : dropStatus === 'error'
+                ? 'bg-red-400'
                 : 'bg-sky-400/70'
             }`}
           />
@@ -90,34 +93,42 @@ export const HomeView: React.FC = () => {
           className={`flex-[0.65] rounded-xl border transition-all p-3 flex flex-col items-center justify-center relative overflow-hidden select-none ${
             dropStatus === 'hover'
               ? 'bg-sky-500/15 border-sky-400 scale-[1.01]'
-              : dropStatus === 'uploading' || dropStatus === 'distilling'
+              : dropStatus === 'distilling'
               ? 'bg-[#141824] border-sky-500/40'
               : dropStatus === 'success'
               ? 'bg-emerald-950/20 border-emerald-500/40'
+              : dropStatus === 'error'
+              ? 'bg-red-950/20 border-red-500/40'
               : 'bg-[#141824] border-dashed border-white/10 hover:border-sky-400/40 hover:bg-white/[0.02]'
           }`}
         >
-          {dropStatus === 'uploading' || dropStatus === 'distilling' ? (
-            <div className="w-full flex flex-col items-center justify-center gap-1.5 px-3">
-              <div className="w-full flex items-center justify-between text-[11px]">
-                <span className="text-sky-300 font-medium truncate max-w-[180px]">
+          {dropStatus === 'distilling' ? (
+            <div className="w-full flex flex-col items-center justify-center gap-2 px-3 text-center">
+              <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
+              <div className="flex flex-col">
+                <span className="text-xs text-sky-300 font-medium truncate max-w-[240px]">
                   {fileName || 'Document'}
                 </span>
-                <span className="font-mono text-sky-400 text-xs">{progress}%</span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  Distillation cognitive en cours...
+                </span>
               </div>
-              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className="bg-sky-400 h-full rounded-full transition-all duration-200"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-slate-400 mt-0.5">Distillation in-place en cours...</span>
             </div>
           ) : dropStatus === 'success' ? (
             <div className="flex flex-col items-center justify-center gap-1.5 text-center">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-              <span className="text-xs text-emerald-300 font-medium">
+              <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+              <span className="text-xs text-emerald-300 font-semibold">
                 Document assimilé et indexé ✓
+              </span>
+            </div>
+          ) : dropStatus === 'error' ? (
+            <div className="flex flex-col items-center justify-center gap-1 text-center px-2">
+              <AlertCircle className="w-5 h-5 text-red-400 mb-0.5" />
+              <span className="text-[11px] text-red-300 font-semibold">
+                {errorMessage || 'Format non supporté'}
+              </span>
+              <span className="text-[9px] text-slate-400">
+                PDF, Markdown (.md) ou texte brut (.txt) uniquement
               </span>
             </div>
           ) : (

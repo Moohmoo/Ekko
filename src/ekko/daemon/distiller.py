@@ -77,7 +77,12 @@ class SignalDistiller:
     def _write_physical_note(self, note: KnowledgeNote, date_str: str, slug: str) -> None:
         """Write note markdown file with YAML frontmatter to notes directory."""
         self.notes_dir.mkdir(parents=True, exist_ok=True)
-        file_path = _determine_unique_path(self.notes_dir, slug, date_str)
+        # Check if note file with same date and slug already exists
+        primary_file = self.notes_dir / f"{date_str}_{slug}.md"
+        if primary_file.exists():
+            file_path = primary_file
+        else:
+            file_path = _determine_unique_path(self.notes_dir, slug, date_str)
         text = _format_markdown_note(note.title, note.content, note.tags, note.sources, date_str)
         file_path.write_text(text, encoding="utf-8")
 
@@ -88,8 +93,8 @@ class SignalDistiller:
         summary: str,
         body: str,
         tags: list[str],
-    ) -> None:
-        """Save knowledge note in hybrid store and on disk."""
+    ) -> KnowledgeNote:
+        """Save knowledge note in hybrid store and on disk, ensuring idempotence."""
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%Y-%m-%d")
         slug = _slugify(title)
@@ -109,8 +114,9 @@ class SignalDistiller:
         vec = self.embedder.embed_query(f"{title}\n{body}") if self.embedder else None
         await self.store.save_knowledge_note(note, embedding=vec)
         await asyncio.to_thread(self._write_physical_note, note, date_str, slug)
+        return note
 
-    async def _distill_single_signal(self, signal: RawSignal) -> None:
+    async def _distill_single_signal(self, signal: RawSignal) -> KnowledgeNote:
         """Run LLM inference with VRAM confinement and save distilled note."""
         prompt = _build_distill_prompt(signal)
         messages = [Message(role="user", content=prompt)]
@@ -118,7 +124,7 @@ class SignalDistiller:
 
         response = await self.llm_provider.generate(messages, **call_kwargs)
         title, summary, body, tags = _parse_distillation(response.content, signal.title)
-        await self._persist_note(signal, title, summary, body, tags)
+        return await self._persist_note(signal, title, summary, body, tags)
 
     async def distill_batch(self, batch_size: int = 5) -> int:
         """Fetch pending signals, distill them, and transition states."""
