@@ -202,3 +202,23 @@ async def test_ipc_server_ingest_file(socket_path: Path, tmp_path: Path) -> None
 
     await server.stop()
 
+
+@pytest.mark.asyncio
+async def test_ipc_server_ingest_file_unreadable(socket_path: Path, tmp_path: Path) -> None:
+    """Ensure ingest_file rejects unreadable locked files with standard RPC error."""
+    locked_file = tmp_path / "locked.md"
+    locked_file.write_text("# Locked Content", encoding="utf-8")
+    locked_file.chmod(0o000)
+
+    server = IPCServer(socket_path=socket_path)
+    await server.start()
+
+    try:
+        async with IPCClient(socket_path=socket_path) as client:
+            with pytest.raises(Exception) as exc_info:
+                await client.call("ingest_file", {"file_path": str(locked_file)})
+            assert "Fichier illisible sur le disque" in str(exc_info.value)
+    finally:
+        locked_file.chmod(0o644)
+        await server.stop()
+

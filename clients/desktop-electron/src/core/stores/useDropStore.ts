@@ -3,6 +3,7 @@ import type { MascotEmotion } from '../../components/Mascot';
 import type { NoteItem } from '../types';
 import { useEchoStore } from './useEchoStore';
 import { RESET_ERROR_DELAY_MS } from '../../design-system/tokens';
+import { playDropBlip, playSuccessChime, playErrorThud } from '../audio/soundManager';
 
 export type DropStatus = 'idle' | 'hover' | 'processing' | 'ready' | 'error';
 
@@ -58,6 +59,7 @@ export const useDropStore = create<DropState>((set, get) => ({
   },
 
   setError: (msg: string) => {
+    playErrorThud();
     set({
       dropStatus: 'error',
       mascotEmotion: 'error',
@@ -89,6 +91,7 @@ export const useDropStore = create<DropState>((set, get) => ({
     const baselineNoteId = useEchoStore.getState().latestNote?.id ?? null;
     const baselineNotesCount = useEchoStore.getState().notes.length;
 
+    playDropBlip();
     set({
       dropStatus: 'processing',
       fileName,
@@ -133,6 +136,8 @@ export const useDropStore = create<DropState>((set, get) => ({
 
       if (rawMsg.includes('Fichier introuvable') || rawMsg.includes('ENOENT')) {
         userMsg = 'Fichier introuvable sur le disque';
+      } else if (rawMsg.includes('Fichier illisible') || rawMsg.includes('Permission') || rawMsg.includes('EACCES')) {
+        userMsg = 'Fichier illisible sur le disque';
       } else if (rawMsg.includes('Format non supporté')) {
         userMsg = 'Format non supporté · PDF, MD ou TXT uniquement';
       } else if (rawMsg.includes('aucun texte extractible')) {
@@ -141,6 +146,7 @@ export const useDropStore = create<DropState>((set, get) => ({
         userMsg = 'Daemon Ekko hors ligne';
       }
 
+      playErrorThud();
       set({
         dropStatus: 'error',
         fileName: null,
@@ -168,6 +174,7 @@ export const useDropStore = create<DropState>((set, get) => ({
   },
 
   onDistillationComplete: (_note: NoteItem) => {
+    playSuccessChime();
     set({
       dropStatus: 'ready',
       mascotEmotion: 'ready',

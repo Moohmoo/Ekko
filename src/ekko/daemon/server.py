@@ -3,6 +3,7 @@
 import asyncio
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -134,6 +135,16 @@ class IPCServer:
             return
         if not target_path.is_file():
             writer.write(_rpc_error(req_id, -32001, f"Le chemin n'est pas un fichier : {target_path}").encode("utf-8"))
+            await writer.drain()
+            return
+        if not os.access(target_path, os.R_OK):
+            writer.write(
+                _rpc_error(
+                    req_id,
+                    -32003,
+                    f"Fichier illisible sur le disque (permissions insuffisantes) : {target_path}",
+                ).encode("utf-8")
+            )
             await writer.drain()
             return
 
