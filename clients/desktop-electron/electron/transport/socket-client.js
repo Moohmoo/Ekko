@@ -7,9 +7,9 @@ export var DEFAULT_SOCKET_PATH = '/tmp/ekko.sock';
 export function sendJsonRpc(method, params, socketPath) {
     if (params === void 0) { params = {}; }
     if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
-    var isPing = method === 'ping';
+    var isSilent = method === 'ping' || method === 'scan_notes';
     return new Promise(function (resolve, reject) {
-        if (!isPing) {
+        if (!isSilent) {
             console.log("[IPC:REQ] Connecting to ".concat(socketPath, " -> ").concat(method));
         }
         var client = net.createConnection(socketPath);
@@ -20,9 +20,11 @@ export function sendJsonRpc(method, params, socketPath) {
             id: Date.now(),
         }) + '\n';
         var buffer = '';
-        client.setTimeout(3000);
+        // Contextual timeouts: 5s for ping, 30s for business actions
+        var timeoutMs = method === 'ping' ? 5000 : 30000;
+        client.setTimeout(timeoutMs);
         client.on('connect', function () {
-            if (!isPing) {
+            if (!isSilent) {
                 console.log("[IPC:REQ] Connected. Writing payload for ".concat(method));
             }
             client.write(payload);
@@ -31,7 +33,7 @@ export function sendJsonRpc(method, params, socketPath) {
             buffer += chunk.toString();
             if (buffer.includes('\n')) {
                 var line = buffer.split('\n')[0];
-                if (!isPing) {
+                if (!isSilent) {
                     console.log("[IPC:RES] ".concat(method, " returned: ").concat(line.slice(0, 120)));
                 }
                 client.end();
@@ -52,12 +54,12 @@ export function sendJsonRpc(method, params, socketPath) {
             }
         });
         client.on('timeout', function () {
-            console.error("[IPC:ERR] Timeout (3000ms) waiting for ".concat(method));
+            console.error("[IPC:ERR] Timeout (".concat(timeoutMs, "ms) waiting for ").concat(method));
             client.destroy();
             reject(new Error('TIMEOUT'));
         });
         client.on('error', function (err) {
-            if (!isPing) {
+            if (method !== 'ping') {
                 console.error("[IPC:ERR] Socket connection error for ".concat(method, ":"), err.message);
             }
             reject(new Error('DAEMON_OFFLINE'));
@@ -73,7 +75,8 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
     var client = net.createConnection(socketPath);
     var fullText = '';
     var buffer = '';
-    client.setTimeout(60000);
+    // Streaming timeout: 120s safety margin for multi-turn ReAct
+    client.setTimeout(120000);
     var payload = JSON.stringify({
         jsonrpc: '2.0',
         method: 'submit_prompt',

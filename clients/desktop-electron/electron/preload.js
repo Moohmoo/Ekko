@@ -1,9 +1,18 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 var api = {
     ping: function () { return ipcRenderer.invoke('daemon:ping'); },
     getNotes: function () { return ipcRenderer.invoke('daemon:get_notes'); },
     submitPrompt: function (prompt) { return ipcRenderer.invoke('daemon:submit_prompt', prompt); },
     ingestFile: function (filePath) { return ipcRenderer.invoke('daemon:ingest_file', filePath); },
+    getDroppedFilePath: function (file) {
+        try {
+            return webUtils.getPathForFile(file);
+        }
+        catch (err) {
+            console.error('[Preload] Échec webUtils.getPathForFile:', err);
+            return '';
+        }
+    },
     closeWindow: function () { return ipcRenderer.invoke('window:close'); },
     resizeWindow: function (width, height) { return ipcRenderer.invoke('window:resize', { width: width, height: height }); },
     onPromptChunk: function (callback) {

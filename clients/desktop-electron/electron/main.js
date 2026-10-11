@@ -64,20 +64,26 @@ function getPreloadPath() {
     console.log('[Main] Using fallback preload path:', fallbackPath);
     return fallbackPath;
 }
-function createWindow() {
+function getCenteredTopBounds(width, height) {
     var primaryDisplay = screen.getPrimaryDisplay();
-    var screenWidth = primaryDisplay.workAreaSize.width;
+    var _a = primaryDisplay.workArea, workX = _a.x, workY = _a.y, workWidth = _a.width;
+    return {
+        x: Math.round(workX + (workWidth - width) / 2),
+        y: workY, // Anchored to top work area (under panel on Linux/GNOME, y=0 on Windows)
+        width: width,
+        height: height,
+    };
+}
+function createWindow() {
     var podWidth = 620;
     var podHeight = 230;
-    // Position anchored in top right with 20px margins
-    var posX = Math.max(20, screenWidth - podWidth - 20);
-    var posY = 30;
+    var initialBounds = getCenteredTopBounds(podWidth, podHeight);
     var preloadPath = getPreloadPath();
     win = new BrowserWindow({
-        width: podWidth,
-        height: podHeight,
-        x: posX,
-        y: posY,
+        width: initialBounds.width,
+        height: initialBounds.height,
+        x: initialBounds.x,
+        y: initialBounds.y,
         resizable: false,
         frame: false,
         transparent: true,
@@ -150,22 +156,25 @@ ipcMain.handle('daemon:ping', function () { return __awaiter(void 0, void 0, voi
     });
 }); });
 ipcMain.handle('daemon:get_notes', function () { return __awaiter(void 0, void 0, void 0, function () {
+    var _e_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, sendJsonRpc('scan_inbox', { limit: 20 })];
+            case 0:
+                _a.trys.push([0, 2, , 4]);
+                return [4 /*yield*/, sendJsonRpc('scan_notes', { limit: 20 })];
             case 1: return [2 /*return*/, _a.sent()];
+            case 2:
+                _e_1 = _a.sent();
+                return [4 /*yield*/, sendJsonRpc('scan_inbox', { limit: 20 })];
+            case 3: return [2 /*return*/, _a.sent()];
+            case 4: return [2 /*return*/];
         }
     });
 }); });
 ipcMain.handle('daemon:ingest_file', function (_event, filePath) { return __awaiter(void 0, void 0, void 0, function () {
-    var prompt;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0:
-                prompt = "Analyse et indexe ce document d\u00E9pos\u00E9 : ".concat(filePath);
-                return [4 /*yield*/, new Promise(function (resolve, reject) {
-                        streamPrompt(prompt, function () { }, function (res) { return resolve(res); }, function (err) { return reject(new Error(err)); });
-                    })];
+            case 0: return [4 /*yield*/, sendJsonRpc('ingest_file', { file_path: filePath })];
             case 1: return [2 /*return*/, _a.sent()];
         }
     });
@@ -192,10 +201,15 @@ ipcMain.handle('window:close', function () {
     }
 });
 ipcMain.handle('window:resize', function (_event_1, _a) { return __awaiter(void 0, [_event_1, _a], void 0, function (_event, _b) {
+    var display, _c, workX, workY, workWidth, newX, newY;
     var width = _b.width, height = _b.height;
-    return __generator(this, function (_c) {
+    return __generator(this, function (_d) {
         if (win && !win.isDestroyed()) {
-            win.setSize(width, height, true);
+            display = screen.getDisplayMatching(win.getBounds());
+            _c = display.workArea, workX = _c.x, workY = _c.y, workWidth = _c.width;
+            newX = Math.round(workX + (workWidth - width) / 2);
+            newY = workY;
+            win.setBounds({ x: newX, y: newY, width: width, height: height }, true);
         }
         return [2 /*return*/];
     });

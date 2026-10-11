@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { NoteItem, ChatMessage } from './core/types';
+import type { ChatMessage } from './core/types';
 import { useDaemonHeartbeat } from './core/hooks/useDaemonHeartbeat';
+import { useEchoStore } from './core/stores/useEchoStore';
 import { useViewStore } from './core/stores/useViewStore';
 import { PodHeader } from './components/PodHeader';
 import { WelcomeView } from './features/welcome/WelcomeView';
@@ -16,33 +17,11 @@ export const App: React.FC = () => {
   useDaemonHeartbeat();
 
   const { viewMode, setViewMode } = useViewStore();
+  const { notes, isLoading: isLoadingNotes, fetchNotes } = useEchoStore();
 
-  const [notes, setNotes] = useState<NoteItem[]>([]);
-  const [isLoadingNotes, setIsLoadingNotes] = useState<boolean>(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Fetch Notes on demand
-  const fetchNotes = useCallback(async () => {
-    if (!window.ekkoAPI) return;
-    setIsLoadingNotes(true);
-    try {
-      const raw = await window.ekkoAPI.getNotes();
-      const mapped: NoteItem[] = (raw as Record<string, unknown>[]).map((item) => ({
-        id: String(item.id || ''),
-        title: String(item.title || 'Signal brut'),
-        summary: String(item.clean_content || ''),
-        source: String(item.source_id || 'ekko'),
-        tags: [String(item.source_id || 'inbox')],
-      }));
-      setNotes(mapped);
-    } catch (e) {
-      console.warn('[Frontend] Failed fetching notes:', e);
-    } finally {
-      setIsLoadingNotes(false);
-    }
-  }, []);
 
   // Handle Send Message
   const handleSendMessage = async (text: string) => {

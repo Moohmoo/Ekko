@@ -21,10 +21,10 @@ export function sendJsonRpc<T = unknown>(
   params: Record<string, unknown> = {},
   socketPath: string = DEFAULT_SOCKET_PATH
 ): Promise<T> {
-  const isPing = method === 'ping';
+  const isSilent = method === 'ping' || method === 'scan_notes';
 
   return new Promise((resolve, reject) => {
-    if (!isPing) {
+    if (!isSilent) {
       console.log(`[IPC:REQ] Connecting to ${socketPath} -> ${method}`);
     }
     const client = net.createConnection(socketPath);
@@ -38,11 +38,11 @@ export function sendJsonRpc<T = unknown>(
     let buffer = '';
 
     // Contextual timeouts: 5s for ping, 30s for business actions
-    const timeoutMs = isPing ? 5000 : 30000;
+    const timeoutMs = method === 'ping' ? 5000 : 30000;
     client.setTimeout(timeoutMs);
 
     client.on('connect', () => {
-      if (!isPing) {
+      if (!isSilent) {
         console.log(`[IPC:REQ] Connected. Writing payload for ${method}`);
       }
       client.write(payload);
@@ -52,7 +52,7 @@ export function sendJsonRpc<T = unknown>(
       buffer += chunk.toString();
       if (buffer.includes('\n')) {
         const line = buffer.split('\n')[0];
-        if (!isPing) {
+        if (!isSilent) {
           console.log(`[IPC:RES] ${method} returned: ${line.slice(0, 120)}`);
         }
         client.end();
@@ -78,7 +78,7 @@ export function sendJsonRpc<T = unknown>(
     });
 
     client.on('error', (err) => {
-      if (!isPing) {
+      if (method !== 'ping') {
         console.error(`[IPC:ERR] Socket connection error for ${method}:`, err.message);
       }
       reject(new Error('DAEMON_OFFLINE'));

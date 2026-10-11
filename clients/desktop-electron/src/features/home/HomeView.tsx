@@ -104,28 +104,29 @@ export const HomeView: React.FC = () => {
           className={`flex-[0.65] rounded-xl border transition-all p-3 flex flex-col items-center justify-center relative overflow-hidden select-none ${
             dropStatus === 'hover'
               ? 'bg-sky-500/15 border-sky-400 scale-[1.01]'
-              : dropStatus === 'distilling'
-              ? 'bg-[#141824] border-sky-500/40'
-              : dropStatus === 'success'
+              : dropStatus === 'processing'
+              ? 'bg-[#141824] border-sky-500/40 shadow-[0_0_15px_rgba(56,189,248,0.08)]'
+              : dropStatus === 'ready'
               ? 'bg-emerald-950/20 border-emerald-500/40'
               : dropStatus === 'error'
               ? 'bg-red-950/20 border-red-500/40'
               : 'bg-[#141824] border-dashed border-white/10 hover:border-sky-400/40 hover:bg-white/[0.02]'
           }`}
         >
-          {dropStatus === 'distilling' ? (
-            <div className="w-full flex flex-col items-center justify-center gap-2 px-3 text-center">
-              <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
-              <div className="flex flex-col">
-                <span className="text-xs text-sky-300 font-medium truncate max-w-[240px]">
-                  {fileName || 'Document'}
+          {dropStatus === 'processing' ? (
+            <div className="w-full flex flex-col items-center justify-center gap-2 px-3 text-center relative">
+              <div className="absolute inset-0 bg-sky-400/[0.04] animate-pulse rounded-lg pointer-events-none" />
+              <Loader2 className="w-5 h-5 text-sky-400 animate-spin" />
+              <div className="flex flex-col z-10">
+                <span className="text-xs text-slate-200 font-medium truncate max-w-[260px]">
+                  Distillation de {fileName || 'document'} en arrière-plan...
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5">
-                  Distillation cognitive en cours...
+                <span className="text-[10px] text-sky-400/80 mt-0.5 animate-pulse">
+                  Extraction et synthèse cognitives
                 </span>
               </div>
             </div>
-          ) : dropStatus === 'success' ? (
+          ) : dropStatus === 'ready' ? (
             <div className="flex flex-col items-center justify-center gap-1.5 text-center px-2">
               <CheckCircle2 className="w-6 h-6 text-emerald-400" />
               <span className="text-xs text-emerald-300 font-semibold">

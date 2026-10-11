@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import type { MascotEmotion } from '../../components/Mascot';
+import type { NoteItem } from '../types';
 import { useEchoStore } from './useEchoStore';
 
-export type DropStatus = 'idle' | 'hover' | 'distilling' | 'success' | 'error';
+export type DropStatus = 'idle' | 'hover' | 'processing' | 'ready' | 'error';
 
 interface DropState {
   dropStatus: DropStatus;
@@ -10,10 +11,14 @@ interface DropState {
   mascotEmotion: MascotEmotion;
   statusMessage: string;
   errorMessage: string | null;
+  pendingFilePath: string | null;
+  baselineNoteId: string | null;
+  baselineNotesCount: number;
 
   setHover: (isHovering: boolean) => void;
   setError: (msg: string) => void;
   ingestFileInPlace: (filePath: string) => Promise<boolean>;
+  onDistillationComplete: (note: NoteItem) => void;
   reset: () => void;
 }
 
@@ -25,9 +30,12 @@ export const useDropStore = create<DropState>((set, get) => ({
   mascotEmotion: 'idle',
   statusMessage: 'Tampon actif',
   errorMessage: null,
+  pendingFilePath: null,
+  baselineNoteId: null,
+  baselineNotesCount: 0,
 
   setHover: (isHovering: boolean) => {
-    if (get().dropStatus === 'distilling') return;
+    if (get().dropStatus === 'processing') return;
 
     if (isHovering) {
       set({
@@ -56,11 +64,13 @@ export const useDropStore = create<DropState>((set, get) => ({
       errorMessage: msg,
     });
     setTimeout(() => {
-      set({
-        dropStatus: 'idle',
-        statusMessage: 'Tampon actif',
-        errorMessage: null,
-      });
+      if (get().dropStatus === 'error') {
+        set({
+          dropStatus: 'idle',
+          statusMessage: 'Tampon actif',
+          errorMessage: null,
+        });
+      }
     }, 3000);
   },
 
@@ -74,12 +84,18 @@ export const useDropStore = create<DropState>((set, get) => ({
       return false;
     }
 
+    const baselineNoteId = useEchoStore.getState().latestNote?.id ?? null;
+    const baselineNotesCount = useEchoStore.getState().notes.length;
+
     set({
-      dropStatus: 'distilling',
+      dropStatus: 'processing',
       fileName,
       mascotEmotion: 'ingesting',
-      statusMessage: 'Distillation en cours...',
+      statusMessage: `Distillation de ${fileName} en arrière-plan...`,
       errorMessage: null,
+      pendingFilePath: filePath,
+      baselineNoteId,
+      baselineNotesCount,
     });
 
     try {
@@ -87,43 +103,26 @@ export const useDropStore = create<DropState>((set, get) => ({
         throw new Error('IPC non disponible');
       }
 
-      const res = (await window.ekkoAPI.ingestFile(filePath)) as {
-        status?: string;
-        filename?: string;
-        message?: string;
-        note?: { id?: string; slug?: string; title: string; summary?: string; source?: string };
-      };
+      const res = await window.ekkoAPI.ingestFile(filePath);
 
-      // If backend returned a completed note, update echo store immediately
+      // If backend returned completed note synchronously (test/mock fallback)
       if (res && typeof res === 'object' && res.note) {
-        useEchoStore.getState().setLatestNote({
+        const completedNote: NoteItem = {
           id: res.note.id || res.note.slug || String(Date.now()),
           title: res.note.title,
           summary: res.note.summary || '',
           source: res.note.source || fileName,
           tags: ['ingested'],
-        });
+        };
+        useEchoStore.getState().setLatestNote(completedNote);
+        get().onDistillationComplete(completedNote);
+        return true;
       }
 
-      // Drop & Forget contract: instant ACK confirmation
-      set({
-        dropStatus: 'success',
-        mascotEmotion: 'ready',
-        statusMessage: 'Document absorbé dans le tampon cognitif ✓',
-      });
-
-      // Keep confirmation for 1.8s then smoothly reset to idle
-      setTimeout(() => {
-        set({
-          dropStatus: 'idle',
-          fileName: null,
-          mascotEmotion: 'idle',
-          statusMessage: 'Tampon actif',
-        });
-        // Trigger background fetch to pick up completed note if ready
-        useEchoStore.getState().fetchNotes();
-      }, 1800);
-
+      // Drop & Forget contract: request accepted by daemon (<50ms).
+      // Distillation pipeline runs asynchronously in background.
+      // Zero mock timers! State remains in 'processing' until useEchoStore
+      // detects the persisted note in SQLite.
       return true;
     } catch (err: unknown) {
       console.error('[DropStore:Error] Erreur complète ingestion:', err);
@@ -146,18 +145,46 @@ export const useDropStore = create<DropState>((set, get) => ({
         mascotEmotion: 'idle',
         statusMessage: 'Erreur assimilation',
         errorMessage: userMsg,
+        pendingFilePath: null,
+        baselineNoteId: null,
+        baselineNotesCount: 0,
       });
 
       setTimeout(() => {
-        set({
-          dropStatus: 'idle',
-          statusMessage: 'Tampon actif',
-          errorMessage: null,
-        });
+        if (get().dropStatus === 'error') {
+          set({
+            dropStatus: 'idle',
+            statusMessage: 'Tampon actif',
+            errorMessage: null,
+          });
+        }
       }, 3000);
 
       return false;
     }
+  },
+
+  onDistillationComplete: (_note: NoteItem) => {
+    set({
+      dropStatus: 'ready',
+      mascotEmotion: 'ready',
+      statusMessage: 'Document absorbé dans le tampon cognitif ✓',
+      pendingFilePath: null,
+      baselineNoteId: null,
+      baselineNotesCount: 0,
+    });
+
+    // Brief visual confirmation before returning dropzone to idle
+    setTimeout(() => {
+      if (get().dropStatus === 'ready') {
+        set({
+          dropStatus: 'idle',
+          fileName: null,
+          mascotEmotion: 'idle',
+          statusMessage: 'Tampon actif',
+        });
+      }
+    }, 2000);
   },
 
   reset: () => {
@@ -167,6 +194,32 @@ export const useDropStore = create<DropState>((set, get) => ({
       mascotEmotion: 'idle',
       statusMessage: 'Tampon actif',
       errorMessage: null,
+      pendingFilePath: null,
+      baselineNoteId: null,
+      baselineNotesCount: 0,
     });
   },
 }));
+
+// Reactive subscription: when SQLite updates via scan_notes in useEchoStore,
+// complete pending ingestion if a new note is detected.
+useEchoStore.subscribe((echoState) => {
+  const dropState = useDropStore.getState();
+  if (dropState.dropStatus !== 'processing') return;
+
+  const newLatest = echoState.latestNote;
+  if (!newLatest) return;
+
+  const isNew =
+    newLatest.id !== dropState.baselineNoteId ||
+    echoState.notes.length > dropState.baselineNotesCount;
+
+  const matchesPending = dropState.pendingFilePath
+    ? newLatest.source === dropState.pendingFilePath ||
+      newLatest.source.includes(dropState.fileName || '')
+    : false;
+
+  if (isNew || matchesPending) {
+    dropState.onDistillationComplete(newLatest);
+  }
+});

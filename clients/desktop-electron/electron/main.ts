@@ -131,14 +131,10 @@ ipcMain.handle('daemon:ping', async () => {
 
 ipcMain.handle('daemon:get_notes', async () => {
   try {
-    const notes = await sendJsonRpc<unknown[]>('scan_notes', { limit: 20 });
-    if (Array.isArray(notes) && notes.length > 0) {
-      return notes;
-    }
+    return await sendJsonRpc<unknown[]>('scan_notes', { limit: 20 });
   } catch (_e) {
-    // fallback to scan_inbox
+    return await sendJsonRpc<unknown[]>('scan_inbox', { limit: 20 });
   }
-  return await sendJsonRpc<unknown[]>('scan_inbox', { limit: 20 });
 });
 
 ipcMain.handle('daemon:ingest_file', async (_event, filePath: string) => {
