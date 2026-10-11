@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt } from './transport/socket-client';
 
+import fs from 'node:fs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 process.env.DIST = path.join(__dirname, '../dist');
@@ -13,6 +15,27 @@ process.env.VITE_PUBLIC = app.isPackaged
 let win: BrowserWindow | null = null;
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 
+function getPreloadPath(): string {
+  // 1. Production / compiled path (same directory as main.js)
+  const prodPath = path.join(__dirname, 'preload.cjs');
+  if (fs.existsSync(prodPath)) {
+    console.log('[Main] Using production preload path:', prodPath);
+    return prodPath;
+  }
+
+  // 2. Dev path relative to electron/ source directory
+  const devPath = path.join(__dirname, '../dist-electron/preload.cjs');
+  if (fs.existsSync(devPath)) {
+    console.log('[Main] Using dev relative preload path:', devPath);
+    return devPath;
+  }
+
+  // 3. Absolute project root fallback
+  const fallbackPath = path.resolve(app.getAppPath(), 'dist-electron/preload.cjs');
+  console.log('[Main] Using fallback preload path:', fallbackPath);
+  return fallbackPath;
+}
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth } = primaryDisplay.workAreaSize;
@@ -22,6 +45,8 @@ function createWindow() {
   // Position anchored in top right with 20px margins
   const posX = Math.max(20, screenWidth - podWidth - 20);
   const posY = 30;
+
+  const preloadPath = getPreloadPath();
 
   win = new BrowserWindow({
     width: podWidth,
@@ -36,7 +61,7 @@ function createWindow() {
     hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
+      preload: preloadPath,
       nodeIntegration: false,
       contextIsolation: true,
     },

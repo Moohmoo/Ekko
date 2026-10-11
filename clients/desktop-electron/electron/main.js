@@ -38,6 +38,7 @@ import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt } from './transport/socket-client';
+import fs from 'node:fs';
 var __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.DIST = path.join(__dirname, '../dist');
 process.env.VITE_PUBLIC = app.isPackaged
@@ -45,6 +46,24 @@ process.env.VITE_PUBLIC = app.isPackaged
     : path.join(__dirname, '../public');
 var win = null;
 var VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
+function getPreloadPath() {
+    // 1. Production / compiled path (same directory as main.js)
+    var prodPath = path.join(__dirname, 'preload.cjs');
+    if (fs.existsSync(prodPath)) {
+        console.log('[Main] Using production preload path:', prodPath);
+        return prodPath;
+    }
+    // 2. Dev path relative to electron/ source directory
+    var devPath = path.join(__dirname, '../dist-electron/preload.cjs');
+    if (fs.existsSync(devPath)) {
+        console.log('[Main] Using dev relative preload path:', devPath);
+        return devPath;
+    }
+    // 3. Absolute project root fallback
+    var fallbackPath = path.resolve(app.getAppPath(), 'dist-electron/preload.cjs');
+    console.log('[Main] Using fallback preload path:', fallbackPath);
+    return fallbackPath;
+}
 function createWindow() {
     var primaryDisplay = screen.getPrimaryDisplay();
     var screenWidth = primaryDisplay.workAreaSize.width;
@@ -53,6 +72,7 @@ function createWindow() {
     // Position anchored in top right with 20px margins
     var posX = Math.max(20, screenWidth - podWidth - 20);
     var posY = 30;
+    var preloadPath = getPreloadPath();
     win = new BrowserWindow({
         width: podWidth,
         height: podHeight,
@@ -66,7 +86,7 @@ function createWindow() {
         hasShadow: true,
         backgroundColor: '#00000000',
         webPreferences: {
-            preload: path.join(__dirname, 'preload.cjs'),
+            preload: preloadPath,
             nodeIntegration: false,
             contextIsolation: true,
         },
