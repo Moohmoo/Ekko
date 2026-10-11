@@ -30,27 +30,32 @@ Le Pod abandonne les formats verticaux rigides au profit d'un format horizontal 
 - **Mode Étendu (Chat, Écho, Réglages) :** `620px` (largeur) × `460px` (hauteur).
   - Déploiement fluide vers le bas pour accueillir le flux conversationnel, la liste des notes PKM ou la configuration.
 
-### 2.2 Conception à Double Coque Top-Docked (Surface Coucou)
+### 2.2 Conception à Double Coque Top-Docked & Scène Unique (Stage)
 - **Coque extérieure (Encoche / Îlot sommital) :**
   - Fond noir absolu `#0c0c0e`.
   - Ancrage sommital sans bordure ni courbure supérieure : `rounded-t-none rounded-b-[26px]`.
   - Bordures : `border-x border-b border-white/[0.08] border-t-0` (continuité absolue avec le bandeau supérieur de l'OS).
   - Ombre portée diffuse vers le bas `shadow-2xl` avec confinement transparent (`backgroundColor: '#00000000'`).
-- **Cartouche intérieure (Panneau flottant) :**
-  - Fond `#141824` / `#161b26` surélevé.
-  - Rayon `rounded-2xl` (`16px`) créant un relief élégant et doux.
-  - Padding interne calibré (12px) pour maximiser la densité sans effet d'étouffement.
+  - Padding extérieur : `10px` (`p-2.5`).
+- **Scène Unique Commune (Stage intérieur) :**
+  - Fond unique `#141824` / `#161b26` surélevé et continu.
+  - Rayon `rounded-2xl` (`16px`), bordure fine `border border-white/[0.08]` et ombre portée diffuse `shadow-inner`.
+  - Hauteur calée sur l'espace disponible sous le header de 32 px (hauteur utile ~172 px en mode compact 230 px).
+  - **Réceptacle commun unique :** Toutes les vues (`Welcome`, `Home`, `Chat`, `Echo`, `Settings`) s'insèrent directement dans ce Stage. Proscription des sous-cartes opaques empilées.
 
-### 2.3 Bandeau Supérieur Permanent (Header 40px)
-Hauteur fixe de `40px` assurant la navigation rapide et le contrôle de l'application :
+### 2.3 Bandeau Supérieur Permanent (Header Compact 32px)
+Hauteur fixe de `32px` (`h-8`) assurant la navigation rapide et le contrôle de l'application :
 - **À gauche (Navigation Principale) :**
-  - Accueil (💧) : retour à la vue Bento principale.
-  - Chat (💬) : bascule vers le dialogue direct et l'assistant ReAct.
+  - Icônes Lucide nettes de `15px` (`size={15}`) dans des boîtes de clic ergonomiques `28×28px` (`w-7 h-7 rounded-lg`).
+  - Onglet actif : fond dépoli subtil `bg-white/[0.08] text-sky-400`.
+  - Onglet inactif : `text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]`.
+  - Accueil (💧) : vue principale Bento.
+  - Chat (💬) : dialogue direct et assistant ReAct.
   - Écho (⚡) : consultation du flux des fiches distillées.
 - **À droite (Système & Contrôle) :**
   - Réglages (⚙️) : panneau des veilleurs, profils BYOM et socket IPC.
-  - Pastille d'état réseau : indicateur dynamique de liaison (`#10b981` connecté, `#ef4444` hors ligne).
-  - Fermer (✕) : bouton de repli immédiat de la fenêtre.
+  - Pastille d'état réseau : diamètre discret de `6px` (`w-1.5 h-1.5`, `#10b981` connecté, `#ef4444` hors ligne).
+  - Fermer (✕) : bouton de repli immédiat de la fenêtre (`w-7 h-7 rounded-lg`).
 
 ---
 
@@ -72,28 +77,33 @@ La mascotte incarne le tampon cognitif sous la forme d'une goutte d'eau fluide e
 
 ---
 
-## 4. Organisation du Home Épuré (Split 40/60)
+## 4. Organisation du Home & Métamorphose de Survol (Stage Unique)
 
-En mode Home (620×230 px), l'espace est organisé en un layout split horizontal épuré de tout jargon de monitoring :
+À l'intérieur du Stage unique (620×230 px), l'espace est organisé en un layout split horizontal sans sous-boîtes opaques, structuré par un séparateur vertical fin (`border-r border-white/[0.06]`) :
 
-### 4.1 Volet Gauche — Capsule Mascotte (40 % / ~230 px)
-- Conteneur vertical surélevé `#141824` accueillant la mascotte vectorielle.
+### 4.1 Volet Gauche — Mascotte Continue (38 % / ~220 px)
+- Mascotte Ekko centrée sur le fond naturel du Stage (aucun contour ni boîte additionnelle).
 - Halo d'ambiance cyan pulsé `#00f2fe`.
-- Micro-statut discret sous la mascotte (`idle`, `hover_drop`, `ingesting`, `ready`).
+- Espace inférieur généreux : micro-statut textuel en une ligne (ex. "Tampon actif") logé avec un padding suffisant (`pb-2`), sans aucun rognage ni débordement d'arc noir.
 - Zéro texte parasite, présence vivante pure.
 
-### 4.2 Volet Droit — Espace Épuré en 2 Blocs Aérés (60 % / ~350 px)
-Le volet droit élimine le bruit technique pour se concentrer sur l'absorption et la mémoire immédiate :
-1. **Bloc 1 : Grande Zone "Drop & Forget" (environ 65 % de la hauteur droite) :**
-   - Cadre généreux avec bordure en pointillés discrets (`border-dashed border-white/10 hover:border-sky-400/40 hover:bg-white/[0.02]`).
-   - Icône centrale d'upload et libellé clair : *"Glisser un document ou une URL"*.
-   - Au survol : contour illuminé en bleu ciel et mascotte en `hover_drop`.
-   - Au dépôt : transformation in-place en barre de progression épurée puis badge émeraude à la complétion. Zéro redirection vers le chat.
-2. **Bloc 2 : Carte "Dernier Écho" (environ 35 % de la hauteur droite) :**
-   - Capsule horizontale élégante `#141824` / `#161b26` avec bordure subtile.
-   - Aperçu en une ligne sobre de la dernière fiche distillée par le daemon (issue de `useEchoStore`).
-   - Clic ouvrant directement le détail dans l'onglet Écho.
-3. **Déport Télémétrie :**
+### 4.2 Volet Droit — Espace Réactif Métamorphe (62 % / ~360 px)
+Le volet droit bascule dynamiquement entre l'état de repos et l'état de capture :
+1. **État 1 : Au repos (Option A — Split 65/35) :**
+   - **Partie supérieure (~65 %) :** invitation au drop délimitée par un cadre en pointillés fins (`border border-dashed border-white/10 rounded-xl hover:border-sky-400/40 hover:bg-white/[0.02]`), icône discrète d'upload et libellé clair : *"Glisser un document ou une URL"*. Clic ouvrant l'explorateur de fichiers.
+   - **Partie inférieure (~35 %) :** ligne "Dernier Écho" posée à plat (`bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] hover:border-sky-400/30`), surtitre compact "DERNIER ÉCHO", titre de note tronqué proprement et chevron de navigation (`ArrowRight`).
+2. **État 2 : Au survol de fichier (Option B — Plein cadre 62 %) :**
+   - Dès qu'un fichier survole la zone (dragenter/dragover), la séparation interne droite s'efface au profit d'une zone d'absorption plein cadre sur les 62 % du volet.
+   - Contour illuminé en cyan doux (`border border-dashed border-sky-400/60 bg-sky-500/[0.04] rounded-xl`).
+   - Mascotte en émotion `hover_drop`.
+   - Message centré et aéré : *"Relâcher pour absorber"*.
+3. **État 3 : En cours de distillation (async) :**
+   - Affichage de l'état d'absorption sans déborder : troncature centrale du nom de fichier (ex. `Distillation de attention_is...need.pdf en cours...`), spinner et pulsation lumineuse.
+   - Mascotte en émotion `ingesting`.
+4. **État 4 : Succès réel (arrivée de la note dans SQLite) :**
+   - Teinte d'ambiance émeraude subtile (`bg-emerald-500/[0.04] border border-emerald-500/30 rounded-xl`), mascotte souriante (`ready`).
+   - Mise à jour instantanée de la ligne "Dernier Écho" et retour doux à l'état de repos.
+5. **Déport Télémétrie :**
    - Les informations techniques (VRAM, `nice +10`, veilleurs, `/tmp/ekko.sock`) sont exclusivement affichées dans l'onglet Réglages (⚙️).
 
 ---

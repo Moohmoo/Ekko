@@ -102,7 +102,7 @@ export const App: React.FC = () => {
       transition={SPRING_BOUNCY}
       className={`w-[620px] ${
         isCompact ? 'h-[230px]' : 'h-[460px]'
-      } rounded-t-none rounded-b-[26px] bg-[#0c0c0e] border-x border-b border-white/[0.08] border-t-0 shadow-2xl flex flex-col p-3 text-slate-100 transition-[height] duration-300 select-none overflow-hidden`}
+      } rounded-t-none rounded-b-[26px] bg-[#0c0c0e] border-x border-b border-white/[0.08] border-t-0 shadow-2xl flex flex-col p-2.5 text-slate-100 transition-[height] duration-300 select-none overflow-hidden`}
     >
       <PodHeader
         activeTab={viewMode}
@@ -113,7 +113,8 @@ export const App: React.FC = () => {
         onClose={handleClose}
       />
 
-      <div className="flex-1 flex flex-col mt-2 overflow-hidden">
+      {/* Unified Stage: Single inner surface for all views */}
+      <div className="flex-1 flex flex-col mt-1.5 rounded-2xl bg-[#141824] border border-white/[0.08] shadow-inner relative overflow-hidden">
         <AnimatePresence mode="wait">
           {viewMode === 'welcome' && (
             <motion.div
@@ -122,7 +123,7 @@ export const App: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={SPRING_SNAPPY}
-              className="flex-1 flex flex-col overflow-hidden"
+              className="flex-1 flex flex-col overflow-hidden w-full h-full"
             >
               <WelcomeView />
             </motion.div>

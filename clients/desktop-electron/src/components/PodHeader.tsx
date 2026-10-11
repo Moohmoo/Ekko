@@ -28,62 +28,62 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
   };
 
   return (
-    <div className="h-9 px-1 flex items-center justify-between select-none shrink-0">
+    <div className="h-8 px-1 flex items-center justify-between select-none shrink-0">
       {/* Navigation Tabs (Left) */}
       <div className="flex items-center gap-1">
         <button
           onClick={() => onSelectTab('home')}
-          className={`p-1.5 rounded-lg transition-colors ${
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'home'
-              ? 'bg-white/10 text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              ? 'bg-white/[0.08] text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
           }`}
           title="Accueil (Bento)"
         >
-          <Droplet className="w-4 h-4" />
+          <Droplet size={15} />
         </button>
 
         <button
           onClick={() => onSelectTab('chat')}
-          className={`p-1.5 rounded-lg transition-colors ${
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'chat'
-              ? 'bg-white/10 text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              ? 'bg-white/[0.08] text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
           }`}
           title="Assistant & Chat"
         >
-          <MessageSquare className="w-4 h-4" />
+          <MessageSquare size={15} />
         </button>
 
         <button
           onClick={() => onSelectTab('echo')}
-          className={`p-1.5 rounded-lg transition-colors ${
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'echo'
-              ? 'bg-white/10 text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              ? 'bg-white/[0.08] text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
           }`}
           title="Écho (Fiches PKM)"
         >
-          <Zap className="w-4 h-4" />
+          <Zap size={15} />
         </button>
       </div>
 
       {/* Controls & Status (Right) */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <button
           onClick={() => onSelectTab('settings')}
-          className={`p-1.5 rounded-lg transition-colors ${
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'settings'
-              ? 'bg-white/10 text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              ? 'bg-white/[0.08] text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
           }`}
           title="Réglages & Télémétrie"
         >
-          <Settings className="w-4 h-4" />
+          <Settings size={15} />
         </button>
 
         <span
-          className={`w-2 h-2 rounded-full transition-colors duration-300 ml-1 ${
+          className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 mx-1 ${
             isOnline ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-red-400'
           }`}
           title={isOnline ? 'Daemon connecté' : 'Daemon déconnecté'}
@@ -91,13 +91,12 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
 
         <button
           onClick={handleClose}
-          className="p-1 rounded-md text-slate-500 hover:text-slate-300 transition-colors ml-1"
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors"
           title="Fermer"
         >
-          <X className="w-3.5 h-3.5" />
+          <X size={15} />
         </button>
       </div>
     </div>
   );
 };
-
