@@ -68,12 +68,13 @@ La mascotte incarne le tampon cognitif sous la forme d'une goutte d'eau fluide e
 2. **Mains satellites détachées :**
    - Deux disques de `14px` de diamètre flottant à `8px` de distance de part et d'autre du corps.
    - Micro-animations de flottaison en opposition de phase.
-3. **Matrice des 5 Micro-Émotions Réactives :**
+3. **Matrice des 6 Micro-Émotions Réactives :**
    - `welcome` : petit coucou avec la main satellite droite et regard joyeux (déclenchée pendant les 1,8 s d'amorce).
    - `idle` : respiration lente, yeux mi-clos apaisés, halo cyan doux en régime nominal.
    - `hover_drop` : yeux grands ouverts fixés sur le fichier, halo cyan intensifié dès le survol de la zone de glisser-déposer.
    - `ingesting` : absorption en cours (déglutition, pulsations vives et flux vers le bas).
-   - `ready` : sourire bienveillant avec badge vert de succès à la fin d'une opération.
+   - `ready` : sourire bienveillant avec halo émeraude à la fin d'une opération.
+   - `error` : secousse de tête rapide (head shake), yeux plissés, moue contrariée et halo corail feutré (`rgba(244, 63, 94, 0.25)`). Rétablissement automatique à l'état `idle` après 2,5 s.
 
 ---
 

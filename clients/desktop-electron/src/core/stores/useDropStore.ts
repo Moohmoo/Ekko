@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { MascotEmotion } from '../../components/Mascot';
 import type { NoteItem } from '../types';
 import { useEchoStore } from './useEchoStore';
+import { RESET_ERROR_DELAY_MS } from '../../design-system/tokens';
 
 export type DropStatus = 'idle' | 'hover' | 'processing' | 'ready' | 'error';
 
@@ -59,7 +60,7 @@ export const useDropStore = create<DropState>((set, get) => ({
   setError: (msg: string) => {
     set({
       dropStatus: 'error',
-      mascotEmotion: 'idle',
+      mascotEmotion: 'error',
       statusMessage: 'Format non supporté',
       errorMessage: msg,
     });
@@ -67,11 +68,12 @@ export const useDropStore = create<DropState>((set, get) => ({
       if (get().dropStatus === 'error') {
         set({
           dropStatus: 'idle',
+          mascotEmotion: 'idle',
           statusMessage: 'Tampon actif',
           errorMessage: null,
         });
       }
-    }, 3000);
+    }, RESET_ERROR_DELAY_MS);
   },
 
   ingestFileInPlace: async (filePath: string) => {
@@ -142,7 +144,7 @@ export const useDropStore = create<DropState>((set, get) => ({
       set({
         dropStatus: 'error',
         fileName: null,
-        mascotEmotion: 'idle',
+        mascotEmotion: 'error',
         statusMessage: 'Erreur assimilation',
         errorMessage: userMsg,
         pendingFilePath: null,
@@ -154,11 +156,12 @@ export const useDropStore = create<DropState>((set, get) => ({
         if (get().dropStatus === 'error') {
           set({
             dropStatus: 'idle',
+            mascotEmotion: 'idle',
             statusMessage: 'Tampon actif',
             errorMessage: null,
           });
         }
-      }, 3000);
+      }, RESET_ERROR_DELAY_MS);
 
       return false;
     }

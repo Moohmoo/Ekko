@@ -18,7 +18,15 @@ export const COLORS = {
   redOffline: '#ef4444',
   eyeDark: '#040814',
   white: '#ffffff',
+  // Error & Alert tokens (soft coral & muted brick)
+  coralGlow: 'rgba(244, 63, 94, 0.25)',
+  coralAccent: '#fb7185',
+  coralGradientTop: '#e11d48',
+  coralGradientMid: '#9f1239',
+  coralGradientBottom: '#4c0519',
 } as const;
+
+export type MascotEmotion = 'idle' | 'welcome' | 'hover_drop' | 'ingesting' | 'ready' | 'error';
 
 export const LAYOUT = {
   podWidth: 620,
@@ -29,6 +37,7 @@ export const LAYOUT = {
 } as const;
 
 export const WELCOME_DURATION_MS = 1800;
+export const RESET_ERROR_DELAY_MS = 2500;
 
 export const SPRING_SNAPPY = {
   type: 'spring' as const,
