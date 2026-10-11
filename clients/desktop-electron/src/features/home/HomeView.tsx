@@ -126,10 +126,10 @@ export const HomeView: React.FC = () => {
               </div>
             </div>
           ) : dropStatus === 'success' ? (
-            <div className="flex flex-col items-center justify-center gap-1.5 text-center">
+            <div className="flex flex-col items-center justify-center gap-1.5 text-center px-2">
               <CheckCircle2 className="w-6 h-6 text-emerald-400" />
               <span className="text-xs text-emerald-300 font-semibold">
-                Document assimilé et indexé ✓
+                Document absorbé dans le tampon cognitif ✓
               </span>
             </div>
           ) : dropStatus === 'error' ? (

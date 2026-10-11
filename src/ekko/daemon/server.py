@@ -150,6 +150,20 @@ class IPCServer:
             await writer.drain()
             return
 
+        # Return instant JSON-RPC response (< 50ms) as per Drop & Forget contract
+        reply = {
+            "status": "accepted",
+            "filename": target_path.name,
+            "message": "Document absorbé · Distillation en cours",
+        }
+        writer.write(_rpc_result(req_id, reply).encode("utf-8"))
+        await writer.drain()
+
+        # Fire and forget asynchronous distillation pipeline
+        asyncio.create_task(self._distill_and_save_async(target_path, suffix))
+
+    async def _distill_and_save_async(self, target_path: Path, suffix: str) -> None:
+        """Background asynchronous text extraction and cognitive distillation."""
         try:
             if suffix == ".pdf":
                 import pypdf
@@ -157,24 +171,16 @@ class IPCServer:
                 extracted_text = "".join(page.extract_text() or "" for page in reader.pages)
             else:
                 extracted_text = target_path.read_text(encoding="utf-8")
-        except Exception as exc:
-            logger.error("Failed to read file %s: %s", target_path, exc)
-            writer.write(_rpc_error(req_id, -32003, f"Erreur de lecture du fichier : {exc}").encode("utf-8"))
-            await writer.drain()
-            return
 
-        cleaned_text = extracted_text.strip()
-        if not cleaned_text:
-            writer.write(_rpc_error(req_id, -32004, "Le document ne contient aucun texte extractible").encode("utf-8"))
-            await writer.drain()
-            return
+            cleaned_text = extracted_text.strip()
+            if not cleaned_text:
+                logger.warning("Dropped file %s has no extractable text, skipping distillation.", target_path)
+                return
 
-        if not self.distiller:
-            writer.write(_rpc_error(req_id, -32603, "Moteur de distillation non configuré").encode("utf-8"))
-            await writer.drain()
-            return
+            if not self.distiller:
+                logger.error("Distiller not available for background task on %s", target_path)
+                return
 
-        try:
             signal = RawSignal(
                 id=f"file_{target_path.stem[:32]}_{abs(hash(str(target_path))) % 1000000}",
                 source_id="local_drop",
@@ -185,23 +191,9 @@ class IPCServer:
                 status=SignalStatus.PROCESSED,
             )
             note = await self.distiller._distill_single_signal(signal)
-            result_payload = {
-                "status": "ok",
-                "note": {
-                    "id": note.id,
-                    "title": note.title,
-                    "slug": note.slug,
-                    "summary": note.summary,
-                    "source": str(target_path),
-                },
-            }
-            writer.write(_rpc_result(req_id, result_payload).encode("utf-8"))
-            await writer.drain()
-            logger.info("File %s successfully ingested and distilled into note %s", target_path, note.slug)
+            logger.info("File %s successfully distilled in background into note %s", target_path, note.slug)
         except Exception as exc:
-            logger.error("Distillation failed for file %s: %s", target_path, exc)
-            writer.write(_rpc_error(req_id, -32005, f"Erreur de distillation : {exc}").encode("utf-8"))
-            await writer.drain()
+            logger.error("Background distillation failed for file %s: %s", target_path, exc)
 
     async def _handle_scan_notes(
         self,

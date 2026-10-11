@@ -37,7 +37,9 @@ export function sendJsonRpc<T = unknown>(
 
     let buffer = '';
 
-    client.setTimeout(3000);
+    // Contextual timeouts: 5s for ping, 30s for business actions
+    const timeoutMs = isPing ? 5000 : 30000;
+    client.setTimeout(timeoutMs);
 
     client.on('connect', () => {
       if (!isPing) {
@@ -70,7 +72,7 @@ export function sendJsonRpc<T = unknown>(
     });
 
     client.on('timeout', () => {
-      console.error(`[IPC:ERR] Timeout (3000ms) waiting for ${method}`);
+      console.error(`[IPC:ERR] Timeout (${timeoutMs}ms) waiting for ${method}`);
       client.destroy();
       reject(new Error('TIMEOUT'));
     });
@@ -99,7 +101,8 @@ export function streamPrompt(
   let fullText = '';
   let buffer = '';
 
-  client.setTimeout(60000);
+  // Streaming timeout: 120s safety margin for multi-turn ReAct
+  client.setTimeout(120000);
 
   const payload = JSON.stringify({
     jsonrpc: '2.0',

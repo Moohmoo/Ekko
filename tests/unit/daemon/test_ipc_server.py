@@ -170,7 +170,7 @@ async def test_ipc_client_context_manager_and_helpers(socket_path: Path) -> None
 
 @pytest.mark.asyncio
 async def test_ipc_server_ingest_file(socket_path: Path, tmp_path: Path) -> None:
-    """Ensure ingest_file method extracts, distills, and returns note metadata."""
+    """Ensure ingest_file responds immediately with accepted status and distills asynchronously."""
     sample_file = tmp_path / "sample_note.md"
     sample_file.write_text("# Test Document\n\nThis is sample text for distillation.", encoding="utf-8")
 
@@ -192,9 +192,13 @@ async def test_ipc_server_ingest_file(socket_path: Path, tmp_path: Path) -> None
 
     async with IPCClient(socket_path=socket_path) as client:
         res = await client.call("ingest_file", {"file_path": str(sample_file)})
-        assert res["status"] == "ok"
-        assert res["note"]["title"] == "Test Doc"
-        assert res["note"]["slug"] == "2026-10-11_test-doc"
+        assert res["status"] == "accepted"
+        assert res["filename"] == "sample_note.md"
+        assert "Distillation en cours" in res["message"]
+
+    # Allow background asyncio task to execute
+    await asyncio.sleep(0.05)
+    mock_distiller._distill_single_signal.assert_awaited_once()
 
     await server.stop()
 

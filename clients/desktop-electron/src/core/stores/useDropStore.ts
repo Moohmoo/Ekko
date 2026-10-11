@@ -89,10 +89,12 @@ export const useDropStore = create<DropState>((set, get) => ({
 
       const res = (await window.ekkoAPI.ingestFile(filePath)) as {
         status?: string;
+        filename?: string;
+        message?: string;
         note?: { id?: string; slug?: string; title: string; summary?: string; source?: string };
       };
 
-      // If backend returned a note object, update echo store immediately
+      // If backend returned a completed note, update echo store immediately
       if (res && typeof res === 'object' && res.note) {
         useEchoStore.getState().setLatestNote({
           id: res.note.id || res.note.slug || String(Date.now()),
@@ -101,17 +103,16 @@ export const useDropStore = create<DropState>((set, get) => ({
           source: res.note.source || fileName,
           tags: ['ingested'],
         });
-      } else {
-        await useEchoStore.getState().fetchNotes();
       }
 
+      // Drop & Forget contract: instant ACK confirmation
       set({
         dropStatus: 'success',
         mascotEmotion: 'ready',
-        statusMessage: 'Document assimilé et indexé ✓',
+        statusMessage: 'Document absorbé dans le tampon cognitif ✓',
       });
 
-      // Keep success state for 2 seconds before returning to idle
+      // Keep confirmation for 1.8s then smoothly reset to idle
       setTimeout(() => {
         set({
           dropStatus: 'idle',
@@ -119,7 +120,9 @@ export const useDropStore = create<DropState>((set, get) => ({
           mascotEmotion: 'idle',
           statusMessage: 'Tampon actif',
         });
-      }, 2000);
+        // Trigger background fetch to pick up completed note if ready
+        useEchoStore.getState().fetchNotes();
+      }, 1800);
 
       return true;
     } catch (err: unknown) {
