@@ -34,6 +34,26 @@ def _rpc_result(req_id: Any, result: Any) -> str:
     return json.dumps(payload) + "\n"
 
 
+def _log_task_exception(task: asyncio.Task[Any]) -> None:
+    """Done-callback that surfaces exceptions from fire-and-forget background tasks.
+
+    asyncio silently discards unhandled task exceptions unless retrieved via
+    task.exception().  Attaching this callback to every create_task() call
+    ensures any failure is immediately emitted to the daemon log.
+    """
+    if task.cancelled():
+        logger.warning("[BG_TASK] Background task was cancelled: %s", task.get_name())
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error(
+            "[BG_TASK_ERROR] Background task %s raised an unhandled exception: %s",
+            task.get_name(),
+            exc,
+            exc_info=exc,
+        )
+
+
 class IPCServer:
     """UNIX socket server accepting JSON-RPC 2.0 requests and streaming events."""
 
@@ -174,8 +194,9 @@ class IPCServer:
         writer.write(_rpc_result(req_id, reply).encode("utf-8"))
         await writer.drain()
 
-        # Fire and forget asynchronous distillation pipeline
-        asyncio.create_task(self._distill_and_save_async(target_path, suffix))
+        # Fire-and-forget: task errors are surfaced via _log_task_exception callback.
+        _task = asyncio.create_task(self._distill_and_save_async(target_path, suffix))
+        _task.add_done_callback(_log_task_exception)
 
     async def _distill_and_save_async(self, target_path: Path, suffix: str) -> None:
         """Background asynchronous text extraction and cognitive distillation."""
@@ -345,7 +366,12 @@ class IPCServer:
             note = await self.distiller._distill_single_signal(signal)
             logger.info("Signal %s successfully distilled in background into note %s", signal_id, note.slug)
         except Exception as exc:
-            logger.error("Background distillation failed for signal %s: %s", signal_data.get("id"), exc)
+            logger.error(
+                "Background distillation failed for signal %s: %s",
+                signal_data.get("id"),
+                exc,
+                exc_info=True,
+            )
 
     async def _handle_resolve_signal(
         self,
@@ -385,7 +411,9 @@ class IPCServer:
         await self.db_manager.resolve_signal(signal_id, action)
 
         if action == "archive":
-            asyncio.create_task(self._distill_signal_async(signal_data))
+            # Fire-and-forget: task errors are surfaced via _log_task_exception callback.
+            _task = asyncio.create_task(self._distill_signal_async(signal_data))
+            _task.add_done_callback(_log_task_exception)
             reply = {
                 "status": "ok",
                 "signal_id": signal_id,

@@ -139,7 +139,13 @@ async def test_resolve_signal_discard(socket_path: Path, db_store: HybridStore) 
 async def test_resolve_signal_archive_triggers_background_distillation(
     socket_path: Path, db_store: HybridStore, tmp_path: Path
 ) -> None:
-    """Archiving a signal triggers background distillation, creating note in DB and on disk."""
+    """Archiving a signal triggers background distillation, creating note in DB and on disk.
+
+    The test explicitly awaits all pending asyncio tasks so there is no
+    time-based fragility — the assertion runs only after the background task
+    has fully completed (or raised, which would cause the test to fail with a
+    clear error rather than a timeout).
+    """
     notes_dir = tmp_path / "notes"
     mock_llm = AsyncMock()
     mock_llm.generate.return_value = ModelResponse(
@@ -178,8 +184,12 @@ async def test_resolve_signal_archive_triggers_background_distillation(
         assert res["action"] == "archived"
         assert res["message"] == "Signal archivé et distillation lancée"
 
-    # Allow background task to complete
-    await asyncio.sleep(0.1)
+    # Drain all pending asyncio tasks so the background distillation coroutine
+    # runs to completion before we assert on its side effects.
+    current = asyncio.current_task()
+    pending = [t for t in asyncio.all_tasks() if t is not current]
+    if pending:
+        await asyncio.gather(*pending, return_exceptions=True)
 
     # Verify status in raw_signals
     with db_store._get_connection() as conn:
@@ -190,15 +200,21 @@ async def test_resolve_signal_archive_triggers_background_distillation(
     notes = await db_store.list_knowledge_notes(limit=5)
     assert len(notes) >= 1
     distilled = next((n for n in notes if n.title == "SQLite WAL2 Insights"), None)
-    assert distilled is not None
+    assert distilled is not None, (
+        "Expected note 'SQLite WAL2 Insights' in knowledge_notes — "
+        "background distillation task may have failed silently."
+    )
     assert distilled.summary == "Deep dive into WAL2 concurrency advantages."
     assert "sqlite" in distilled.tags
 
     # Verify physical markdown note file on disk
     md_files = list(notes_dir.glob("*.md"))
-    assert len(md_files) == 1
-    content = md_files[0].read_text(encoding="utf-8")
-    assert "SQLite WAL2 Insights" in content
+    assert len(md_files) == 1, f"Expected 1 Markdown note, found {md_files}"
+    note_content = md_files[0].read_text(encoding="utf-8")
+    assert "SQLite WAL2 Insights" in note_content
+    # Validate YAML frontmatter is present
+    assert "---" in note_content
+    assert "tags:" in note_content
 
     await server.stop()
 
