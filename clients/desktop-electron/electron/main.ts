@@ -39,8 +39,8 @@ function getPreloadPath(): string {
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth } = primaryDisplay.workAreaSize;
-  const podWidth = 440;
-  const podHeight = 560;
+  const podWidth = 620;
+  const podHeight = 230;
 
   // Position anchored in top right with 20px margins
   const posX = Math.max(20, screenWidth - podWidth - 20);
@@ -158,6 +158,12 @@ ipcMain.handle('daemon:submit_prompt', async (event, prompt: string) => {
 ipcMain.handle('window:close', () => {
   if (win) {
     win.close();
+  }
+});
+
+ipcMain.handle('window:resize', async (_event, { width, height }: { width: number; height: number }) => {
+  if (win && !win.isDestroyed()) {
+    win.setSize(width, height, true);
   }
 });
 

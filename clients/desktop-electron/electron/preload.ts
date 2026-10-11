@@ -6,6 +6,7 @@ export interface EkkoAPI {
   submitPrompt: (prompt: string) => Promise<string>;
   ingestFile: (filePath: string) => Promise<string>;
   closeWindow: () => Promise<void>;
+  resizeWindow: (width: number, height: number) => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
 }
 
@@ -15,6 +16,7 @@ const api: EkkoAPI = {
   submitPrompt: (prompt: string) => ipcRenderer.invoke('daemon:submit_prompt', prompt),
   ingestFile: (filePath: string) => ipcRenderer.invoke('daemon:ingest_file', filePath),
   closeWindow: () => ipcRenderer.invoke('window:close'),
+  resizeWindow: (width: number, height: number) => ipcRenderer.invoke('window:resize', { width, height }),
   onPromptChunk: (callback: (chunk: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, chunk: string) => callback(chunk);
     ipcRenderer.on('daemon:prompt_chunk', handler);

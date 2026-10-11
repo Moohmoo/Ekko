@@ -17,11 +17,14 @@ export const COLORS = {
 } as const;
 
 export const LAYOUT = {
-  podWidth: 440,
-  podHeight: 560,
+  podWidth: 620,
+  podHeightCompact: 230,
+  podHeightExtended: 460,
   headerHeight: 40,
   borderRadius: 28,
 } as const;
+
+export const WELCOME_DURATION_MS = 1800;
 
 export const SPRING_SNAPPY = {
   type: 'spring' as const,

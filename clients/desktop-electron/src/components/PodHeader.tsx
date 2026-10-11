@@ -1,11 +1,11 @@
 import React from 'react';
-import type { PodTab } from '../core/types';
+import type { ViewMode } from '../core/types';
 import { useDaemonStore } from '../core/stores/useDaemonStore';
-import { Droplet, MessageSquare, Layers, X } from 'lucide-react';
+import { Droplet, MessageSquare, Zap, Settings, X } from 'lucide-react';
 
 interface PodHeaderProps {
-  activeTab: PodTab;
-  onSelectTab: (tab: PodTab) => void;
+  activeTab: ViewMode;
+  onSelectTab: (tab: ViewMode) => void;
   onClose: () => void;
 }
 
@@ -28,17 +28,17 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
   };
 
   return (
-    <div className="h-10 px-4 flex items-center justify-between border-b border-white/[0.04] bg-[#11141c]/50">
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-1.5">
+    <div className="h-10 px-4 flex items-center justify-between border-b border-white/[0.04] bg-[#11141c]/50 select-none">
+      {/* Navigation Tabs (Left) */}
+      <div className="flex items-center gap-1">
         <button
           onClick={() => onSelectTab('home')}
           className={`p-1.5 rounded-lg transition-colors ${
             activeTab === 'home'
               ? 'bg-white/10 text-sky-400'
-              : 'text-slate-400 hover:text-slate-200'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
           }`}
-          title="Accueil"
+          title="Accueil (Bento)"
         >
           <Droplet className="w-4 h-4" />
         </button>
@@ -48,9 +48,9 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           className={`p-1.5 rounded-lg transition-colors ${
             activeTab === 'chat'
               ? 'bg-white/10 text-sky-400'
-              : 'text-slate-400 hover:text-slate-200'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
           }`}
-          title="Assistant"
+          title="Assistant & Chat"
         >
           <MessageSquare className="w-4 h-4" />
         </button>
@@ -60,18 +60,30 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           className={`p-1.5 rounded-lg transition-colors ${
             activeTab === 'echo'
               ? 'bg-white/10 text-sky-400'
-              : 'text-slate-400 hover:text-slate-200'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
           }`}
-          title="Écho (Notes)"
+          title="Écho (Fiches PKM)"
         >
-          <Layers className="w-4 h-4" />
+          <Zap className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Status Dot & Close Button */}
-      <div className="flex items-center gap-3">
+      {/* Controls & Status (Right) */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onSelectTab('settings')}
+          className={`p-1.5 rounded-lg transition-colors ${
+            activeTab === 'settings'
+              ? 'bg-white/10 text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+          }`}
+          title="Réglages & Télémétrie"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+
         <span
-          className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+          className={`w-2 h-2 rounded-full transition-colors duration-300 ml-1 ${
             isOnline ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-red-400'
           }`}
           title={isOnline ? 'Daemon connecté' : 'Daemon déconnecté'}
@@ -79,7 +91,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
 
         <button
           onClick={handleClose}
-          className="p-1 rounded-md text-slate-500 hover:text-slate-300 transition-colors"
+          className="p-1 rounded-md text-slate-500 hover:text-slate-300 transition-colors ml-1"
           title="Fermer"
         >
           <X className="w-3.5 h-3.5" />
@@ -88,3 +100,4 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
     </div>
   );
 };
+

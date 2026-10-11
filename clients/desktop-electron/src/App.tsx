@@ -1,16 +1,21 @@
 import React, { useState, useCallback } from 'react';
-import type { PodTab, NoteItem, ChatMessage } from './core/types';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { NoteItem, ChatMessage } from './core/types';
 import { useDaemonHeartbeat } from './core/hooks/useDaemonHeartbeat';
+import { useViewStore } from './core/stores/useViewStore';
 import { PodHeader } from './components/PodHeader';
+import { WelcomeView } from './features/welcome/WelcomeView';
 import { HomeView } from './features/home/HomeView';
 import { ChatView } from './features/assistant/ChatView';
 import { EchoView } from './features/echo/EchoView';
+import { SPRING_SNAPPY } from './design-system/tokens';
 
 export const App: React.FC = () => {
   // Mount 2s polling heartbeat from Zustand store
   useDaemonHeartbeat();
 
-  const [activeTab, setActiveTab] = useState<PodTab>('home');
+  const { viewMode, setViewMode } = useViewStore();
+
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [isLoadingNotes, setIsLoadingNotes] = useState<boolean>(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -105,7 +110,7 @@ export const App: React.FC = () => {
 
   // Handle File Drop
   const handleFileDrop = async (filePath: string) => {
-    setActiveTab('chat');
+    setViewMode('chat');
     await handleSendMessage(`Analyse et indexe ce document déposé : ${filePath}`);
   };
 
@@ -113,33 +118,108 @@ export const App: React.FC = () => {
     window.ekkoAPI?.closeWindow();
   };
 
-  return (
-    <div className="w-[440px] h-[560px] rounded-[28px] bg-[#0c0c0e] border border-white/10 shadow-2xl flex flex-col overflow-hidden text-slate-100">
-      <PodHeader
-        activeTab={activeTab}
-        onSelectTab={(tab) => {
-          setActiveTab(tab);
-          if (tab === 'echo') fetchNotes();
-        }}
-        onClose={handleClose}
-      />
+  const isCompact = viewMode === 'welcome' || viewMode === 'home';
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {activeTab === 'home' && <HomeView onFileDrop={handleFileDrop} />}
-        {activeTab === 'chat' && (
-          <ChatView
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            isStreaming={isStreaming}
-            errorMessage={errorMessage}
+  return (
+    <div
+      className={`w-[620px] ${
+        isCompact ? 'h-[230px]' : 'h-[460px]'
+      } rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-2xl flex flex-col overflow-hidden text-slate-100 transition-[height] duration-300 select-none`}
+    >
+      {viewMode === 'welcome' ? (
+        <WelcomeView />
+      ) : (
+        <>
+          <PodHeader
+            activeTab={viewMode}
+            onSelectTab={(tab) => {
+              setViewMode(tab);
+              if (tab === 'echo') fetchNotes();
+            }}
+            onClose={handleClose}
           />
-        )}
-        {activeTab === 'echo' && (
-          <EchoView notes={notes} onRefresh={fetchNotes} isLoading={isLoadingNotes} />
-        )}
-      </div>
+
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <AnimatePresence mode="wait">
+              {viewMode === 'home' && (
+                <motion.div
+                  key="home"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={SPRING_SNAPPY}
+                  className="flex-1 flex flex-col overflow-hidden"
+                >
+                  <HomeView onFileDrop={handleFileDrop} />
+                </motion.div>
+              )}
+
+              {viewMode === 'chat' && (
+                <motion.div
+                  key="chat"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={SPRING_SNAPPY}
+                  className="flex-1 flex flex-col overflow-hidden"
+                >
+                  <ChatView
+                    messages={messages}
+                    onSendMessage={handleSendMessage}
+                    isStreaming={isStreaming}
+                    errorMessage={errorMessage}
+                  />
+                </motion.div>
+              )}
+
+              {viewMode === 'echo' && (
+                <motion.div
+                  key="echo"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={SPRING_SNAPPY}
+                  className="flex-1 flex flex-col overflow-hidden"
+                >
+                  <EchoView notes={notes} onRefresh={fetchNotes} isLoading={isLoadingNotes} />
+                </motion.div>
+              )}
+
+              {viewMode === 'settings' && (
+                <motion.div
+                  key="settings"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={SPRING_SNAPPY}
+                  className="flex-1 p-4 flex flex-col gap-3 text-xs overflow-y-auto"
+                >
+                  <div className="p-3.5 rounded-2xl bg-[#141824] border border-white/[0.08] flex flex-col gap-2.5">
+                    <span className="font-semibold text-slate-200 text-xs">
+                      Configuration & Télémétrie
+                    </span>
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>Socket UNIX :</span>
+                      <span className="font-mono text-slate-300">/tmp/ekko.sock</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>Priorité CPU :</span>
+                      <span className="text-emerald-400 font-medium">nice +10</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>Confinement GPU :</span>
+                      <span className="text-sky-400 font-medium">keep_alive: 0</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
 export default App;
+

@@ -67,8 +67,8 @@ function getPreloadPath() {
 function createWindow() {
     var primaryDisplay = screen.getPrimaryDisplay();
     var screenWidth = primaryDisplay.workAreaSize.width;
-    var podWidth = 440;
-    var podHeight = 560;
+    var podWidth = 620;
+    var podHeight = 230;
     // Position anchored in top right with 20px margins
     var posX = Math.max(20, screenWidth - podWidth - 20);
     var posY = 30;
@@ -191,6 +191,15 @@ ipcMain.handle('window:close', function () {
         win.close();
     }
 });
+ipcMain.handle('window:resize', function (_event_1, _a) { return __awaiter(void 0, [_event_1, _a], void 0, function (_event, _b) {
+    var width = _b.width, height = _b.height;
+    return __generator(this, function (_c) {
+        if (win && !win.isDestroyed()) {
+            win.setSize(width, height, true);
+        }
+        return [2 /*return*/];
+    });
+}); });
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {
         app.quit();

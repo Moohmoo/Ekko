@@ -14,6 +14,7 @@ export interface ChatMessage {
 }
 
 export type PodTab = 'home' | 'chat' | 'echo';
+export type ViewMode = 'welcome' | 'home' | 'chat' | 'echo' | 'settings';
 
 export interface PingResult {
   status: string;
@@ -21,11 +22,12 @@ export interface PingResult {
 }
 
 export interface EkkoAPI {
-  ping: () => Promise<PingResult>;
+  ping: () => Promise<PingResult | null>;
   getNotes: () => Promise<unknown[]>;
   submitPrompt: (prompt: string) => Promise<string>;
   ingestFile: (filePath: string) => Promise<string>;
   closeWindow: () => Promise<void>;
+  resizeWindow: (width: number, height: number) => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
 }
 

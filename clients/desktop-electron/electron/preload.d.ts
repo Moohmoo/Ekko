@@ -7,5 +7,6 @@ export interface EkkoAPI {
     submitPrompt: (prompt: string) => Promise<string>;
     ingestFile: (filePath: string) => Promise<string>;
     closeWindow: () => Promise<void>;
+    resizeWindow: (width: number, height: number) => Promise<void>;
     onPromptChunk: (callback: (chunk: string) => void) => () => void;
 }
