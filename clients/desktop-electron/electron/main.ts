@@ -36,23 +36,30 @@ function getPreloadPath(): string {
   return fallbackPath;
 }
 
-function createWindow() {
+function getCenteredTopBounds(width: number, height: number) {
   const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenWidth } = primaryDisplay.workAreaSize;
+  const { x: workX, y: workY, width: workWidth } = primaryDisplay.workArea;
+
+  return {
+    x: Math.round(workX + (workWidth - width) / 2),
+    y: workY, // Anchored to top work area (under panel on Linux/GNOME, y=0 on Windows)
+    width,
+    height,
+  };
+}
+
+function createWindow() {
   const podWidth = 620;
   const podHeight = 230;
-
-  // Position anchored in top right with 20px margins
-  const posX = Math.max(20, screenWidth - podWidth - 20);
-  const posY = 30;
+  const initialBounds = getCenteredTopBounds(podWidth, podHeight);
 
   const preloadPath = getPreloadPath();
 
   win = new BrowserWindow({
-    width: podWidth,
-    height: podHeight,
-    x: posX,
-    y: posY,
+    width: initialBounds.width,
+    height: initialBounds.height,
+    x: initialBounds.x,
+    y: initialBounds.y,
     resizable: false,
     frame: false,
     transparent: true,
@@ -163,7 +170,12 @@ ipcMain.handle('window:close', () => {
 
 ipcMain.handle('window:resize', async (_event, { width, height }: { width: number; height: number }) => {
   if (win && !win.isDestroyed()) {
-    win.setSize(width, height, true);
+    const display = screen.getDisplayMatching(win.getBounds());
+    const { x: workX, y: workY, width: workWidth } = display.workArea;
+    const newX = Math.round(workX + (workWidth - width) / 2);
+    const newY = workY;
+
+    win.setBounds({ x: newX, y: newY, width, height }, true);
   }
 });
 

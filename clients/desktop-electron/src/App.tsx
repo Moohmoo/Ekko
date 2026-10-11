@@ -8,7 +8,7 @@ import { WelcomeView } from './features/welcome/WelcomeView';
 import { HomeView } from './features/home/HomeView';
 import { ChatView } from './features/assistant/ChatView';
 import { EchoView } from './features/echo/EchoView';
-import { SPRING_SNAPPY } from './design-system/tokens';
+import { SPRING_SNAPPY, SPRING_BOUNCY } from './design-system/tokens';
 
 export const App: React.FC = () => {
   // Mount 2s polling heartbeat from Zustand store
@@ -116,7 +116,10 @@ export const App: React.FC = () => {
   const isCompact = viewMode === 'welcome' || viewMode === 'home';
 
   return (
-    <div
+    <motion.div
+      initial={{ y: -30, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={SPRING_BOUNCY}
       className={`w-[620px] ${
         isCompact ? 'h-[230px]' : 'h-[460px]'
       } rounded-[28px] bg-[#0c0c0e] border border-white/[0.08] shadow-2xl flex flex-col p-3 text-slate-100 transition-[height] duration-300 select-none overflow-hidden`}
@@ -219,7 +222,7 @@ export const App: React.FC = () => {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
