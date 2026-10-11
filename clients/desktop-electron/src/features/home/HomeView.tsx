@@ -22,6 +22,7 @@ export const HomeView: React.FC = () => {
     statusMessage,
     errorMessage,
     setHover,
+    setError,
     ingestFileInPlace,
   } = useDropStore();
 
@@ -46,8 +47,18 @@ export const HomeView: React.FC = () => {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      const filePath = (file as unknown as { path?: string }).path || file.name;
-      await ingestFileInPlace(filePath);
+      const realPath = window.ekkoAPI?.getDroppedFilePath
+        ? window.ekkoAPI.getDroppedFilePath(file)
+        : '';
+
+      console.log('[Drop:Event] Chemin absolu extrait via webUtils :', realPath);
+
+      if (!realPath) {
+        setError('Impossible de résoudre le chemin système du fichier.');
+        return;
+      }
+
+      await ingestFileInPlace(realPath);
     }
   };
 

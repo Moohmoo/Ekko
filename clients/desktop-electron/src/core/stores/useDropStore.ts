@@ -123,14 +123,26 @@ export const useDropStore = create<DropState>((set, get) => ({
 
       return true;
     } catch (err: unknown) {
-      const errMsg = (err as Error).message || 'Erreur lors de la distillation';
-      console.warn('[DropStore] Erreur ingestion:', err);
+      console.error('[DropStore:Error] Erreur complète ingestion:', err);
+      const rawMsg = (err as Error).message || '';
+      let userMsg = "Erreur lors de l'assimilation du document";
+
+      if (rawMsg.includes('Fichier introuvable') || rawMsg.includes('ENOENT')) {
+        userMsg = 'Fichier introuvable sur le disque';
+      } else if (rawMsg.includes('Format non supporté')) {
+        userMsg = 'Format non supporté · PDF, MD ou TXT uniquement';
+      } else if (rawMsg.includes('aucun texte extractible')) {
+        userMsg = 'Aucun texte extractible dans ce document';
+      } else if (rawMsg.includes('ECONNREFUSED') || rawMsg.includes('Liaison')) {
+        userMsg = 'Daemon Ekko hors ligne';
+      }
+
       set({
         dropStatus: 'error',
         fileName: null,
         mascotEmotion: 'idle',
-        statusMessage: 'Erreur distillation',
-        errorMessage: errMsg,
+        statusMessage: 'Erreur assimilation',
+        errorMessage: userMsg,
       });
 
       setTimeout(() => {
