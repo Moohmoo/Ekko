@@ -8,6 +8,8 @@ export default {
     extend: {
       colors: {
         background: '#0c0c0e',
+        surface: '#141824',
+        'surface-subtle': '#161a24',
       },
     },
   },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { SPRING_BOUNCY } from '../design-system/tokens';
+import { COLORS, SPRING_BOUNCY } from '../design-system/tokens';
 
 export type MascotEmotion = 'welcome' | 'idle' | 'hover_drop' | 'ingesting' | 'ready';
 
@@ -13,7 +13,7 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
   // Halo Glow variation based on emotion
   const haloScale = emotion === 'hover_drop' ? [1.1, 1.25, 1.1] : [0.95, 1.05, 0.95];
   const haloOpacity = emotion === 'hover_drop' ? [0.3, 0.45, 0.3] : [0.15, 0.25, 0.15];
-  const haloColor = emotion === 'ready' ? '#10b981' : '#00f2fe';
+  const haloColor = emotion === 'ready' ? COLORS.emeraldOnline : COLORS.cyanGlow;
 
   return (
     <div className={`relative w-36 h-36 flex items-center justify-center ${className}`}>
@@ -66,10 +66,10 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
         >
           <defs>
             <linearGradient id="ekkoMascotGradient" x1="50%" y1="0%" x2="50%" y2="100%">
-              <stop offset="0%" stopColor={emotion === 'ready' ? '#34d399' : '#00f2fe'} />
-              <stop offset="35%" stopColor={emotion === 'ready' ? '#10b981' : '#38bdf8'} />
-              <stop offset="75%" stopColor="#0284c7" />
-              <stop offset="100%" stopColor="#1e3a8a" />
+              <stop offset="0%" stopColor={emotion === 'ready' ? COLORS.emeraldLight : COLORS.cyanGlow} />
+              <stop offset="35%" stopColor={emotion === 'ready' ? COLORS.emeraldOnline : COLORS.cyanAccent} />
+              <stop offset="75%" stopColor={COLORS.bluePrimary} />
+              <stop offset="100%" stopColor={COLORS.blueDeep} />
             </linearGradient>
           </defs>
 
@@ -81,19 +81,19 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                C 28 116, 8 108, 8 86 
                C 8 64, 30 32, 50 10 Z"
             fill="url(#ekkoMascotGradient)"
-            stroke={emotion === 'ready' ? '#34d399' : '#38bdf8'}
+            stroke={emotion === 'ready' ? COLORS.emeraldLight : COLORS.cyanAccent}
             strokeWidth="1.2"
           />
 
           {/* Expressive Almond Eyes */}
-          <g fill="#040814">
+          <g fill={COLORS.eyeDark}>
             <ellipse
               cx="40"
               cy="62"
               rx={emotion === 'hover_drop' ? 4.5 : 3.5}
               ry={emotion === 'hover_drop' ? 6 : 5}
             />
-            <circle cx="39" cy="60" r={emotion === 'hover_drop' ? 1.6 : 1.2} fill="#ffffff" />
+            <circle cx="39" cy="60" r={emotion === 'hover_drop' ? 1.6 : 1.2} fill={COLORS.white} />
 
             <ellipse
               cx="60"
@@ -101,7 +101,7 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
               rx={emotion === 'hover_drop' ? 4.5 : 3.5}
               ry={emotion === 'hover_drop' ? 6 : 5}
             />
-            <circle cx="59" cy="60" r={emotion === 'hover_drop' ? 1.6 : 1.2} fill="#ffffff" />
+            <circle cx="59" cy="60" r={emotion === 'hover_drop' ? 1.6 : 1.2} fill={COLORS.white} />
           </g>
 
           {/* Welcoming or Ready Smile */}
@@ -109,7 +109,7 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
             <path
               d="M 44 72 Q 50 77 56 72"
               fill="none"
-              stroke="#040814"
+              stroke={COLORS.eyeDark}
               strokeWidth="1.5"
               strokeLinecap="round"
             />
@@ -126,7 +126,8 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
             repeat: Infinity,
             ease: 'easeInOut',
           }}
-          className="absolute -left-2 top-[60px] w-3.5 h-3.5 rounded-full bg-[#38bdf8] shadow-[0_2px_8px_rgba(56,189,248,0.4)]"
+          style={{ backgroundColor: COLORS.cyanAccent }}
+          className="absolute -left-2 top-[60px] w-3.5 h-3.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.4)]"
         />
 
         {/* Detached Right Satellite Hand with Greeting Wave during Welcome */}
@@ -160,10 +161,10 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                   ease: 'easeInOut',
                 }
           }
-          className="absolute -right-2 top-[60px] w-3.5 h-3.5 rounded-full bg-[#38bdf8] shadow-[0_2px_8px_rgba(56,189,248,0.5)] origin-bottom"
+          style={{ backgroundColor: COLORS.cyanAccent }}
+          className="absolute -right-2 top-[60px] w-3.5 h-3.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.5)] origin-bottom"
         />
       </motion.div>
     </div>
   );
 };
-

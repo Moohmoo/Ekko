@@ -2,6 +2,7 @@ import React from 'react';
 import type { ViewMode } from '../core/types';
 import { useDaemonStore } from '../core/stores/useDaemonStore';
 import { Droplet, MessageSquare, Zap, Settings, X } from 'lucide-react';
+import { SURFACES } from '../design-system/tokens';
 
 interface PodHeaderProps {
   activeTab: ViewMode;
@@ -35,8 +36,8 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           onClick={() => onSelectTab('home')}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'home'
-              ? 'bg-white/[0.08] text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
+              ? SURFACES.headerTabActive
+              : SURFACES.headerTabInactive
           }`}
           title="Accueil (Bento)"
         >
@@ -47,8 +48,8 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           onClick={() => onSelectTab('chat')}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'chat'
-              ? 'bg-white/[0.08] text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
+              ? SURFACES.headerTabActive
+              : SURFACES.headerTabInactive
           }`}
           title="Assistant & Chat"
         >
@@ -59,8 +60,8 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           onClick={() => onSelectTab('echo')}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'echo'
-              ? 'bg-white/[0.08] text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
+              ? SURFACES.headerTabActive
+              : SURFACES.headerTabInactive
           }`}
           title="Écho (Fiches PKM)"
         >
@@ -74,8 +75,8 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           onClick={() => onSelectTab('settings')}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'settings'
-              ? 'bg-white/[0.08] text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]'
+              ? SURFACES.headerTabActive
+              : SURFACES.headerTabInactive
           }`}
           title="Réglages & Télémétrie"
         >

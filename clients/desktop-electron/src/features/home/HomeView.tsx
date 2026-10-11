@@ -4,6 +4,12 @@ import { useDropStore } from '../../core/stores/useDropStore';
 import { useEchoStore } from '../../core/stores/useEchoStore';
 import { useViewStore } from '../../core/stores/useViewStore';
 import {
+  SURFACES,
+  SURFACE_CARD,
+  SURFACE_CARD_HOVER,
+  STATUS_CONFIG,
+} from '../../design-system/tokens';
+import {
   UploadCloud,
   CheckCircle2,
   AlertCircle,
@@ -15,7 +21,7 @@ import {
 /**
  * Truncate filename in the middle to prevent visual overflow while preserving extension.
  */
-function truncateMiddle(str: string, maxLength: number = 24): string {
+function truncateMiddle(str: string, maxLength: number = 20): string {
   if (str.length <= maxLength) return str;
   const charsToShow = maxLength - 3;
   const frontChars = Math.ceil(charsToShow / 2);
@@ -31,7 +37,6 @@ export const HomeView: React.FC = () => {
     dropStatus,
     fileName,
     mascotEmotion,
-    statusMessage,
     errorMessage,
     setHover,
     setError,
@@ -101,12 +106,26 @@ export const HomeView: React.FC = () => {
     }
   };
 
+  // Derive stable status badge under mascot
+  const statusKey =
+    dropStatus === 'hover'
+      ? 'hover'
+      : dropStatus === 'processing'
+      ? 'processing'
+      : dropStatus === 'ready'
+      ? 'ready'
+      : dropStatus === 'error'
+      ? 'error'
+      : 'idle';
+
+  const currentStatus = STATUS_CONFIG[statusKey];
+
   return (
     <div
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="w-full h-full flex select-none overflow-hidden relative"
+      className="w-full h-full flex gap-4 p-2.5 select-none overflow-hidden relative"
     >
       <input
         ref={fileInputRef}
@@ -116,8 +135,8 @@ export const HomeView: React.FC = () => {
         className="hidden"
       />
 
-      {/* Volet Gauche (38 % / ~220 px) — Mascotte continue */}
-      <div className="w-[38%] h-full flex flex-col items-center justify-between border-r border-white/[0.06] relative px-2 pt-1 pb-2 shrink-0">
+      {/* Volet Gauche (36 %) — Mascotte continue sans séparateur vertical */}
+      <div className="w-[36%] h-full flex flex-col items-center justify-between relative shrink-0">
         {/* Soft radial shine */}
         <div className="absolute inset-0 bg-radial from-sky-400/[0.04] via-transparent to-transparent pointer-events-none" />
 
@@ -125,32 +144,22 @@ export const HomeView: React.FC = () => {
           <Mascot emotion={mascotEmotion} />
         </div>
 
-        {/* Micro-statut textuel en une ligne sous la mascotte */}
-        <div className="flex items-center gap-1.5 z-10 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] shrink-0">
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              mascotEmotion === 'ready'
-                ? 'bg-emerald-400'
-                : mascotEmotion === 'ingesting'
-                ? 'bg-sky-400 animate-ping'
-                : mascotEmotion === 'hover_drop'
-                ? 'bg-sky-300'
-                : dropStatus === 'error'
-                ? 'bg-red-400'
-                : 'bg-sky-400/70'
-            }`}
-          />
-          <span className="text-[10px] text-slate-300 font-medium tracking-tight">
-            {statusMessage}
-          </span>
+        {/* Badge d'état sous la mascotte à gabarit stable (sans texte long ni coupure) */}
+        <div className="flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] shrink-0 h-6">
+            <span className={`w-1.5 h-1.5 rounded-full ${currentStatus.dotClass}`} />
+            <span className="text-[10px] text-slate-300 font-medium tracking-tight whitespace-nowrap">
+              {currentStatus.label}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Volet Droit (62 % / ~360 px) — Espace réactif métamorphe */}
-      <div className="w-[62%] h-full flex flex-col p-2.5 overflow-hidden relative">
+      {/* Volet Droit — Espace réactif métamorphe */}
+      <div className="flex-1 h-full flex flex-col overflow-hidden relative">
         {dropStatus === 'hover' ? (
           /* État 2 : Au survol de fichier (Option B plein cadre) */
-          <div className="w-full h-full rounded-xl border border-dashed border-sky-400/60 bg-sky-500/[0.04] flex flex-col items-center justify-center gap-1.5 text-center select-none transition-all">
+          <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneHover} flex flex-col items-center justify-center gap-1.5 text-center select-none transition-all`}>
             <UploadCloud className="w-7 h-7 text-sky-300 animate-bounce" />
             <span className="text-xs font-semibold text-sky-200">
               Relâcher pour absorber
@@ -161,12 +170,12 @@ export const HomeView: React.FC = () => {
           </div>
         ) : dropStatus === 'processing' ? (
           /* État 3 : En cours de distillation (async) */
-          <div className="w-full h-full rounded-xl border border-sky-500/30 bg-sky-500/[0.03] flex flex-col items-center justify-center gap-2 text-center p-3 relative select-none">
+          <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneProcessing} flex flex-col items-center justify-center gap-2 text-center p-3 relative select-none`}>
             <div className="absolute inset-0 bg-sky-400/[0.03] animate-pulse rounded-xl pointer-events-none" />
-            <Loader2 className="w-5 h-5 text-sky-400 animate-spin" />
+            <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
             <div className="flex flex-col z-10 max-w-[280px]">
-              <span className="text-xs text-slate-200 font-medium truncate">
-                Distillation de {fileName ? truncateMiddle(fileName, 24) : 'document'} en cours...
+              <span className="text-xs text-slate-200 font-medium">
+                Distillation de {fileName ? truncateMiddle(fileName, 20) : 'document'} en cours...
               </span>
               <span className="text-[10px] text-sky-400/80 mt-0.5 animate-pulse">
                 Extraction et synthèse cognitives
@@ -175,7 +184,7 @@ export const HomeView: React.FC = () => {
           </div>
         ) : dropStatus === 'ready' ? (
           /* État 4 : Succès réel (arrivée de la note dans SQLite) */
-          <div className="w-full h-full rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] flex flex-col items-center justify-center gap-1.5 text-center p-3 select-none">
+          <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneReady} flex flex-col items-center justify-center gap-1.5 text-center p-3 select-none`}>
             <CheckCircle2 className="w-6 h-6 text-emerald-400" />
             <span className="text-xs text-emerald-300 font-semibold">
               Document absorbé dans le tampon cognitif ✓
@@ -183,7 +192,7 @@ export const HomeView: React.FC = () => {
           </div>
         ) : dropStatus === 'error' ? (
           /* État 5 : Erreur */
-          <div className="w-full h-full rounded-xl border border-red-500/30 bg-red-500/[0.04] flex flex-col items-center justify-center gap-1 text-center p-3 select-none">
+          <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneError} flex flex-col items-center justify-center gap-1 text-center p-3 select-none`}>
             <AlertCircle className="w-5 h-5 text-red-400 mb-0.5" />
             <span className="text-[11px] text-red-300 font-semibold">
               {errorMessage || 'Format non supporté'}
@@ -195,10 +204,10 @@ export const HomeView: React.FC = () => {
         ) : (
           /* État 1 : Au repos (Option A — Split 65/35) */
           <div className="w-full h-full flex flex-col gap-2">
-            {/* Partie supérieure (~65 %) : invitation au drop */}
+            {/* Partie supérieure (~65 %) : invitation au drop transparente */}
             <div
               onClick={handleBrowseFile}
-              className="flex-[0.65] rounded-xl border border-dashed border-white/10 hover:border-sky-400/40 hover:bg-white/[0.02] flex flex-col items-center justify-center gap-1 text-center p-2 transition-colors cursor-pointer select-none"
+              className={`flex-[0.65] rounded-xl flex flex-col items-center justify-center gap-1 text-center p-2 transition-colors cursor-pointer select-none ${SURFACES.dropzoneIdle}`}
             >
               <UploadCloud className="w-5 h-5 text-sky-400/70 mb-0.5 transition-colors" />
               <span className="text-xs font-semibold text-slate-200">
@@ -212,7 +221,7 @@ export const HomeView: React.FC = () => {
             {/* Partie inférieure (~35 %) : ligne "Dernier Écho" posée à plat */}
             <div
               onClick={() => setViewMode('echo')}
-              className="flex-[0.35] rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] hover:border-sky-400/30 px-3 py-1.5 flex items-center justify-between cursor-pointer transition-all group select-none"
+              className={`flex-[0.35] rounded-xl ${SURFACE_CARD} ${SURFACE_CARD_HOVER} px-3 py-1.5 flex items-center justify-between cursor-pointer transition-all group select-none`}
             >
               <div className="flex items-center gap-2.5 min-w-0 pr-2">
                 <div className="p-1 rounded-lg bg-amber-400/10 text-amber-400 shrink-0">

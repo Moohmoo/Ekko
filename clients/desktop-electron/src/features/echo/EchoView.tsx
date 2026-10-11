@@ -41,7 +41,7 @@ export const EchoView: React.FC<EchoViewProps> = ({ notes, onRefresh, isLoading 
           notes.map((note) => (
             <div
               key={note.id}
-              className="p-3 rounded-xl bg-[#141824] border border-white/5 hover:border-white/10 transition-colors flex flex-col gap-1.5"
+              className="p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-colors flex flex-col gap-1.5"
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="font-semibold text-slate-100 text-[11px] line-clamp-1">

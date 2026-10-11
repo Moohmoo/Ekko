@@ -102,7 +102,7 @@ export const App: React.FC = () => {
       transition={SPRING_BOUNCY}
       className={`w-[620px] ${
         isCompact ? 'h-[230px]' : 'h-[460px]'
-      } rounded-t-none rounded-b-[26px] bg-[#0c0c0e] border-x border-b border-white/[0.08] border-t-0 shadow-2xl flex flex-col p-2.5 text-slate-100 transition-[height] duration-300 select-none overflow-hidden`}
+      } rounded-t-none rounded-b-[26px] bg-background border-x border-b border-white/[0.08] border-t-0 shadow-2xl flex flex-col p-2.5 text-slate-100 transition-[height] duration-300 select-none overflow-hidden`}
     >
       <PodHeader
         activeTab={viewMode}
@@ -114,7 +114,7 @@ export const App: React.FC = () => {
       />
 
       {/* Unified Stage: Single inner surface for all views */}
-      <div className="flex-1 flex flex-col mt-1.5 rounded-2xl bg-[#141824] border border-white/[0.08] shadow-inner relative overflow-hidden">
+      <div className="flex-1 flex flex-col mt-1.5 rounded-2xl bg-surface border border-white/[0.08] shadow-inner relative overflow-hidden">
         <AnimatePresence mode="wait">
           {viewMode === 'welcome' && (
             <motion.div

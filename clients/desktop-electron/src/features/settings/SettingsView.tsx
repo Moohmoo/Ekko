@@ -8,7 +8,7 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="flex-1 p-3 flex flex-col gap-3 text-xs overflow-y-auto select-none">
       {/* Liaison Daemon & Socket UNIX */}
-      <div className="p-3.5 rounded-2xl bg-[#141824] border border-white/[0.08] flex flex-col gap-2.5 shadow-sm">
+      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2.5 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Server className="w-4 h-4 text-sky-400" />
@@ -38,7 +38,7 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Télémétrie Frugale & Confinement Système */}
-      <div className="p-3.5 rounded-2xl bg-[#141824] border border-white/[0.08] flex flex-col gap-2.5 shadow-sm">
+      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2.5 shadow-sm">
         <div className="flex items-center gap-2">
           <Cpu className="w-4 h-4 text-emerald-400" />
           <span className="font-semibold text-slate-200">Télémétrie & Empreinte Système</span>
@@ -66,7 +66,7 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Veilleurs & Sources de Signal */}
-      <div className="p-3.5 rounded-2xl bg-[#141824] border border-white/[0.08] flex flex-col gap-2.5 shadow-sm">
+      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2.5 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-amber-400" />
@@ -103,7 +103,7 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Profils BYOM & Modèles */}
-      <div className="p-3.5 rounded-2xl bg-[#141824] border border-white/[0.08] flex flex-col gap-2 shadow-sm">
+      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2 shadow-sm">
         <div className="flex items-center gap-2">
           <HardDrive className="w-4 h-4 text-sky-400" />
           <span className="font-semibold text-slate-200">Modèles & Moteur Cognitif (BYOM)</span>

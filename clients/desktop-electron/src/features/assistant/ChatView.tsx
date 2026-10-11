@@ -56,7 +56,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed break-words ${
                 msg.sender === 'user'
                   ? 'bg-sky-600 text-white border border-sky-400/30'
-                  : 'bg-[#161a24] text-slate-100 border border-white/5'
+                  : 'bg-white/[0.04] text-slate-100 border border-white/5'
               }`}
             >
               <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -75,7 +75,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       {/* Input Bar */}
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141824] border border-white/10 focus-within:border-sky-400/40 transition-colors"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 focus-within:border-sky-400/40 transition-colors"
       >
         <input
           type="text"
