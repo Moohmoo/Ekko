@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 import re
 import sqlite3
-from typing import Any
 import sqlite_vec
 
 from ekko.core.models import (
@@ -19,6 +18,8 @@ from ekko.memory.schema import INIT_UNIFIED_SCHEMA_SQL
 from ekko.logger import get_logger
 
 logger = get_logger("memory.hybrid_store")
+
+_RESERVED_FTS_WORDS = frozenset({"AND", "OR", "NOT", "NEAR"})
 
 
 def _to_iso(dt: datetime | None) -> str | None:
@@ -33,8 +34,17 @@ def _from_iso(val: str | None) -> datetime | None:
 
 def _sanitize_fts_query(query: str) -> str:
     """Format query string into safe quoted terms connected with OR for FTS5."""
-    terms = [re.sub(r"[^\w-]", "", term) for term in query.strip().split() if term.strip()]
-    valid_terms = [f'"{t}"' for t in terms if t]
+    clean_query = query.strip()
+    if not clean_query:
+        return ""
+
+    tokens = [re.sub(r"[^\w-]", "", term) for term in clean_query.split()]
+    valid_terms: list[str] = []
+    for token in tokens:
+        stripped = token.strip("-")
+        if stripped and stripped.upper() not in _RESERVED_FTS_WORDS:
+            valid_terms.append(f'"{stripped}"')
+
     return " OR ".join(valid_terms)
 
 
@@ -63,11 +73,13 @@ class HybridStore:
             self.init_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
-        """Create connection with sqlite-vec extension and foreign keys enabled."""
-        conn = sqlite3.connect(self.db_path)
+        """Create connection with sqlite-vec extension, WAL mode, timeout, and foreign keys enabled."""
+        conn = sqlite3.connect(self.db_path, timeout=10.0)
         conn.row_factory = sqlite3.Row
         conn.enable_load_extension(True)
         sqlite_vec.load(conn)
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA busy_timeout = 10000;")
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
 
@@ -220,18 +232,19 @@ class HybridStore:
     def _get_raw_signals_sync(
         self,
         source_id: str | None,
-        status: SignalStatus | None,
+        status: SignalStatus | str | None,
         limit: int,
     ) -> list[RawSignal]:
         """Query raw signals matching filters synchronously."""
         conditions: list[str] = []
-        params: list[Any] = []
+        params: list[str | int] = []
         if source_id:
             conditions.append("source_id = ?")
             params.append(source_id)
         if status:
+            status_val = status.value if isinstance(status, SignalStatus) else status
             conditions.append("status = ?")
-            params.append(status.value)
+            params.append(status_val)
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         sql = f"SELECT * FROM raw_signals {where} ORDER BY ingested_at DESC LIMIT ?;"
         params.append(limit)
@@ -258,7 +271,7 @@ class HybridStore:
     async def get_raw_signals(
         self,
         source_id: str | None = None,
-        status: SignalStatus | None = None,
+        status: SignalStatus | str | None = None,
         limit: int = 50,
     ) -> list[RawSignal]:
         """Retrieve filtered raw signals asynchronously."""
@@ -283,7 +296,7 @@ class HybridStore:
         target_status = status if isinstance(status, SignalStatus) else SignalStatus(status)
         await self.update_signal_status(signal_id, target_status)
 
-    def _get_retained_signals_sync(self, limit: int = 5) -> list[dict[str, Any]]:
+    def _get_retained_signals_sync(self, limit: int = 5) -> list[dict[str, str | None]]:
         """Fetch pending retained signals for UC-1 proactive alert."""
         sql = """
         SELECT id, title, COALESCE(source_type, source_id, 'veille') as source_type,
@@ -304,23 +317,23 @@ class HybridStore:
                     "source_type": row["source_type"],
                     "source_url": row["source_url"],
                     "summary": row["summary"],
-                    "created_at": str(row["created_at"]),
+                    "created_at": str(row["created_at"]) if row["created_at"] is not None else None,
                 }
                 for row in rows
             ]
 
-    async def get_retained_signals(self, limit: int = 5) -> list[dict[str, Any]]:
+    async def get_retained_signals(self, limit: int = 5) -> list[dict[str, str | None]]:
         """Retrieve retained signals asynchronously for UC-1 proactive alerts."""
         return await asyncio.to_thread(self._get_retained_signals_sync, limit)
 
-    def _get_raw_signal_by_id_sync(self, signal_id: str) -> dict[str, Any] | None:
+    def _get_raw_signal_by_id_sync(self, signal_id: str) -> dict[str, object] | None:
         """Fetch raw signal record by ID synchronously."""
         sql = "SELECT * FROM raw_signals WHERE id = ?;"
         with self._get_connection() as conn:
             row = conn.execute(sql, (signal_id,)).fetchone()
             return dict(row) if row else None
 
-    async def get_raw_signal_by_id(self, signal_id: str) -> dict[str, Any] | None:
+    async def get_raw_signal_by_id(self, signal_id: str) -> dict[str, object] | None:
         """Fetch raw signal record by ID asynchronously."""
         return await asyncio.to_thread(self._get_raw_signal_by_id_sync, signal_id)
 

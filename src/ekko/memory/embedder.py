@@ -1,7 +1,5 @@
 """CPU text embedding service encapsulating FastEmbed (bge-small-en-v1.5)."""
 
-from typing import Any
-
 from fastembed import TextEmbedding
 
 from ekko.logger import get_logger
@@ -17,9 +15,9 @@ class TextEmbedder:
 
     def __init__(self, model_name: str = DEFAULT_MODEL_NAME) -> None:
         self.model_name = model_name
-        self._model: Any = None
+        self._model: TextEmbedding | None = None
 
-    def _get_model(self) -> Any:
+    def _get_model(self) -> TextEmbedding:
         """Lazily initialize FastEmbed model upon first invocation."""
         if self._model is None:
             logger.info("Initializing FastEmbed model: %s", self.model_name)

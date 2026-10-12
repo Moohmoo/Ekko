@@ -122,3 +122,40 @@ async def test_hybrid_search_rrf_scoring_order(db_manager: HybridStore) -> None:
     )
     assert len(results) >= 1
     assert results[0][0].id == "n1"
+
+
+@pytest.mark.asyncio
+async def test_search_notes_handles_toxic_fts5_syntax(db_manager: HybridStore) -> None:
+    """Ensure search_notes does not crash with syntax errors on toxic FTS5 query inputs."""
+    note = KnowledgeNote(
+        id="toxic_test_note",
+        slug="toxic-test-note",
+        title="Python Security & Resilience",
+        summary="A guide on defensive database querying.",
+        content="Testing reserved keywords and special punctuation in sqlite fts5.",
+        tags=["python", "security"],
+        sources=[],
+    )
+    await db_manager.save_knowledge_note(note)
+
+    # Toxic inputs with reserved words, quotes, unmatched syntax, punctuation
+    toxic_queries = [
+        'NOT AND OR NEAR * " \' : ( )',
+        '"""',
+        "AND NOT",
+        "---",
+        "  ",
+        "",
+        "Python NOT",
+        "Resilience: AND OR",
+    ]
+
+    for toxic in toxic_queries:
+        # Must execute cleanly without sqlite3.OperationalError
+        results = await db_manager.search_notes(query=toxic, mode="lexical", limit=5)
+        assert isinstance(results, list)
+
+    # Valid keyword should still find the note
+    results_valid = await db_manager.search_notes(query="Python NOT", mode="lexical", limit=5)
+    assert len(results_valid) == 1
+    assert results_valid[0][0].id == "toxic_test_note"
