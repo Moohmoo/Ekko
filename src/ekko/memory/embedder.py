@@ -26,22 +26,29 @@ class TextEmbedder:
             self._model = TextEmbedding(model_name=self.model_name)
         return self._model
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        """Generate dense embedding vectors for a list of strings."""
+    def _embed_batch_sync(self, texts: list[str]) -> list[list[float]]:
+        """Generate dense embedding vectors synchronously, materializing generator in thread pool."""
         if not texts:
             return []
         model = self._get_model()
-        embeddings_iter = model.embed(texts)
-        return [list(vec.tolist() if hasattr(vec, "tolist") else vec) for vec in embeddings_iter]
+        return [vec.tolist() if hasattr(vec, "tolist") else list(vec) for vec in model.embed(texts)]
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate dense embedding vectors for a list of strings."""
+        return self._embed_batch_sync(texts)
 
     def embed_query(self, query: str) -> list[float]:
         """Generate embedding vector for a single query string."""
         results = self.embed([query])
         return results[0] if results else [0.0] * EMBEDDING_DIM
 
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Generate dense embedding vectors asynchronously on a worker thread."""
+        return await asyncio.to_thread(self._embed_batch_sync, texts)
+
     async def async_embed(self, texts: list[str]) -> list[list[float]]:
         """Generate dense embedding vectors asynchronously on a worker thread."""
-        return await asyncio.to_thread(self.embed, texts)
+        return await self.embed_batch(texts)
 
     async def async_embed_query(self, query: str) -> list[float]:
         """Generate embedding vector for a single query string asynchronously on a worker thread."""

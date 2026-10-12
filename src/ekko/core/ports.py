@@ -115,6 +115,10 @@ class HybridMemoryPort(Protocol):
         """Persist a distilled knowledge note with FTS and vector indexing."""
         ...
 
+    async def delete_knowledge_note(self, note_id: str) -> bool:
+        """Delete a knowledge note and all associated chunks and indexes."""
+        ...
+
     async def get_popular_tags(self, limit: int = 30) -> list[str]:
         """Fetch most frequently used tags across all knowledge notes."""
         ...
@@ -136,6 +140,10 @@ class EmbedderPort(Protocol):
 
     def embed_query(self, query: str) -> list[float]:
         """Generate dense embedding vector for a single query string."""
+        ...
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Generate dense embedding vectors for a list of strings asynchronously."""
         ...
 
 

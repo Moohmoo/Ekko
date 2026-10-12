@@ -62,8 +62,19 @@ CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
     tokenize = 'unicode61'
 );
 
+CREATE TABLE IF NOT EXISTS note_chunks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    note_id TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (note_id) REFERENCES knowledge_notes(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_chunks_note_id ON note_chunks(note_id);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_vectors USING vec0(
-    note_id TEXT PRIMARY KEY,
+    chunk_rowid INTEGER PRIMARY KEY,
     embedding float[{EMBEDDING_DIM}]
 );
 """
