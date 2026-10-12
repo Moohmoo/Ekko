@@ -231,3 +231,22 @@ async def test_save_note_with_hybrid_memory_injection(tmp_path: Path) -> None:
     assert saved_note.title == "CRISPR Analysis"
     assert saved_note.tags == ["bio", "crispr"]
     assert call_args[1]["embedding"] == [0.1] * 384
+
+
+@pytest.mark.asyncio
+async def test_save_note_handles_database_sync_error(tmp_path: Path) -> None:
+    """Ensure DB sync failure returns DatabaseSyncError without crashing."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_db = MagicMock()
+    mock_db.save_knowledge_note = AsyncMock(side_effect=RuntimeError("SQLite disk lock error"))
+
+    tool = SaveNoteTool(notes_dir=tmp_path, db_manager=mock_db)
+    result = await tool._run(
+        title="Failing Note",
+        content="Valid content written to disk before failure.",
+    )
+
+    assert result.success is False
+    assert result.error == "DatabaseSyncError"
+    assert "Erreur lors de la sauvegarde" in result.content

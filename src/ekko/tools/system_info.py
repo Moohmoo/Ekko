@@ -5,7 +5,6 @@ from pathlib import Path
 import platform
 import shutil
 import subprocess
-from typing import Any
 from pydantic import BaseModel, Field
 
 from ekko.core.models import ToolResult
@@ -36,7 +35,7 @@ def _get_os_info() -> dict[str, str]:
     return {"os": distro, "kernel": platform.release(), "arch": platform.machine()}
 
 
-def _get_cpu_info() -> dict[str, Any]:
+def _get_cpu_info() -> dict[str, str | int]:
     """Extract CPU architecture and core count."""
     return {"arch": platform.machine(), "cores": os.cpu_count() or 1}
 

@@ -50,3 +50,17 @@ def test_tool_catalog_includes_scan_inbox() -> None:
     """Ensure ToolCatalog registers ScanInboxTool by default."""
     catalog = ToolCatalog(include_defaults=True)
     assert catalog.get_class("scan_inbox") is ScanInboxTool
+
+
+@pytest.mark.asyncio
+async def test_scan_inbox_handles_infrastructure_error() -> None:
+    """Ensure database retrieval errors return ScanInboxError without crashing."""
+    mock_db = MagicMock()
+    mock_db.get_raw_signals = AsyncMock(side_effect=RuntimeError("SQLite busy timeout"))
+
+    tool = ScanInboxTool(db_manager=mock_db)
+    result = await tool._run(status="pending")
+
+    assert result.success is False
+    assert result.error == "ScanInboxError"
+    assert "Erreur lors de la lecture des signaux" in result.content

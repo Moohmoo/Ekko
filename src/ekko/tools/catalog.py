@@ -1,9 +1,8 @@
 """ToolCatalog mapping configuration names to tool classes adhering to OCP."""
 
 from pathlib import Path
-from typing import Any
 
-from ekko.core.ports import HybridMemoryPort
+from ekko.core.ports import EmbedderPort, HybridMemoryPort
 from ekko.tools.base import BaseTool
 from ekko.tools.query_knowledge import QueryKnowledgeTool
 from ekko.tools.read_resource import ReadResourceTool
@@ -20,14 +19,16 @@ def _instantiate_tool(
     cls: type[BaseTool],
     db_manager: HybridMemoryPort | None = None,
     notes_dir: Path | str = "data/notes",
-    embedder: Any | None = None,
+    embedder: EmbedderPort | None = None,
 ) -> BaseTool:
     """Instantiate a tool class injecting optional dependencies."""
     name = getattr(cls, "name", "")
     if name == "save_note":
         return SaveNoteTool(notes_dir=notes_dir, db_manager=db_manager, embedder=embedder)
-    if name in {"query_knowledge", "scan_inbox"}:
-        return cls(db_manager=db_manager)  # type: ignore[call-arg]
+    if name == "query_knowledge":
+        return QueryKnowledgeTool(db_manager=db_manager, embedder=embedder)
+    if name == "scan_inbox":
+        return ScanInboxTool(db_manager=db_manager)
     return cls()
 
 
@@ -58,7 +59,7 @@ class ToolCatalog:
         enabled_names: list[str],
         db_manager: HybridMemoryPort | None = None,
         notes_dir: Path | str = "data/notes",
-        embedder: Any | None = None,
+        embedder: EmbedderPort | None = None,
     ) -> ToolRegistry:
         """Instantiate and register tools declared in enabled configuration."""
         registry = ToolRegistry()

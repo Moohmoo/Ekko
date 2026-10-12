@@ -3,15 +3,17 @@
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
-import re
-from typing import Any
-import unicodedata
 from pydantic import BaseModel, Field, field_validator
 
 from ekko.core.models import KnowledgeNote, ToolResult
-from ekko.core.ports import HybridMemoryPort
+from ekko.core.ports import EmbedderPort, HybridMemoryPort
 from ekko.tools.base import BaseTool
 from ekko.logger import get_logger
+from ekko.memory.formatters import (
+    determine_unique_path as _determine_unique_path,
+    format_markdown_note as _format_markdown_note,
+    slugify as _slugify,
+)
 
 logger = get_logger("tools.save_note")
 
@@ -46,13 +48,6 @@ class SaveNoteInput(BaseModel):
         return cleaned
 
 
-from ekko.memory.formatters import (
-    determine_unique_path as _determine_unique_path,
-    format_markdown_note as _format_markdown_note,
-    slugify as _slugify,
-)
-
-
 def _build_knowledge_note(
     title: str,
     content: str,
@@ -81,7 +76,7 @@ def _build_knowledge_note(
 async def _sync_hybrid_store(
     db_manager: HybridMemoryPort,
     note: KnowledgeNote,
-    embedder: Any | None,
+    embedder: EmbedderPort | None,
 ) -> None:
     """Index note into SQLite tables, FTS5 index, and sqlite-vec embeddings."""
     embedding = None
@@ -105,7 +100,7 @@ class SaveNoteTool(BaseTool):
         self,
         notes_dir: Path | str = "data/notes",
         db_manager: HybridMemoryPort | None = None,
-        embedder: Any | None = None,
+        embedder: EmbedderPort | None = None,
     ) -> None:
         self.notes_dir = Path(notes_dir)
         self.db_manager = db_manager
@@ -156,15 +151,24 @@ class SaveNoteTool(BaseTool):
         except OSError as exc:
             return ToolResult(content=f"Erreur d'écriture sur le disque : {exc}", success=False, error="DiskWriteError")
 
-        if self.db_manager is not None:
-            knote = _build_knowledge_note(title, content, tags, sources, slug, date_str)
-            await _sync_hybrid_store(self.db_manager, knote, self.embedder)
-
         rel_display = (
             resolved_target.relative_to(Path.cwd())
             if resolved_target.is_relative_to(Path.cwd())
             else resolved_target
         )
+
+        if self.db_manager is not None:
+            try:
+                knote = _build_knowledge_note(title, content, tags, sources, slug, date_str)
+                await _sync_hybrid_store(self.db_manager, knote, self.embedder)
+            except Exception as exc:
+                logger.error("Failed to sync note to hybrid store: %s", exc)
+                return ToolResult(
+                    content=f"Erreur lors de la sauvegarde : {exc}",
+                    success=False,
+                    error="DatabaseSyncError",
+                )
+
         logger.info("Note successfully written to %s", rel_display)
         return ToolResult(
             content=f"Note enregistrée avec succès sous : {rel_display} (indexée dans la mémoire hybride).",

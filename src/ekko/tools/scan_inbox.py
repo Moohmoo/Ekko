@@ -69,12 +69,20 @@ class ScanInboxTool(BaseTool):
         limit: int = 10,
     ) -> ToolResult:
         """Fetch raw signals matching criteria and format into markdown."""
-        status_enum = SignalStatus(status) if status else None
-        signals = await self.db_manager.get_raw_signals(
-            source_id=source_id,
-            status=status_enum,
-            limit=limit,
-        )
+        try:
+            status_enum = SignalStatus(status) if status else None
+            signals = await self.db_manager.get_raw_signals(
+                source_id=source_id,
+                status=status_enum,
+                limit=limit,
+            )
+        except Exception as exc:
+            logger.error("Error scanning inbox signals: %s", exc)
+            return ToolResult(
+                content=f"Erreur lors de la lecture des signaux : {exc}",
+                success=False,
+                error="ScanInboxError",
+            )
 
         if not signals:
             return ToolResult(

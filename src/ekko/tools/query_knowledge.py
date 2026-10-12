@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from ekko.core.models import KnowledgeNote, ToolResult
-from ekko.core.ports import HybridMemoryPort
+from ekko.core.ports import EmbedderPort, HybridMemoryPort
 from ekko.memory.embedder import TextEmbedder
 from ekko.memory.hybrid_store import HybridStore
 from ekko.tools.base import BaseTool
@@ -63,7 +63,7 @@ class QueryKnowledgeTool(BaseTool):
     def __init__(
         self,
         db_manager: HybridMemoryPort | None = None,
-        embedder: TextEmbedder | None = None,
+        embedder: EmbedderPort | None = None,
         db_path: str = "data/ekko.db",
     ) -> None:
         self.db_manager = db_manager or HybridStore(db_path=db_path)
@@ -79,15 +79,23 @@ class QueryKnowledgeTool(BaseTool):
         logger.debug("Executing knowledge query '%s' with mode '%s'", query, mode)
         query_vec: list[float] | None = None
 
-        if mode in {"hybrid", "semantic"}:
-            query_vec = await asyncio.to_thread(self.embedder.embed_query, query)
+        try:
+            if mode in {"hybrid", "semantic"} and self.embedder is not None:
+                query_vec = await asyncio.to_thread(self.embedder.embed_query, query)
 
-        results = await self.db_manager.search_notes(
-            query=query,
-            query_embedding=query_vec,
-            mode=mode,
-            limit=limit,
-        )
+            results = await self.db_manager.search_notes(
+                query=query,
+                query_embedding=query_vec,
+                mode=mode,
+                limit=limit,
+            )
+        except Exception as exc:
+            logger.error("Error querying knowledge notes: %s", exc)
+            return ToolResult(
+                content=f"Erreur lors de la recherche : {exc}",
+                success=False,
+                error="QueryKnowledgeError",
+            )
 
         if not results:
             return ToolResult(

@@ -186,3 +186,80 @@ async def test_read_resource_web_http_error() -> None:
 
     assert result.success is False
     assert "404" in result.content
+
+
+@pytest.mark.asyncio
+async def test_read_resource_path_traversal_rejection() -> None:
+    """Ensure path traversal attempts to read sensitive system files are rejected."""
+    tool = ReadResourceTool()
+    # Test absolute system path
+    result_abs = await tool.execute(uri="/etc/passwd")
+    assert result_abs.success is False
+    assert result_abs.error == "SecurityViolation"
+    assert "hors du périmètre autorisé" in result_abs.content
+
+    # Test relative traversal escape
+    result_rel = await tool.execute(uri="../../../../etc/passwd")
+    assert result_rel.success is False
+    assert result_rel.error == "SecurityViolation"
+    assert "hors du périmètre autorisé" in result_rel.content
+
+
+@pytest.mark.asyncio
+async def test_read_resource_symlink_traversal_rejection(tmp_path: Path) -> None:
+    """Ensure symlinks pointing outside allowed sandbox are rejected via canonical resolution."""
+    tool = ReadResourceTool()
+    symlink_file = tmp_path / "evil_symlink.txt"
+    try:
+        symlink_file.symlink_to("/etc/passwd")
+    except OSError:
+        pytest.skip("Symlink creation not permitted in current environment")
+
+    result = await tool.execute(uri=str(symlink_file))
+    assert result.success is False
+    assert result.error == "SecurityViolation"
+    assert "hors du périmètre autorisé" in result.content
+
+
+@pytest.mark.asyncio
+async def test_read_resource_custom_sandbox_confinement(tmp_path: Path) -> None:
+    """Ensure custom allowed_dirs sandboxes access strictly to specified roots."""
+    sandbox = tmp_path / "sandbox"
+    sandbox.mkdir()
+    allowed_doc = sandbox / "allowed.txt"
+    allowed_doc.write_text("Secret in sandbox", encoding="utf-8")
+
+    forbidden = tmp_path / "forbidden"
+    forbidden.mkdir()
+    forbidden_doc = forbidden / "forbidden.txt"
+    forbidden_doc.write_text("Secret outside sandbox", encoding="utf-8")
+
+    tool = ReadResourceTool(allowed_dirs=[sandbox])
+
+    # Reading within sandbox succeeds
+    res_ok = await tool.execute(uri=str(allowed_doc))
+    assert res_ok.success is True
+    assert "Secret in sandbox" in res_ok.content
+
+    # Reading outside sandbox fails even though file exists
+    res_blocked = await tool.execute(uri=str(forbidden_doc))
+    assert res_blocked.success is False
+    assert res_blocked.error == "SecurityViolation"
+
+
+@pytest.mark.asyncio
+async def test_read_resource_redirect_ssrf_rejection() -> None:
+    """Ensure malicious HTTP redirects to internal/private addresses trigger SSRFViolationError."""
+    from ekko.ingestion.ssrf import SSRFViolationError
+
+    tool = ReadResourceTool()
+    with patch("ekko.tools.read_resource.ResilientHttpClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = SSRFViolationError("Redirect hop to private IP 127.0.0.1 blocked")
+        mock_client.__aenter__.return_value = mock_client
+        mock_client_cls.return_value = mock_client
+
+        result = await tool.execute(uri="https://attacker.com/redirect-to-localhost")
+        assert result.success is False
+        assert result.error == "SSRFViolationError"
+        assert "SSRF error" in result.content

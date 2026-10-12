@@ -47,3 +47,17 @@ async def test_query_knowledge_handles_empty_results() -> None:
 
     assert result.success is True
     assert "Aucune note de connaissance" in result.content
+
+
+@pytest.mark.asyncio
+async def test_query_knowledge_handles_infrastructure_error() -> None:
+    """Ensure database or embedding exceptions return QueryKnowledgeError without crashing."""
+    mock_db = MagicMock()
+    mock_db.search_notes = AsyncMock(side_effect=RuntimeError("FTS5 table corruption"))
+
+    tool = QueryKnowledgeTool(db_manager=mock_db)
+    result = await tool._run(query="critical error query", mode="hybrid")
+
+    assert result.success is False
+    assert result.error == "QueryKnowledgeError"
+    assert "Erreur lors de la recherche" in result.content
