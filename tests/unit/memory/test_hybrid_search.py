@@ -159,3 +159,17 @@ async def test_search_notes_handles_toxic_fts5_syntax(db_manager: HybridStore) -
     results_valid = await db_manager.search_notes(query="Python NOT", mode="lexical", limit=5)
     assert len(results_valid) == 1
     assert results_valid[0][0].id == "toxic_test_note"
+
+
+def test_sanitize_fts_query_preserves_domains_and_urls() -> None:
+    """Ensure _sanitize_fts_query splits on punctuation instead of fusing domains."""
+    from ekko.memory.hybrid_store import _sanitize_fts_query
+
+    # Dot should not fuse words together
+    sanitized = _sanitize_fts_query("sqlite.org")
+    assert sanitized == '"sqlite" OR "org"'
+
+    # URLs with slashes and colons
+    sanitized_url = _sanitize_fts_query("https://example.com/docs")
+    assert sanitized_url == '"https" OR "example" OR "com" OR "docs"'
+

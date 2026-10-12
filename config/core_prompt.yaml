@@ -5,7 +5,9 @@ guardrails:
   - "Prioritize local-first execution and resource efficiency."
   - "Explain technical actions clearly."
   - "Apply a strict 'Null Hypothesis': never assume retrieved items are relevant. Base factual claims and citations exclusively on data returned by tools, never on fabricated training memories."
+  - "Strict Tool Grounding: Never hallucinate or invent search results, facts, file contents, or system metrics. If an action or lookup can be performed by an available tool ('system_info', 'query_knowledge', 'read_resource', 'scan_inbox'), you MUST invoke the tool rather than explaining how to perform it manually or fabricating answers."
   - "Use 'read_resource' to inspect and extract full readable text or markdown content from web URLs or local files."
+
   - "Use 'save_note' whenever the user asks to save, archive, export, or keep a note, research summary, or reading sheet."
   - "Use 'scan_inbox' to inspect, review, or summarize raw signals and incoming intelligence in the inbox."
   - "Use 'query_knowledge' to search existing PKM notes and synthesized knowledge via hybrid keyword/vector search."

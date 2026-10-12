@@ -85,24 +85,36 @@ async def run_app(
 
     active_renderer.render_home(active_metadata)
 
-    while True:
-        user_input = await active_input.get_input()
-        if user_input.command == CommandType.EXIT:
-            active_renderer.render_exit()
-            break
-        if user_input.command == CommandType.CLEAR:
-            await memory.clear_session(session_id)
-            active_renderer.render_clear(session_id)
-            continue
-        if user_input.command == CommandType.HELP:
-            active_renderer.render_help()
-            continue
-        if user_input.command == CommandType.INTERRUPT:
-            continue
-        if user_input.command == CommandType.USER_PROMPT:
-            if not user_input.text:
+    try:
+        while True:
+            try:
+                user_input = await active_input.get_input()
+            except (KeyboardInterrupt, asyncio.CancelledError):
+                active_renderer.render_exit()
+                break
+
+            if user_input.command == CommandType.EXIT:
+                active_renderer.render_exit()
+                break
+            if user_input.command == CommandType.CLEAR:
+                await memory.clear_session(session_id)
+                active_renderer.render_clear(session_id)
                 continue
-            await _stream_turn(engine, active_renderer, user_input.text, session_id)
+            if user_input.command == CommandType.HELP:
+                active_renderer.render_help()
+                continue
+            if user_input.command == CommandType.INTERRUPT:
+                continue
+            if user_input.command == CommandType.USER_PROMPT:
+                cleaned_text = user_input.text.strip()
+                if not cleaned_text:
+                    continue
+                if cleaned_text.lower() in {"exit", "quit", "q", ":q"}:
+                    active_renderer.render_exit()
+                    break
+                await _stream_turn(engine, active_renderer, user_input.text, session_id)
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        active_renderer.render_exit()
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -143,16 +155,19 @@ def main(argv: list[str] | None = None) -> None:
         workspace=str(Path.cwd()),
     )
 
-
-    asyncio.run(
-        run_app(
-            engine=engine,
-            memory=memory,
-            metadata=metadata,
-            session_id=parsed.session,
-            clear=parsed.clear,
+    try:
+        asyncio.run(
+            run_app(
+                engine=engine,
+                memory=memory,
+                metadata=metadata,
+                session_id=parsed.session,
+                clear=parsed.clear,
+            )
         )
-    )
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        pass
+
 
 
 if __name__ == "__main__":

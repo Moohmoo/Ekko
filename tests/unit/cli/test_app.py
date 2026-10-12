@@ -163,3 +163,45 @@ def test_main_initialization_with_real_settings() -> None:
                                                 assert kwargs["metadata"].model_name != ""
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("exit_word", ["exit", "quit", "q", ":q", " EXIT ", "Quit"])
+async def test_run_app_exits_on_textual_exit_commands(exit_word: str) -> None:
+    """Ensure run_app treats textual exit/quit words as exit commands without invoking engine."""
+    mock_engine = AsyncMock()
+    mock_memory = AsyncMock()
+    mock_input = AsyncMock()
+    mock_input.get_input.side_effect = [UserInput(command=CommandType.USER_PROMPT, text=exit_word)]
+    mock_renderer = MagicMock()
+
+    await run_app(
+        engine=mock_engine,
+        memory=mock_memory,
+        input_handler=mock_input,
+        renderer=mock_renderer,
+    )
+
+    mock_renderer.render_exit.assert_called_once()
+    mock_engine.run_stream.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_run_app_catches_keyboard_interrupt_gracefully() -> None:
+    """Ensure KeyboardInterrupt in input loop renders exit cleanly without unhandled exception."""
+    mock_engine = AsyncMock()
+    mock_memory = AsyncMock()
+    mock_input = AsyncMock()
+    mock_input.get_input.side_effect = KeyboardInterrupt()
+    mock_renderer = MagicMock()
+
+    await run_app(
+        engine=mock_engine,
+        memory=mock_memory,
+        input_handler=mock_input,
+        renderer=mock_renderer,
+    )
+
+    mock_renderer.render_exit.assert_called_once()
+    mock_engine.run_stream.assert_not_called()
+
+
+

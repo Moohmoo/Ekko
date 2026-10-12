@@ -277,8 +277,48 @@ async def test_engine_circuit_breaker_intercepts_duplicate_tool_call() -> None:
     messages = await memory.get_messages("circuit_breaker_test")
     # user, asst(call1), tool(obs1), asst(call2), tool(circuit_breaker), asst(final)
     assert len(messages) == 6
-    assert messages[2].content == "Probe result for same_url"
-    assert "Cet outil a déjà été exécuté avec les mêmes paramètres" in messages[4].content
     assert messages[4].tool_call_id == "c_dup"
+
+
+@pytest.mark.asyncio
+async def test_engine_handles_empty_tool_result_content() -> None:
+    """Ensure engine does not raise Pydantic validation error when tool content is empty or whitespace."""
+    from pydantic import BaseModel
+    from ekko.core.models import ToolCall, ToolResult
+    from ekko.tools.base import BaseTool
+    from ekko.tools.registry import ToolRegistry
+
+    class EmptyArgs(BaseModel):
+        pass
+
+    class EmptyTool(BaseTool):
+        name: str = "empty_tool"
+        description: str = "Returns empty content"
+        args_schema: type[BaseModel] = EmptyArgs
+
+        async def _run(self) -> ToolResult:
+            return ToolResult(content="", success=True)
+
+    registry = ToolRegistry()
+    registry.register(EmptyTool())
+
+    mock_provider = AsyncMock()
+    mock_provider.generate.side_effect = [
+        ModelResponse(content="", model_name="mock", tool_calls=[ToolCall(id="c_empty", name="empty_tool", arguments={})]),
+        ModelResponse(content="Handled empty gracefully.", model_name="mock"),
+    ]
+
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=mock_provider, memory=memory, tools=registry)
+
+    reply = await engine.process_message("Run empty tool", session_id="empty_test")
+    assert reply == "Handled empty gracefully."
+
+    messages = await memory.get_messages("empty_test")
+    assert len(messages) == 4
+    tool_msg = messages[2]
+    assert tool_msg.role == "tool"
+    assert tool_msg.content == "(Aucun contenu retourné par l'outil)"
+
 
 

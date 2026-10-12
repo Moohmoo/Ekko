@@ -143,8 +143,12 @@ class EkkoEngine:
                 duration_ms=duration_ms,
             )
 
-            msg = Message(role="tool", content=result.content, tool_call_id=call.id)
+            content_str = (result.content or "").strip()
+            msg_content = content_str if content_str else "(Aucun contenu retourné par l'outil)"
+            msg = Message(role="tool", content=msg_content, tool_call_id=call.id)
             await self.memory.add_message(session_id, msg)
+
+
 
     async def run_stream(
         self,

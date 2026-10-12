@@ -40,7 +40,9 @@ def _sanitize_fts_query(query: str) -> str:
     if not clean_query:
         return ""
 
-    tokens = [re.sub(r"[^\w-]", "", term) for term in clean_query.split()]
+    # Replace punctuation (e.g. '.', '/', ':') with spaces to prevent fusing domains (e.g. sqlite.org -> sqlite org)
+    normalized = re.sub(r"[^\w-]", " ", clean_query)
+    tokens = normalized.split()
     valid_terms: list[str] = []
     for token in tokens:
         stripped = token.strip("-")
@@ -48,6 +50,7 @@ def _sanitize_fts_query(query: str) -> str:
             valid_terms.append(f'"{stripped}"')
 
     return " OR ".join(valid_terms)
+
 
 
 def _row_to_knowledge_note(row: sqlite3.Row) -> KnowledgeNote:

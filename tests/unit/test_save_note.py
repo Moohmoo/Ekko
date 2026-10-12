@@ -170,21 +170,19 @@ async def test_save_note_run_nominal(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_save_note_security_path_traversal(tmp_path: Path) -> None:
-    """Ensure path traversal attempts are safely quarantined within notes_dir."""
+    """Ensure path traversal attempts in title are explicitly rejected."""
     tool = SaveNoteTool(notes_dir=tmp_path)
     result = await tool._run(
         title="../../etc/passwd",
         content="Contenu malveillant.",
     )
 
-    # Slugification turns '../../etc/passwd' into 'etc-passwd'
-    assert result.success is True
+    assert result.success is False
+    assert result.error == "SecurityViolation"
+    assert "Tentative d'évasion de répertoire détectée" in result.content
     assert not Path("/etc/passwd.md").exists()
+    assert len(list(tmp_path.glob("*.md"))) == 0
 
-    files = list(tmp_path.glob("*.md"))
-    assert len(files) == 1
-    assert files[0].resolve().is_relative_to(tmp_path.resolve())
-    assert "etc-passwd" in files[0].name
 
 
 @pytest.mark.asyncio

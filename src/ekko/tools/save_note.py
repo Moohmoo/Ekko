@@ -118,7 +118,13 @@ class SaveNoteTool(BaseTool):
         tags: list[str] | None = None,
         sources: list[str] | None = None,
     ) -> ToolResult:
-        """Format, validate security containment, write Markdown and index into hybrid DB."""
+        if ".." in title or "/" in title or "\\" in title:
+            return ToolResult(
+                content="Tentative d'évasion de répertoire détectée.",
+                success=False,
+                error="SecurityViolation",
+            )
+
         resolved_base = self.notes_dir.resolve()
         date_str = datetime.now().strftime("%Y-%m-%d")
         slug = _slugify(title)
@@ -129,6 +135,7 @@ class SaveNoteTool(BaseTool):
                 success=False,
                 error="SecurityViolation",
             )
+
 
         try:
             target_path = _determine_unique_path(resolved_base, slug, date_str)
