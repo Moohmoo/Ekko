@@ -81,10 +81,10 @@ function createWindow() {
     console.error(error);
   });
 
-  // Native keyboard shortcut fallback for closing window (Escape or Ctrl+Q)
+  // Native keyboard shortcut fallback for quitting application (Ctrl+Q)
   win.webContents.on('before-input-event', (_event, input) => {
-    if (input.key === 'Escape' || (input.control && input.key.toLowerCase() === 'q')) {
-      console.log('[Main] Escape/Ctrl+Q pressed, closing window.');
+    if (input.control && input.key.toLowerCase() === 'q') {
+      console.log('[Main] Ctrl+Q pressed, closing window.');
       win?.close();
     }
   });

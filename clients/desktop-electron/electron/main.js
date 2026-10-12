@@ -103,10 +103,10 @@ function createWindow() {
         console.error('[Main:FATAL] Preload execution error in:', preloadErrPath);
         console.error(error);
     });
-    // Native keyboard shortcut fallback for closing window (Escape or Ctrl+Q)
+    // Native keyboard shortcut fallback for quitting application (Ctrl+Q)
     win.webContents.on('before-input-event', function (_event, input) {
-        if (input.key === 'Escape' || (input.control && input.key.toLowerCase() === 'q')) {
-            console.log('[Main] Escape/Ctrl+Q pressed, closing window.');
+        if (input.control && input.key.toLowerCase() === 'q') {
+            console.log('[Main] Ctrl+Q pressed, closing window.');
             win === null || win === void 0 ? void 0 : win.close();
         }
     });

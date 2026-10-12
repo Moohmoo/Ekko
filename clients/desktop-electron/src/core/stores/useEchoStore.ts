@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import type { NoteItem } from '../types';
 
-export type EchoViewMode = 'browse' | 'search' | 'tag';
+export interface EchoFilters {
+  query: string;
+  tag: string | null;
+}
 
 interface EchoState {
   notes: NoteItem[];
@@ -10,7 +13,6 @@ interface EchoState {
   isOffline: boolean;
   searchQuery: string;
   selectedTag: string | null;
-  viewMode: EchoViewMode;
   searchSeq: number;
 
   // Actions
@@ -57,7 +59,6 @@ export const useEchoStore = create<EchoState>((set, get) => ({
   isOffline: false,
   searchQuery: '',
   selectedTag: null,
-  viewMode: 'browse',
   searchSeq: 0,
 
   setLatestNote: (note: NoteItem) => {
@@ -68,17 +69,15 @@ export const useEchoStore = create<EchoState>((set, get) => ({
   },
 
   filterByTag: (tag: string | null) => {
-    set((state) => ({
-      selectedTag: tag,
-      viewMode: tag ? 'tag' : state.searchQuery.trim() ? 'search' : 'browse',
-    }));
+    set({ selectedTag: tag });
   },
 
   fetchNotes: async () => {
     if (!window.ekkoAPI) return;
 
-    // Strict heartbeat isolation: DO NOT overwrite active search results with browse notes
-    if (get().viewMode === 'search') {
+    // Strict Heartbeat Isolation: NEVER overwrite results if any filter is active
+    const hasActiveFilters = Boolean(get().searchQuery.trim() || get().selectedTag);
+    if (hasActiveFilters) {
       return;
     }
 
@@ -92,7 +91,6 @@ export const useEchoStore = create<EchoState>((set, get) => ({
           latestNote: mapped.length > 0 ? mapped[0] : null,
           isLoading: false,
           isOffline: false,
-          viewMode: get().selectedTag ? 'tag' : 'browse',
         });
       } else {
         // Non-array response (unexpected IPC reply) -> retain existing cache
@@ -113,12 +111,29 @@ export const useEchoStore = create<EchoState>((set, get) => ({
     set({
       searchQuery: query,
       searchSeq: currentSeq,
-      viewMode: trimmed ? 'search' : get().selectedTag ? 'tag' : 'browse',
     });
 
     if (!trimmed) {
-      // Revert to full list of recent notes
-      await get().fetchNotes();
+      // If query is empty but a tag is selected, load recent notes without clearing tag
+      set({ isLoading: true });
+      try {
+        const raw = await window.ekkoAPI?.getNotes();
+        if (get().searchSeq !== currentSeq) return;
+        if (Array.isArray(raw)) {
+          const mapped = (raw as Record<string, unknown>[]).map(mapRawNote);
+          set({
+            notes: mapped,
+            latestNote: mapped.length > 0 ? mapped[0] : null,
+            isLoading: false,
+            isOffline: false,
+          });
+        } else {
+          set({ isLoading: false });
+        }
+      } catch (e) {
+        if (get().searchSeq !== currentSeq) return;
+        set({ isLoading: false, isOffline: true });
+      }
       return;
     }
 
@@ -153,11 +168,30 @@ export const useEchoStore = create<EchoState>((set, get) => ({
   },
 
   refresh: async () => {
-    const { searchQuery, viewMode } = get();
-    if (viewMode === 'search' && searchQuery.trim()) {
+    const { searchQuery } = get();
+    if (searchQuery.trim()) {
       await get().searchNotes(searchQuery);
     } else {
-      await get().fetchNotes();
+      // Fetch latest notes from backend while keeping selectedTag intact
+      if (!window.ekkoAPI) return;
+      set({ isLoading: true });
+      try {
+        const raw = await window.ekkoAPI.getNotes();
+        if (Array.isArray(raw)) {
+          const mapped = (raw as Record<string, unknown>[]).map(mapRawNote);
+          set({
+            notes: mapped,
+            latestNote: mapped.length > 0 ? mapped[0] : null,
+            isLoading: false,
+            isOffline: false,
+          });
+        } else {
+          set({ isLoading: false, isOffline: true });
+        }
+      } catch (e) {
+        console.warn('[EchoStore] Erreur refresh:', e);
+        set({ isLoading: false, isOffline: true });
+      }
     }
   },
 }));

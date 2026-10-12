@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { NoteItem } from '../../core/types';
 import { X, Copy, Check, ExternalLink, Calendar, Tag, FileText, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { SPRING_SNAPPY } from '../../design-system/tokens';
+import { SPRING_SNAPPY, SURFACES } from '../../design-system/tokens';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { formatSourceDisplay, normalizeTag } from '../../core/utils/formatters';
 
@@ -19,15 +19,17 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
-  // Keyboard shortcut: Escape to close
+  // Keyboard shortcut: Escape to close modal cleanly without affecting the window
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
         onClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [onClose]);
 
   const handleCopyMarkdown = () => {
@@ -75,7 +77,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 select-none"
+      className={`absolute inset-0 z-50 ${SURFACES.modalOverlay} flex items-center justify-center p-3 select-none`}
       onClick={onClose}
     >
       <motion.div
@@ -84,7 +86,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         exit={{ scale: 0.96, opacity: 0, y: 8 }}
         transition={SPRING_SNAPPY}
         onClick={(e) => e.stopPropagation()}
-        className="w-full h-full max-h-[85vh] bg-surfaceCard border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl text-slate-100"
+        className={`w-full h-full max-h-[85vh] ${SURFACES.modalContainer} flex flex-col overflow-hidden text-slate-100`}
       >
         {/* 1. Header bar (shrink-0) */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.08] bg-white/[0.02] shrink-0">
@@ -118,7 +120,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-colors"
               title="Fermer (Échap)"
             >
               <X className="w-4 h-4" />
@@ -127,7 +129,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         </div>
 
         {/* 2. Content body (flex-1 min-h-0 overflow-y-auto) */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3.5 text-xs min-h-0">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-xs min-h-0">
           {/* Title & Metadata */}
           <div className="space-y-1.5">
             <h2 className="text-base font-semibold text-slate-100 leading-snug">
@@ -180,7 +182,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                         onClose();
                       }
                     }}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-white/[0.05] hover:bg-sky-500/20 text-slate-300 hover:text-sky-200 border border-white/5 transition-colors cursor-pointer"
+                    className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-sky-500/20 text-slate-400 hover:text-sky-200 transition-colors text-[10px] font-medium"
                     title={`Filtrer par #${norm}`}
                   >
                     #{norm}
@@ -190,14 +192,14 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
             </div>
           )}
 
-          {/* Main Markdown Body rendered with MarkdownRenderer */}
-          <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-slate-300 text-xs">
+          {/* Main Markdown Body directly rendered without redundant nested container */}
+          <div className="text-slate-300 text-xs">
             <MarkdownRenderer content={note.content || note.summary} />
           </div>
         </div>
 
-        {/* 3. Footer bar (shrink-0 border-t) */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-zinc-800 bg-white/[0.01] shrink-0 text-[10.5px] text-slate-500">
+        {/* 3. Footer bar (shrink-0 border-t with unified BORDER_SUBTLE) */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-white/[0.08] bg-white/[0.01] shrink-0 text-[10.5px] text-slate-500">
           <div className="flex items-center gap-1">
             <span className="px-1.5 py-0.5 rounded bg-white/5 font-mono text-[9.5px] text-slate-400 border border-white/5">
               Échap
