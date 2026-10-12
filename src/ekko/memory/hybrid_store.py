@@ -430,6 +430,43 @@ class HybridStore:
         """Retrieve retained signals asynchronously for UC-1 proactive alerts."""
         return await asyncio.to_thread(self._get_retained_signals_sync, limit)
 
+    def _get_retained_signals_count_sync(self) -> int:
+        """Count total raw signals currently in retained status."""
+        sql = "SELECT count(*) FROM raw_signals WHERE status = 'retained';"
+        with self._connection() as conn:
+            row = conn.execute(sql).fetchone()
+            return int(row[0]) if row else 0
+
+    async def get_retained_signals_count(self) -> int:
+        """Count total retained signals asynchronously."""
+        return await asyncio.to_thread(self._get_retained_signals_count_sync)
+
+    def _get_retained_signals_with_count_sync(self, limit: int = 20) -> dict[str, object]:
+        """Fetch retained signals along with total count of retained records."""
+        signals = self._get_retained_signals_sync(limit=limit)
+        total_count = self._get_retained_signals_count_sync()
+        return {"signals": signals, "total_count": total_count}
+
+    async def get_retained_signals_with_count(self, limit: int = 20) -> dict[str, object]:
+        """Fetch retained signals with total count asynchronously."""
+        return await asyncio.to_thread(self._get_retained_signals_with_count_sync, limit)
+
+    def _resolve_all_retained_signals_sync(self, action: str) -> int:
+        """Resolve all currently retained signals with 'archive' -> 'archived' or 'discard' -> 'discarded'."""
+        status_map = {"archive": "archived", "discard": "discarded"}
+        new_status = status_map.get(action)
+        if not new_status:
+            raise ValueError(f"Invalid action '{action}'. Must be 'archive' or 'discard'.")
+
+        sql_update = "UPDATE raw_signals SET status = ? WHERE status = 'retained';"
+        with self._connection() as conn:
+            cursor = conn.execute(sql_update, (new_status,))
+            return cursor.rowcount
+
+    async def resolve_all_retained_signals(self, action: str) -> int:
+        """Resolve all retained signals asynchronously."""
+        return await asyncio.to_thread(self._resolve_all_retained_signals_sync, action)
+
     def _get_raw_signal_by_id_sync(self, signal_id: str) -> dict[str, object] | None:
         """Fetch raw signal record by ID synchronously."""
         sql = "SELECT * FROM raw_signals WHERE id = ?;"

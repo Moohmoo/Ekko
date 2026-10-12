@@ -9,11 +9,17 @@ export interface Signal {
   created_at: string;
 }
 
+export interface SignalsResult {
+  signals: Signal[];
+  total_count: number;
+}
+
 export interface EkkoAPI {
   ping: () => Promise<{ status: string; timestamp: string } | null>;
   getNotes: () => Promise<unknown[]>;
-  getPendingSignals: () => Promise<Signal[]>;
+  getPendingSignals: () => Promise<SignalsResult | Signal[]>;
   resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{ status: string; signal_id?: string; action?: string }>;
+  resolveAllPendingSignals: (action: 'archive' | 'discard') => Promise<{ status: string; action?: string; count?: number }>;
   submitPrompt: (prompt: string) => Promise<string>;
   ingestFile: (filePath: string) => Promise<{ status: string; filename?: string; message?: string; note?: { id: string; title: string; slug: string; summary: string; source?: string } }>;
   getDroppedFilePath: (file: File) => string;
@@ -28,6 +34,8 @@ const api: EkkoAPI = {
   getPendingSignals: () => ipcRenderer.invoke('daemon:get_pending_signals'),
   resolveSignal: (signalId: string, action: 'archive' | 'discard') =>
     ipcRenderer.invoke('daemon:resolve_signal', { signalId, action }),
+  resolveAllPendingSignals: (action: 'archive' | 'discard') =>
+    ipcRenderer.invoke('daemon:resolve_all_pending_signals', { action }),
   submitPrompt: (prompt: string) => ipcRenderer.invoke('daemon:submit_prompt', prompt),
   ingestFile: (filePath: string) => ipcRenderer.invoke('daemon:ingest_file', filePath),
   getDroppedFilePath: (file: File) => {

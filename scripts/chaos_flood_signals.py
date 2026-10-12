@@ -70,4 +70,20 @@ def chaos_flood(db_path: str | Path = "data/ekko.db", count: int = 30) -> None:
 
 
 if __name__ == "__main__":
-    chaos_flood()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Chaos test script simulating high-frequency signal flooding.")
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=30,
+        help="Number of synthetic retained signals to inject (default: 30).",
+    )
+    parser.add_argument(
+        "--db",
+        type=str,
+        default="data/ekko.db",
+        help="Path to the SQLite database (default: data/ekko.db).",
+    )
+    args = parser.parse_args()
+    chaos_flood(db_path=args.db, count=args.count)

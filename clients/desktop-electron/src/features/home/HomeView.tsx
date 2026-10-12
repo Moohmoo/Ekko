@@ -20,8 +20,6 @@ import {
   Check,
 } from 'lucide-react';
 
-const TICKER_INTERVAL_MS = 6000;
-
 /**
  * Defensive pure helper detecting raw JSON dumps or Algolia metadata payloads.
  */
@@ -56,27 +54,13 @@ export const HomeView: React.FC = () => {
     ingestFileInPlace,
   } = useDropStore();
 
-  const { notes, latestNote, fetchNotes } = useEchoStore();
+  const { latestNote, fetchNotes } = useEchoStore();
   const currentSignal = useSignalStore((state) => state.currentSignal);
+  const totalCount = useSignalStore((state) => state.totalCount);
   const dismissCurrent = useSignalStore((state) => state.dismissCurrent);
-  const isSignalLoading = useSignalStore((state) => state.isLoading);
+  const resolveAll = useSignalStore((state) => state.resolveAll);
+  const isSignalResolving = useSignalStore((state) => state.isResolving);
 
-  // Calmed ticker rotation state with pause on hover
-  const [tickerIndex, setTickerIndex] = React.useState<number>(0);
-  const [isTickerPaused, setIsTickerPaused] = React.useState<boolean>(false);
-
-  useEffect(() => {
-    if (notes.length <= 1 || isTickerPaused) return;
-
-    const interval = setInterval(() => {
-      setTickerIndex((prev) => (prev + 1) % notes.length);
-    }, TICKER_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [notes.length, isTickerPaused]);
-
-  // Derived current note for ticker ensuring safe index boundary
-  const activeTickerNote = notes.length > 0 ? notes[tickerIndex % notes.length] : latestNote;
   const cleanSummary = currentSignal?.summary && !isJsonPayload(currentSignal.summary) ? currentSignal.summary : null;
 
   // Derived mascot emotion prioritizing active drag/ingestion/error, then blindspot alert, then idle
@@ -226,12 +210,12 @@ export const HomeView: React.FC = () => {
         ) : currentSignal ? (
           /* État Veilleur : Alerte Proactive d'Angle Mort (UC-1) */
           <div className={`w-full h-full rounded-xl ${SURFACES.alertCard} flex flex-col justify-between p-3 select-none relative overflow-hidden transition-all shadow-[0_4px_20px_rgba(245,158,11,0.06)]`}>
-            {/* Header: Badge ambre + source */}
+            {/* Header: Badge ambre + source + compteur */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300">
                 <Zap className="w-3 h-3 text-amber-400" />
                 <span className="text-[10px] font-semibold tracking-wide uppercase">
-                  Angle mort identifié
+                  {totalCount > 1 ? `Angle mort identifié · 1 / ${totalCount}` : 'Angle mort identifié'}
                 </span>
               </div>
               <span className="text-[10px] text-amber-400/80 font-medium truncate max-w-[130px] uppercase tracking-wider">
@@ -251,27 +235,42 @@ export const HomeView: React.FC = () => {
               )}
             </div>
 
-            {/* Actions: Écarter (secondaire) & Archiver (primaire) */}
-            <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/[0.04]">
-              <button
-                onClick={() => dismissCurrent('discard')}
-                disabled={isSignalLoading}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors text-xs font-medium cursor-pointer"
-                title="Écarter cette découverte"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Écarter</span>
-              </button>
+            {/* Actions: Tout écarter (si > 10) | Écarter (secondaire) & Archiver (primaire) */}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/[0.04]">
+              {totalCount > 10 ? (
+                <button
+                  onClick={() => resolveAll('discard')}
+                  disabled={isSignalResolving}
+                  className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer"
+                  title="Écarter tous les signaux en attente"
+                >
+                  Tout écarter ({totalCount})
+                </button>
+              ) : (
+                <div />
+              )}
 
-              <button
-                onClick={() => dismissCurrent('archive')}
-                disabled={isSignalLoading}
-                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-all text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
-                title="Conserver et archiver dans le PKM"
-              >
-                <Check className="w-3.5 h-3.5 text-amber-400" />
-                <span>Archiver</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => dismissCurrent('discard')}
+                  disabled={isSignalResolving}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors text-xs font-medium cursor-pointer"
+                  title="Écarter cette découverte"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Écarter</span>
+                </button>
+
+                <button
+                  onClick={() => dismissCurrent('archive')}
+                  disabled={isSignalResolving}
+                  className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-all text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
+                  title="Conserver et archiver dans le PKM"
+                >
+                  <Check className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Archiver</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -294,8 +293,6 @@ export const HomeView: React.FC = () => {
             {/* Partie inférieure (~35 %) : ligne "Dernier Écho" posée à plat */}
             <div
               onClick={() => setViewMode('echo')}
-              onMouseEnter={() => setIsTickerPaused(true)}
-              onMouseLeave={() => setIsTickerPaused(false)}
               className={`flex-[0.35] rounded-xl ${SURFACE_CARD} ${SURFACE_CARD_HOVER} px-3 py-1.5 flex items-center justify-between cursor-pointer transition-all group select-none`}
             >
               <div className="flex items-center gap-2.5 min-w-0 pr-2">
@@ -307,7 +304,7 @@ export const HomeView: React.FC = () => {
                     Dernier Écho
                   </span>
                   <p className="text-xs text-slate-200 font-medium truncate">
-                    {activeTickerNote?.title || 'Tampon cognitif vide'}
+                    {latestNote?.title || 'Tampon cognitif vide'}
                   </p>
                 </div>
               </div>

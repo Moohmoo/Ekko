@@ -145,7 +145,7 @@ ipcMain.handle('daemon:ingest_file', async (_event, filePath: string) => {
 });
 
 ipcMain.handle('daemon:get_pending_signals', async () => {
-  return await sendJsonRpc<unknown[]>('get_pending_signals', { limit: 5 });
+  return await sendJsonRpc<{ signals: unknown[]; total_count: number }>('get_pending_signals', { limit: 20 });
 });
 
 ipcMain.handle(
@@ -154,6 +154,16 @@ ipcMain.handle(
     return await sendJsonRpc<{ status: string; signal_id: string; action: string }>(
       'resolve_signal',
       { signal_id: signalId, action }
+    );
+  }
+);
+
+ipcMain.handle(
+  'daemon:resolve_all_pending_signals',
+  async (_event, { action }: { action: 'archive' | 'discard' }) => {
+    return await sendJsonRpc<{ status: string; action: string; count: number }>(
+      'resolve_all_pending_signals',
+      { action }
     );
   }
 );

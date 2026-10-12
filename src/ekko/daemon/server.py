@@ -196,6 +196,8 @@ class IPCServer:
             await self._handle_get_pending_signals(req_id, params, writer)
         elif method == "resolve_signal":
             await self._handle_resolve_signal(req_id, params, writer)
+        elif method == "resolve_all_pending_signals":
+            await self._handle_resolve_all_pending_signals(req_id, params, writer)
         elif method == "submit_prompt":
             await self._handle_submit_prompt(req_id, params, writer)
         else:
@@ -367,14 +369,18 @@ class IPCServer:
         params: dict[str, object],
         writer: asyncio.StreamWriter,
     ) -> None:
-        """Query retained raw signals for UC-1 proactive alert display."""
+        """Query retained raw signals and total retained count for UC-1 proactive alert display."""
         if not self.db_manager:
-            writer.write(_rpc_result(req_id, []).encode("utf-8"))
+            writer.write(_rpc_result(req_id, {"signals": [], "total_count": 0}).encode("utf-8"))
             await writer.drain()
             return
-        limit = int(params.get("limit", 5))
-        signals = await self.db_manager.get_retained_signals(limit=limit)
-        writer.write(_rpc_result(req_id, signals).encode("utf-8"))
+        limit = int(params.get("limit", 20))
+        if hasattr(self.db_manager, "get_retained_signals_with_count"):
+            res = await self.db_manager.get_retained_signals_with_count(limit=limit)
+        else:
+            signals = await self.db_manager.get_retained_signals(limit=limit)
+            res = {"signals": signals, "total_count": len(signals)}
+        writer.write(_rpc_result(req_id, res).encode("utf-8"))
         await writer.drain()
 
     async def _distill_signal_async(self, signal_data: dict[str, object]) -> None:
@@ -481,5 +487,39 @@ class IPCServer:
                 "action": "discarded",
             }
 
+        writer.write(_rpc_result(req_id, reply).encode("utf-8"))
+        await writer.drain()
+
+    async def _handle_resolve_all_pending_signals(
+        self,
+        req_id: str | int | None,
+        params: dict[str, object],
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Resolve all retained signals in bulk by setting status to archived or discarded."""
+        action = str(params.get("action") or "discard")
+        if action not in ("archive", "discard"):
+            writer.write(
+                _rpc_error(
+                    req_id,
+                    -32602,
+                    f"Invalid action '{action}'. Must be 'archive' or 'discard'.",
+                ).encode("utf-8")
+            )
+            await writer.drain()
+            return
+
+        if not self.db_manager:
+            writer.write(_rpc_error(req_id, -32000, "Database manager not available").encode("utf-8"))
+            await writer.drain()
+            return
+
+        resolved_count = await self.db_manager.resolve_all_retained_signals(action)
+        action_name = "archived" if action == "archive" else "discarded"
+        reply = {
+            "status": "ok",
+            "action": action_name,
+            "count": resolved_count,
+        }
         writer.write(_rpc_result(req_id, reply).encode("utf-8"))
         await writer.drain()

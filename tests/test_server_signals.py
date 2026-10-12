@@ -26,20 +26,21 @@ def db_store(tmp_path: Path) -> HybridStore:
 
 @pytest.mark.asyncio
 async def test_get_pending_signals_empty(socket_path: Path, db_store: HybridStore) -> None:
-    """When no retained signals exist, get_pending_signals returns empty list."""
+    """When no retained signals exist, get_pending_signals returns empty list and count 0."""
     server = IPCServer(socket_path=socket_path, db_manager=db_store)
     await server.start()
 
     async with IPCClient(socket_path=socket_path) as client:
-        signals = await client.call("get_pending_signals")
-        assert signals == []
+        res = await client.call("get_pending_signals")
+        assert res["signals"] == []
+        assert res["total_count"] == 0
 
     await server.stop()
 
 
 @pytest.mark.asyncio
 async def test_get_pending_signals_nominal(socket_path: Path, db_store: HybridStore) -> None:
-    """Ensure get_pending_signals returns retained signals with expected structure."""
+    """Ensure get_pending_signals returns retained signals and total_count."""
     with db_store._get_connection() as conn:
         conn.execute(
             """
@@ -61,7 +62,9 @@ async def test_get_pending_signals_nominal(socket_path: Path, db_store: HybridSt
     await server.start()
 
     async with IPCClient(socket_path=socket_path) as client:
-        signals = await client.call("get_pending_signals")
+        res = await client.call("get_pending_signals")
+        signals = res["signals"]
+        assert res["total_count"] == 1
         assert len(signals) == 1
         s = signals[0]
         assert s["id"] == "sig_test_1"
@@ -98,7 +101,8 @@ async def test_resolve_signal_archive(socket_path: Path, db_store: HybridStore) 
 
         # Signal should no longer be pending
         pending = await client.call("get_pending_signals")
-        assert pending == []
+        assert pending["signals"] == []
+        assert pending["total_count"] == 0
 
     # Check status in SQLite
     with db_store._get_connection() as conn:
@@ -264,7 +268,9 @@ async def test_get_pending_signals_sanitizes_raw_json_leak(socket_path: Path, db
     await server.start()
 
     async with IPCClient(socket_path=socket_path) as client:
-        signals = await client.call("get_pending_signals")
+        res = await client.call("get_pending_signals")
+        signals = res["signals"]
+        assert res["total_count"] == 1
         assert len(signals) == 1
         s = signals[0]
         assert s["id"] == "sig_leaked_json"
@@ -272,5 +278,40 @@ async def test_get_pending_signals_sanitizes_raw_json_leak(socket_path: Path, db
         assert s["summary"] == ""
         assert not s["summary"].startswith("{")
         assert "_highlightResult" not in s["summary"]
+
+    await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_resolve_all_pending_signals(socket_path: Path, db_store: HybridStore) -> None:
+    """Ensure resolve_all_pending_signals updates all retained signals in bulk."""
+    with db_store._get_connection() as conn:
+        for i in range(5):
+            conn.execute(
+                """
+                INSERT INTO raw_signals (id, source_type, source_url, title, raw_content, status)
+                VALUES (?, ?, ?, ?, ?, ?);
+                """,
+                (f"sig_bulk_{i}", "rss", "https://rss.feed/item", f"Title {i}", "Content", "retained"),
+            )
+
+    server = IPCServer(socket_path=socket_path, db_manager=db_store)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        # Check initial count
+        pending = await client.call("get_pending_signals")
+        assert pending["total_count"] == 5
+
+        # Resolve all with action 'discard'
+        res = await client.call("resolve_all_pending_signals", {"action": "discard"})
+        assert res["status"] == "ok"
+        assert res["action"] == "discarded"
+        assert res["count"] == 5
+
+        # Verify all are cleared
+        after = await client.call("get_pending_signals")
+        assert after["signals"] == []
+        assert after["total_count"] == 0
 
     await server.stop()
