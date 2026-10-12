@@ -5,10 +5,10 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
-from typing import Any
 
+from ekko.core.errors import DistillationError
 from ekko.core.models import KnowledgeNote, Message, RawSignal
-from ekko.core.ports import HybridMemoryPort, LLMProviderPort
+from ekko.core.ports import EmbedderPort, HybridMemoryPort, LLMProviderPort, ResourceManagerPort
 from ekko.logger import get_logger
 from ekko.tools.save_note import (
     _determine_unique_path,
@@ -39,21 +39,28 @@ def _build_distill_prompt(signal: RawSignal) -> str:
 
 def _parse_distillation(response_text: str, default_title: str) -> tuple[str, str, str, list[str]]:
     """Parse JSON or extract structured summary fallback from model response."""
-    match = re.search(r"\{.*\}", response_text, re.DOTALL)
+    cleaned = response_text.strip()
+    if not cleaned:
+        raise DistillationError("LLM returned empty distillation response")
+
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if match:
         try:
             data = json.loads(match.group(0))
-            title = data.get("title") or default_title
-            summary = data.get("summary") or ""
-            points = data.get("key_points") or []
-            tags = data.get("tags") or ["distilled"]
-            body = f"## Summary\n\n{summary}\n\n## Key Takeaways\n\n" + "\n".join(f"- {p}" for p in points)
-            return title, summary, body, tags
+            if isinstance(data, dict):
+                title = data.get("title") or default_title
+                summary = data.get("summary") or ""
+                raw_points = data.get("key_points")
+                points = [str(p) for p in raw_points] if isinstance(raw_points, list) else []
+                raw_tags = data.get("tags")
+                tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else ["distilled"]
+                body = f"## Summary\n\n{summary}\n\n## Key Takeaways\n\n" + "\n".join(f"- {p}" for p in points)
+                return str(title), str(summary), body, tags
         except json.JSONDecodeError:
             pass
 
-    summary = response_text.strip()[:300]
-    return default_title, summary, response_text.strip(), ["distilled"]
+    summary = cleaned[:300]
+    return default_title, summary, cleaned, ["distilled"]
 
 
 class SignalDistiller:
@@ -64,8 +71,8 @@ class SignalDistiller:
         store: HybridMemoryPort,
         llm_provider: LLMProviderPort,
         notes_dir: Path | str = "data/notes",
-        embedder: Any | None = None,
-        resource_manager: Any | None = None,
+        embedder: EmbedderPort | None = None,
+        resource_manager: ResourceManagerPort | None = None,
     ) -> None:
         self.store = store
         self.llm_provider = llm_provider
@@ -76,7 +83,6 @@ class SignalDistiller:
     def _write_physical_note(self, note: KnowledgeNote, date_str: str, slug: str) -> None:
         """Write note markdown file with YAML frontmatter to notes directory."""
         self.notes_dir.mkdir(parents=True, exist_ok=True)
-        # Check if note file with same date and slug already exists
         primary_file = self.notes_dir / f"{date_str}_{slug}.md"
         if primary_file.exists():
             file_path = primary_file
@@ -115,7 +121,7 @@ class SignalDistiller:
         await asyncio.to_thread(self._write_physical_note, note, date_str, slug)
         return note
 
-    async def _distill_single_signal(self, signal: RawSignal) -> KnowledgeNote:
+    async def distill_signal(self, signal: RawSignal) -> KnowledgeNote:
         """Run LLM inference with VRAM confinement and save distilled note."""
         prompt = _build_distill_prompt(signal)
         messages = [Message(role="user", content=prompt)]
@@ -124,9 +130,66 @@ class SignalDistiller:
         else:
             call_kwargs = {"extra_body": {"keep_alive": 0}}
 
-        response = await self.llm_provider.generate(messages, **call_kwargs)
+        try:
+            response = await self.llm_provider.generate(messages, **call_kwargs)
+        except Exception as exc:
+            raise DistillationError(f"LLM generation failed during distillation of '{signal.id}': {exc}") from exc
+
         title, summary, body, tags = _parse_distillation(response.content, signal.title)
         return await self._persist_note(signal, title, summary, body, tags)
+
+    async def distill_raw_content(
+        self,
+        raw_content: str,
+        title: str = "Untitled Document",
+        source_id: str = "text_input",
+        url: str | None = None,
+    ) -> KnowledgeNote:
+        """Convenience method to distill raw in-memory content directly into a knowledge note."""
+        cleaned = raw_content.strip()
+        if not cleaned:
+            raise DistillationError("Cannot distill empty content")
+        signal = RawSignal(
+            id=f"text_{abs(hash(cleaned)) % 1000000}",
+            source_id=source_id,
+            title=title,
+            url=url,
+            raw_content=cleaned,
+            clean_content=cleaned,
+        )
+        return await self.distill_signal(signal)
+
+    async def distill_file(self, file_path: Path | str) -> KnowledgeNote:
+        """Extract text from physical file and distill into a knowledge note."""
+        path = Path(file_path)
+        if not path.exists():
+            raise DistillationError(f"File not found: {path}")
+
+        suffix = path.suffix.lower()
+        if suffix == ".pdf":
+            try:
+                import pypdf
+                reader = pypdf.PdfReader(str(path))
+                extracted_text = "".join(page.extract_text() or "" for page in reader.pages)
+            except Exception as exc:
+                raise DistillationError(f"Failed to extract PDF text from '{path}': {exc}") from exc
+        else:
+            try:
+                extracted_text = path.read_text(encoding="utf-8")
+            except Exception as exc:
+                raise DistillationError(f"Failed to read file '{path}': {exc}") from exc
+
+        title = path.stem.replace("_", " ").replace("-", " ").title()
+        return await self.distill_raw_content(
+            raw_content=extracted_text,
+            title=title,
+            source_id="local_file",
+            url=str(path),
+        )
+
+    async def _distill_single_signal(self, signal: RawSignal) -> KnowledgeNote:
+        """Backward-compatible proxy to distill_signal."""
+        return await self.distill_signal(signal)
 
     async def distill_batch(self, batch_size: int = 5) -> int:
         """Fetch pending signals, distill them, and transition states."""
@@ -137,7 +200,7 @@ class SignalDistiller:
         success_count = 0
         for signal in signals:
             try:
-                await self._distill_single_signal(signal)
+                await self.distill_signal(signal)
                 await self.store.mark_signal_status(signal.id, "processed")
                 success_count += 1
                 logger.info("Signal '%s' distilled successfully into note.", signal.id)

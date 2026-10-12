@@ -121,3 +121,51 @@ async def test_distill_batch_unformatted_response_fallback(
     assert count == 1
     mock_store.save_knowledge_note.assert_awaited_once()
     mock_store.mark_signal_status.assert_awaited_once_with("sig_test_1", "processed")
+
+
+@pytest.mark.asyncio
+async def test_distill_raw_content_and_file_success(tmp_path: Path) -> None:
+    """Ensure distill_raw_content and distill_file process content into knowledge notes."""
+    mock_store = AsyncMock()
+    mock_llm = AsyncMock()
+    mock_llm.generate.return_value = ModelResponse(
+        content=json.dumps({
+            "title": "Clean Code Architecture",
+            "summary": "Hexagonal architecture decouples domain logic.",
+            "key_points": ["Ports and adapters", "No DB leaks", "Dependency inversion"],
+            "tags": ["architecture", "clean-code"],
+        }),
+        model_name="mock_model",
+    )
+
+    distiller = SignalDistiller(store=mock_store, llm_provider=mock_llm, notes_dir=tmp_path)
+
+    # Test in-memory raw content distillation
+    note = await distiller.distill_raw_content("Domain core logic here.", title="Hexagonal Architecture")
+    assert note.title == "Clean Code Architecture"
+    assert "Ports and adapters" in note.content
+    assert mock_store.save_knowledge_note.await_count == 1
+
+    # Test physical file distillation
+    doc_file = tmp_path / "architecture_notes.txt"
+    doc_file.write_text("Detailed document text.", encoding="utf-8")
+
+    file_note = await distiller.distill_file(doc_file)
+    assert file_note.title == "Clean Code Architecture"
+    assert mock_store.save_knowledge_note.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_distill_empty_content_raises_distillation_error(tmp_path: Path) -> None:
+    """Ensure empty content raises DistillationError immediately."""
+    from ekko.core.errors import DistillationError
+
+    mock_store = AsyncMock()
+    mock_llm = AsyncMock()
+    distiller = SignalDistiller(store=mock_store, llm_provider=mock_llm, notes_dir=tmp_path)
+
+    with pytest.raises(DistillationError, match="Cannot distill empty content"):
+        await distiller.distill_raw_content("   ")
+
+    with pytest.raises(DistillationError, match="File not found"):
+        await distiller.distill_file(tmp_path / "non_existent.md")

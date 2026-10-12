@@ -181,3 +181,41 @@ async def test_rest_api_connector_handles_304_not_modified() -> None:
 
     assert len(signals) == 0
     assert updated_state.etag == '"cached_api_etag"'
+
+
+@pytest.mark.asyncio
+async def test_rest_api_connector_handles_malformed_json() -> None:
+    """Ensure RestApiConnector handles malformed JSON without raising and increments consecutive_errors."""
+    mock_http = AsyncMock()
+    mock_http.get.return_value = HttpResponseResult(
+        status_code=200,
+        not_modified=False,
+        text="<html><body>Not JSON</body></html>",
+    )
+
+    connector = RestApiConnector(http_client=mock_http)
+    source = SourceConfig(id="api_bad", type="rest_api", url="https://api.test/bad")
+
+    signals, updated_state = await connector.fetch_signals(source)
+
+    assert len(signals) == 0
+    assert updated_state.consecutive_errors == 1
+
+
+@pytest.mark.asyncio
+async def test_rss_connector_handles_malformed_xml() -> None:
+    """Ensure RssConnector handles malformed XML without raising and increments consecutive_errors."""
+    mock_http = AsyncMock()
+    mock_http.get.return_value = HttpResponseResult(
+        status_code=200,
+        not_modified=False,
+        text="<feed><unclosed_tag>",
+    )
+
+    connector = RssConnector(http_client=mock_http)
+    source = SourceConfig(id="rss_bad", type="rss", url="https://rss.test/bad")
+
+    signals, updated_state = await connector.fetch_signals(source)
+
+    assert len(signals) == 0
+    assert updated_state.consecutive_errors == 1

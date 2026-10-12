@@ -88,7 +88,13 @@ class RestApiConnector(BaseConnector):
             current_state.consecutive_errors = 0
             return [], current_state
 
-        data = json.loads(resp.text)
+        try:
+            data = json.loads(resp.text)
+        except json.JSONDecodeError as exc:
+            logger.error("Failed to parse JSON response from source '%s': %s", source.id, exc)
+            current_state.consecutive_errors += 1
+            return [], current_state
+
         items = _extract_items(data, source.json_items_path)
         signals = [_project_item(item, source.id) for item in items[: source.max_items]]
 

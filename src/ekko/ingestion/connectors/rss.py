@@ -132,7 +132,13 @@ class RssConnector(BaseConnector):
             current_state.consecutive_errors = 0
             return [], current_state
 
-        root = ET.fromstring(resp.text)
+        try:
+            root = ET.fromstring(resp.text)
+        except ET.ParseError as exc:
+            logger.error("Failed to parse XML feed from source '%s': %s", source.id, exc)
+            current_state.consecutive_errors += 1
+            return [], current_state
+
         tag = root.tag.lower()
         if "feed" in tag:
             signals = _parse_atom_entries(root, source.id, source.max_items)

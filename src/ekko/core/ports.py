@@ -124,3 +124,21 @@ class IngestionPort(Protocol):
         """Execute a single polling pass across all active ingestion sources."""
         ...
 
+
+@runtime_checkable
+class EmbedderPort(Protocol):
+    """Port defining local text embedding generation."""
+
+    def embed_query(self, query: str) -> list[float]:
+        """Generate dense embedding vector for a single query string."""
+        ...
+
+
+@runtime_checkable
+class ResourceManagerPort(Protocol):
+    """Port defining hardware resource management and VRAM lifecycle coordination."""
+
+    def inject_unload_vram(self, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Inject parameters directing local LLM providers to unload models after inference."""
+        ...
+

@@ -3,7 +3,8 @@
 import asyncio
 from dataclasses import dataclass
 import random
-from typing import Any
+from types import TracebackType
+from typing import Mapping
 from urllib.parse import urlparse
 import httpx
 
@@ -15,6 +16,7 @@ from ekko.logger import get_logger
 logger = get_logger("ekko.ingestion.client")
 
 DEFAULT_USER_AGENT = "EkkoAgent/2.0 (+https://github.com/ekko-org/ekko; polite-ingestion)"
+HttpQueryParamValue = str | int | float | bool | list[str | int | float | bool]
 
 
 class HttpFetchError(EkkoError):
@@ -55,7 +57,12 @@ class ResilientHttpClient:
     async def __aenter__(self) -> "ResilientHttpClient":
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         await self.close()
 
     async def close(self) -> None:
@@ -86,7 +93,7 @@ class ResilientHttpClient:
     async def _send_with_retry(
         self,
         url: str,
-        params: dict[str, Any] | None,
+        params: Mapping[str, HttpQueryParamValue] | None,
         headers: dict[str, str],
     ) -> httpx.Response:
         """Send GET request with retry backoff against transient network errors."""
@@ -112,7 +119,7 @@ class ResilientHttpClient:
         url: str,
         etag: str | None = None,
         last_modified: str | None = None,
-        params: dict[str, Any] | None = None,
+        params: Mapping[str, HttpQueryParamValue] | None = None,
         headers: dict[str, str] | None = None,
     ) -> HttpResponseResult:
         """Execute safe, rate-limited HTTP GET request with conditional caching."""
