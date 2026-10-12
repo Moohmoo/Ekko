@@ -118,12 +118,34 @@ async def test_scheduler_triggers_distiller_after_polling() -> None:
         db_manager=mock_db,
         catalog=SourcesCatalogConfig(sources=[]),
         distiller=mock_distiller,
+        auto_distill=True,
     )
 
     results = await coordinator.run_once()
 
     assert results["distilled"] == 3
     mock_distiller.distill_batch.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_scheduler_skips_distiller_when_auto_distill_is_false() -> None:
+    """Ensure run_once does not trigger distiller when auto_distill is False."""
+    mock_db = MagicMock()
+    mock_distiller = MagicMock()
+    mock_distiller.distill_batch = AsyncMock(return_value=3)
+
+    coordinator = IngestionCoordinator(
+        db_manager=mock_db,
+        catalog=SourcesCatalogConfig(sources=[]),
+        distiller=mock_distiller,
+        auto_distill=False,
+    )
+
+    results = await coordinator.run_once()
+
+    assert "distilled" not in results
+    mock_distiller.distill_batch.assert_not_called()
+
 
 
 @pytest.mark.asyncio

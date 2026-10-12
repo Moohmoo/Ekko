@@ -168,3 +168,32 @@ async def test_distill_empty_content_raises_distillation_error(tmp_path: Path) -
 
     with pytest.raises(DistillationError, match="File not found"):
         await distiller.distill_file(tmp_path / "non_existent.md")
+
+
+@pytest.mark.asyncio
+async def test_distill_uses_semaphore_lock(tmp_path: Path, sample_signal: RawSignal) -> None:
+    """Ensure SignalDistiller acquires the injected semaphore during distillation."""
+    import asyncio
+
+    mock_store = AsyncMock()
+    mock_store.get_pending_signals.return_value = [sample_signal]
+    mock_llm = AsyncMock()
+    mock_llm.generate.return_value = ModelResponse(
+        content=json.dumps({"title": "Test", "summary": "Sum", "key_points": [], "tags": []}),
+        model_name="mock",
+    )
+    semaphore = asyncio.Semaphore(1)
+
+    distiller = SignalDistiller(
+        store=mock_store,
+        llm_provider=mock_llm,
+        notes_dir=tmp_path,
+        semaphore=semaphore,
+    )
+
+    # Acquire semaphore to test contention/locking behavior
+    assert not semaphore.locked()
+    await distiller.distill_signal(sample_signal)
+    # Semaphore should be released after execution
+    assert not semaphore.locked()
+

@@ -12,6 +12,7 @@ from ekko.daemon.scheduler import IngestionCoordinator
 from ekko.daemon.server import DEFAULT_SOCKET_PATH, IPCServer
 from ekko.ingestion.distiller import SignalDistiller
 from ekko.logger import get_logger, setup_logger
+from ekko.memory.embedder import TextEmbedder
 from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.sqlite_memory import SqliteMemory
 from ekko.providers.router import LLMRouter
@@ -30,7 +31,11 @@ def _setup_signal_handlers(loop: asyncio.AbstractEventLoop, stop_event: asyncio.
             pass
 
 
-def _build_engine(settings: Settings, store: HybridStore) -> EkkoEngine:
+def _build_engine(
+    settings: Settings,
+    store: HybridStore,
+    embedder: TextEmbedder | None = None,
+) -> EkkoEngine:
     """Compose and return an EkkoEngine instance for IPC prompt execution."""
     core_prompt = load_core_prompt(settings.config_dir)
     user_context = load_user_context(settings.config_dir)
@@ -38,7 +43,11 @@ def _build_engine(settings: Settings, store: HybridStore) -> EkkoEngine:
     system_prompt = build_system_prompt(core_prompt, user_context)
 
     catalog = ToolCatalog(include_defaults=True)
-    tools = catalog.build_registry(plugins_config.enabled_tools, db_manager=store)
+    tools = catalog.build_registry(
+        plugins_config.enabled_tools,
+        db_manager=store,
+        embedder=embedder,
+    )
     provider = LLMRouter(settings=settings).get_provider()
     memory = SqliteMemory(db_path=settings.sqlite_db_path)
     return EkkoEngine(
@@ -68,15 +77,27 @@ async def _run_services(
         logger.info("Daemon components cleanly stopped.")
 
 
-def _compose_coordinator(settings: Settings, store: HybridStore) -> IngestionCoordinator:
-    """Create IngestionCoordinator wired with autonomous SignalDistiller."""
+def _compose_coordinator(
+    settings: Settings,
+    store: HybridStore,
+    embedder: TextEmbedder | None = None,
+    semaphore: asyncio.Semaphore | None = None,
+) -> IngestionCoordinator:
+    """Create IngestionCoordinator wired with shared embedder and semaphore."""
     provider = LLMRouter(settings=settings).get_provider()
     notes_dir = getattr(settings, "notes_dir", "data/notes")
-    distiller = SignalDistiller(store=store, llm_provider=provider, notes_dir=notes_dir)
+    distiller = SignalDistiller(
+        store=store,
+        llm_provider=provider,
+        notes_dir=notes_dir,
+        embedder=embedder,
+        semaphore=semaphore,
+    )
     return IngestionCoordinator(
         db_manager=store,
         config_dir=settings.config_dir,
         distiller=distiller,
+        auto_distill=False,
     )
 
 
@@ -91,9 +112,17 @@ async def run_daemon(
     setup_logger(active_settings)
 
     ResourceManager().apply_process_niceness(increment=10)
+    embedder = TextEmbedder()
+    inference_semaphore = asyncio.Semaphore(1)
+
     store = HybridStore(db_path=active_settings.sqlite_db_path)
-    engine = _build_engine(active_settings, store)
-    coordinator = _compose_coordinator(active_settings, store)
+    engine = _build_engine(active_settings, store, embedder=embedder)
+    coordinator = _compose_coordinator(
+        active_settings,
+        store,
+        embedder=embedder,
+        semaphore=inference_semaphore,
+    )
 
     sock = Path(socket_path or getattr(active_settings, "ipc_socket_path", DEFAULT_SOCKET_PATH))
     server = IPCServer(
@@ -101,6 +130,7 @@ async def run_daemon(
         db_manager=store,
         engine=engine,
         distiller=coordinator.distiller,
+        distillation_semaphore=inference_semaphore,
     )
 
     evt = stop_event or asyncio.Event()

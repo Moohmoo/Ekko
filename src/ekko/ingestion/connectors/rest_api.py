@@ -1,13 +1,12 @@
 """Universal REST API connector projecting JSON payloads into raw signals."""
 
 from datetime import datetime, timezone
-import hashlib
 import json
 from typing import Any
 
 from ekko.config.schemas import SourceConfig
 from ekko.ingestion.client import ResilientHttpClient
-from ekko.ingestion.connectors.base import BaseConnector
+from ekko.ingestion.connectors.base import BaseConnector, compute_signal_id
 from ekko.core.models import RawSignal, SignalStatus, SourceState
 from ekko.logger import get_logger
 
@@ -35,11 +34,11 @@ def _project_item(item: dict[str, Any], source_id: str) -> RawSignal:
     url = str(item.get("url") or "")
     author = str(item.get("author") or item.get("by") or "") or None
 
-    sig_hash = hashlib.sha256(f"{source_id}:{ext_id or url or title}".encode()).hexdigest()[:16]
     content = json.dumps(item, ensure_ascii=False)
+    sig_id = compute_signal_id(url=url or ext_id, title=title, content=content)
 
     return RawSignal(
-        id=f"api_{sig_hash}",
+        id=sig_id,
         source_id=source_id,
         external_id=ext_id or None,
         url=url or None,
@@ -47,7 +46,7 @@ def _project_item(item: dict[str, Any], source_id: str) -> RawSignal:
         raw_content=content,
         clean_content=content,
         author=author,
-        status=SignalStatus.PENDING,
+        status=SignalStatus.RETAINED,
     )
 
 

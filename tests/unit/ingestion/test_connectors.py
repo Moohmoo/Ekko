@@ -78,7 +78,7 @@ async def test_rss_connector_parses_atom_feed() -> None:
     assert sig.title == "Deep Reasoning in Small Models"
     assert "1B architectures" in (sig.clean_content or "")
     assert sig.author == "Jane Doe"
-    assert sig.status == SignalStatus.PENDING
+    assert sig.status == SignalStatus.RETAINED
 
     assert new_state.id == "arxiv_ai"
     assert new_state.etag == '"atom_etag"'
@@ -219,3 +219,27 @@ async def test_rss_connector_handles_malformed_xml() -> None:
 
     assert len(signals) == 0
     assert updated_state.consecutive_errors == 1
+
+
+def test_url_normalization_strips_tracking() -> None:
+    """Ensure normalize_url strips query tracking params and standardizes url."""
+    from ekko.ingestion.connectors.base import normalize_url
+
+    raw = "https://EXAMPLE.COM/articles/test/?utm_source=twitter&utm_medium=social&ref=hn#section"
+    normalized = normalize_url(raw)
+    assert normalized == "https://example.com/articles/test"
+
+
+def test_cross_source_deduplication_same_signal_id() -> None:
+    """Ensure compute_signal_id generates identical id across sources and tracking params."""
+    from ekko.ingestion.connectors.base import compute_signal_id
+
+    url1 = "https://example.com/post?utm_source=reddit"
+    url2 = "https://example.com/post?ref=newsletter"
+
+    id1 = compute_signal_id(url=url1, title="Breaking News")
+    id2 = compute_signal_id(url=url2, title="Breaking News")
+
+    assert id1 == id2
+    assert id1.startswith("sig_")
+

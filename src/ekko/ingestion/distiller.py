@@ -79,12 +79,14 @@ class SignalDistiller:
         notes_dir: Path | str = "data/notes",
         embedder: EmbedderPort | None = None,
         resource_manager: ResourceManagerPort | None = None,
+        semaphore: asyncio.Semaphore | None = None,
     ) -> None:
         self.store = store
         self.llm_provider = llm_provider
         self.notes_dir = Path(notes_dir)
         self.embedder = embedder
         self.resource_manager = resource_manager
+        self.semaphore = semaphore
 
     def _write_physical_note(self, note: KnowledgeNote, date_str: str, slug: str) -> None:
         """Write note markdown file with YAML frontmatter to notes directory."""
@@ -131,8 +133,8 @@ class SignalDistiller:
         await asyncio.to_thread(self._write_physical_note, note, date_str, slug)
         return note
 
-    async def distill_signal(self, signal: RawSignal) -> KnowledgeNote:
-        """Run LLM inference with VRAM confinement and save distilled note."""
+    async def _execute_distill(self, signal: RawSignal) -> KnowledgeNote:
+        """Execute LLM generation and note persistence."""
         prompt = _build_distill_prompt(signal)
         messages = [Message(role="user", content=prompt)]
         if self.resource_manager is not None and hasattr(self.resource_manager, "inject_unload_vram"):
@@ -147,6 +149,13 @@ class SignalDistiller:
 
         title, summary, body, tags = _parse_distillation(response.content, signal.title)
         return await self._persist_note(signal, title, summary, body, tags)
+
+    async def distill_signal(self, signal: RawSignal) -> KnowledgeNote:
+        """Run LLM inference with VRAM confinement and save distilled note."""
+        if self.semaphore is not None:
+            async with self.semaphore:
+                return await self._execute_distill(signal)
+        return await self._execute_distill(signal)
 
     async def distill_raw_content(
         self,

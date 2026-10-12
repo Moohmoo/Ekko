@@ -50,12 +50,14 @@ class IngestionCoordinator:
         rest_connector: BaseConnector | None = None,
         config_dir: Path | str = "config",
         distiller: SignalDistiller | None = None,
+        auto_distill: bool = False,
     ) -> None:
         self.db_manager = db_manager
         self.catalog = catalog or load_sources_config(config_dir)
         self.rss_connector = rss_connector or RssConnector()
         self.rest_connector = rest_connector or RestApiConnector()
         self.distiller = distiller
+        self.auto_distill = auto_distill
         self._running = False
         self._lock = asyncio.Lock()
         self._loop_task: asyncio.Task[None] | None = None
@@ -131,7 +133,7 @@ class IngestionCoordinator:
                 signals = await self.poll_source(source)
                 results[source.id] = len(signals)
 
-            if self.distiller:
+            if self.distiller and self.auto_distill:
                 results["distilled"] = await self.distiller.distill_batch()
 
             return results

@@ -1,12 +1,11 @@
 """Universal RSS and Atom XML connector with polite conditional polling."""
 
 from datetime import datetime, timezone
-import hashlib
 import xml.etree.ElementTree as ET
 
 from ekko.config.schemas import SourceConfig
 from ekko.ingestion.client import ResilientHttpClient
-from ekko.ingestion.connectors.base import BaseConnector
+from ekko.ingestion.connectors.base import BaseConnector, compute_signal_id
 from ekko.core.models import RawSignal, SignalStatus, SourceState
 from ekko.logger import get_logger
 
@@ -49,10 +48,10 @@ def _parse_atom_entries(root: ET.Element, source_id: str, max_items: int) -> lis
         link_node = _get_node(entry, "atom:link", ATOM_NS)
         url = link_node.get("href") if link_node is not None else ext_id
 
-        sig_id = hashlib.sha256(f"{source_id}:{ext_id or url or title}".encode()).hexdigest()[:16]
+        sig_id = compute_signal_id(url=url or ext_id, title=title, content=summary)
         signals.append(
             RawSignal(
-                id=f"rss_{sig_id}",
+                id=sig_id,
                 source_id=source_id,
                 external_id=ext_id or None,
                 url=url or None,
@@ -60,7 +59,7 @@ def _parse_atom_entries(root: ET.Element, source_id: str, max_items: int) -> lis
                 raw_content=summary,
                 clean_content=summary,
                 author=author,
-                status=SignalStatus.PENDING,
+                status=SignalStatus.RETAINED,
             )
         )
     return signals
@@ -79,10 +78,10 @@ def _parse_rss2_items(root: ET.Element, source_id: str, max_items: int) -> list[
         summary = _get_text(item, "description")
         author = _get_text(item, "author") or None
 
-        sig_id = hashlib.sha256(f"{source_id}:{ext_id or url or title}".encode()).hexdigest()[:16]
+        sig_id = compute_signal_id(url=url or ext_id, title=title, content=summary)
         signals.append(
             RawSignal(
-                id=f"rss_{sig_id}",
+                id=sig_id,
                 source_id=source_id,
                 external_id=ext_id or None,
                 url=url or None,
@@ -90,7 +89,7 @@ def _parse_rss2_items(root: ET.Element, source_id: str, max_items: int) -> list[
                 raw_content=summary,
                 clean_content=summary,
                 author=author,
-                status=SignalStatus.PENDING,
+                status=SignalStatus.RETAINED,
             )
         )
     return signals

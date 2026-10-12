@@ -63,6 +63,7 @@ class IPCServer:
         db_manager: HybridStore | None = None,
         engine: EkkoEngine | None = None,
         distiller: SignalDistiller | None = None,
+        distillation_semaphore: asyncio.Semaphore | None = None,
     ) -> None:
         self.socket_path = Path(socket_path)
         self.db_manager = db_manager or HybridStore()
@@ -71,7 +72,7 @@ class IPCServer:
         self._server: asyncio.Server | None = None
         self._background_tasks: set[asyncio.Task[object]] = set()
         self._active_writers: set[asyncio.StreamWriter] = set()
-        self._distillation_semaphore = asyncio.Semaphore(1)
+        self._distillation_semaphore = distillation_semaphore or asyncio.Semaphore(1)
 
     def _spawn_background_task(
         self,
@@ -258,7 +259,10 @@ class IPCServer:
                 logger.error("Distiller not available for background task on %s", target_path)
                 return
 
-            async with self._distillation_semaphore:
+            if self._distillation_semaphore and getattr(self.distiller, "semaphore", None) is not self._distillation_semaphore:
+                async with self._distillation_semaphore:
+                    note = await self.distiller.distill_file(target_path)
+            else:
                 note = await self.distiller.distill_file(target_path)
             logger.info("File %s successfully distilled in background into note %s", target_path, note.slug)
         except Exception as exc:
@@ -396,7 +400,10 @@ class IPCServer:
                 clean_content=raw_content[:12000],
                 status=SignalStatus.ARCHIVED,
             )
-            async with self._distillation_semaphore:
+            if self._distillation_semaphore and getattr(self.distiller, "semaphore", None) is not self._distillation_semaphore:
+                async with self._distillation_semaphore:
+                    note = await self.distiller.distill_signal(signal)
+            else:
                 note = await self.distiller.distill_signal(signal)
             logger.info("Signal %s successfully distilled in background into note %s", signal_id, note.slug)
         except Exception as exc:
