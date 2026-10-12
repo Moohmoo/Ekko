@@ -175,7 +175,7 @@ async def test_ipc_server_ingest_file(socket_path: Path, tmp_path: Path) -> None
     sample_file.write_text("# Test Document\n\nThis is sample text for distillation.", encoding="utf-8")
 
     mock_distiller = MagicMock()
-    mock_distiller._distill_single_signal = AsyncMock(
+    mock_distiller.distill_file = AsyncMock(
         return_value=KnowledgeNote(
             id="note_test_doc",
             slug="2026-10-11_test-doc",
@@ -198,7 +198,52 @@ async def test_ipc_server_ingest_file(socket_path: Path, tmp_path: Path) -> None
 
     # Allow background asyncio task to execute
     await asyncio.sleep(0.05)
-    mock_distiller._distill_single_signal.assert_awaited_once()
+    mock_distiller.distill_file.assert_awaited_once_with(sample_file)
+
+    await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_ipc_server_distillation_serialized_by_semaphore(socket_path: Path, tmp_path: Path) -> None:
+    """Ensure concurrent distillations are serialized by _distillation_semaphore (max concurrency 1)."""
+    file1 = tmp_path / "doc1.md"
+    file1.write_text("# Doc 1", encoding="utf-8")
+    file2 = tmp_path / "doc2.md"
+    file2.write_text("# Doc 2", encoding="utf-8")
+
+    concurrent_count = 0
+    max_concurrent = 0
+
+    async def mock_distill(path: Path) -> KnowledgeNote:
+        nonlocal concurrent_count, max_concurrent
+        concurrent_count += 1
+        max_concurrent = max(max_concurrent, concurrent_count)
+        await asyncio.sleep(0.05)
+        concurrent_count -= 1
+        return KnowledgeNote(
+            id=f"note_{path.stem}",
+            slug=f"2026-10-11_{path.stem}",
+            title=path.stem,
+            summary="Summary",
+            content="Content",
+            tags=[],
+            sources=[str(path)],
+        )
+
+    mock_distiller = MagicMock()
+    mock_distiller.distill_file = AsyncMock(side_effect=mock_distill)
+
+    server = IPCServer(socket_path=socket_path, distiller=mock_distiller)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        await client.call("ingest_file", {"file_path": str(file1)})
+        await client.call("ingest_file", {"file_path": str(file2)})
+
+    # Wait for background tasks to complete
+    await asyncio.sleep(0.2)
+    assert max_concurrent == 1
+    assert mock_distiller.distill_file.await_count == 2
 
     await server.stop()
 

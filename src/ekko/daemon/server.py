@@ -71,6 +71,7 @@ class IPCServer:
         self._server: asyncio.Server | None = None
         self._background_tasks: set[asyncio.Task[object]] = set()
         self._active_writers: set[asyncio.StreamWriter] = set()
+        self._distillation_semaphore = asyncio.Semaphore(1)
 
     def _spawn_background_task(
         self,
@@ -246,44 +247,19 @@ class IPCServer:
 
         # Supervised background task: lifetime retention + unhandled exception logging
         self._spawn_background_task(
-            self._distill_and_save_async(target_path, suffix),
+            self._distill_and_save_async(target_path),
             name=f"ingest_file_{target_path.name}",
         )
 
-    async def _distill_and_save_async(self, target_path: Path, suffix: str) -> None:
+    async def _distill_and_save_async(self, target_path: Path) -> None:
         """Background asynchronous text extraction and cognitive distillation."""
         try:
             if not self.distiller:
                 logger.error("Distiller not available for background task on %s", target_path)
                 return
 
-            # Check if mock specifically configured _distill_single_signal
-            if "_distill_single_signal" in getattr(self.distiller, "__dict__", {}):
-                extracted_text = target_path.read_text(encoding="utf-8").strip()
-                signal = RawSignal(
-                    id=f"file_{target_path.stem[:32]}_{abs(hash(str(target_path))) % 1000000}",
-                    source_id="local_drop",
-                    title=target_path.stem.replace("_", " ").replace("-", " ").title(),
-                    url=str(target_path),
-                    raw_content=extracted_text[:12000],
-                    clean_content=extracted_text[:12000],
-                    status=SignalStatus.PROCESSED,
-                )
-                note = await self.distiller._distill_single_signal(signal)
-            elif hasattr(self.distiller, "distill_file") and callable(self.distiller.distill_file):
+            async with self._distillation_semaphore:
                 note = await self.distiller.distill_file(target_path)
-            else:
-                extracted_text = target_path.read_text(encoding="utf-8").strip()
-                signal = RawSignal(
-                    id=f"file_{target_path.stem[:32]}_{abs(hash(str(target_path))) % 1000000}",
-                    source_id="local_drop",
-                    title=target_path.stem.replace("_", " ").replace("-", " ").title(),
-                    url=str(target_path),
-                    raw_content=extracted_text[:12000],
-                    clean_content=extracted_text[:12000],
-                    status=SignalStatus.PROCESSED,
-                )
-                note = await self.distiller._distill_single_signal(signal)
             logger.info("File %s successfully distilled in background into note %s", target_path, note.slug)
         except Exception as exc:
             logger.error("Background distillation failed for file %s: %s", target_path, exc)
@@ -420,7 +396,8 @@ class IPCServer:
                 clean_content=raw_content[:12000],
                 status=SignalStatus.ARCHIVED,
             )
-            note = await self.distiller._distill_single_signal(signal)
+            async with self._distillation_semaphore:
+                note = await self.distiller.distill_signal(signal)
             logger.info("Signal %s successfully distilled in background into note %s", signal_id, note.slug)
         except Exception as exc:
             logger.error(
