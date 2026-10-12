@@ -5,9 +5,9 @@ import pytest
 
 from ekko.config.schemas import SourceConfig
 from ekko.ingestion.client import HttpResponseResult
+from ekko.core.models import SignalStatus, SourceState
 from ekko.ingestion.connectors.rest_api import RestApiConnector
 from ekko.ingestion.connectors.rss import RssConnector
-from ekko.memory.models import SignalStatus, SourceState
 
 SAMPLE_ATOM_XML = """<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">

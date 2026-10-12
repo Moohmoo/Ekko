@@ -6,7 +6,7 @@ import pytest
 
 from ekko.daemon.ipc_client import IPCClient
 from ekko.daemon.server import IPCServer
-from ekko.memory.models import KnowledgeNote, RawSignal, SignalStatus
+from ekko.core.models import KnowledgeNote, RawSignal, SignalStatus
 from unittest.mock import AsyncMock, MagicMock
 
 

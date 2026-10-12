@@ -3,8 +3,8 @@
 from pathlib import Path
 import pytest
 
+from ekko.core.models import KnowledgeNote
 from ekko.memory.hybrid_store import HybridStore
-from ekko.memory.models import KnowledgeNote
 
 
 @pytest.fixture

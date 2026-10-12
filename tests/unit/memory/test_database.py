@@ -4,13 +4,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 import pytest
 
-from ekko.memory.hybrid_store import HybridStore
-from ekko.memory.models import (
+from ekko.core.models import (
     KnowledgeNote,
     RawSignal,
     SignalStatus,
     SourceState,
 )
+from ekko.memory.hybrid_store import HybridStore
 
 
 @pytest.fixture

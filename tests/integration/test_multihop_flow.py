@@ -6,9 +6,8 @@ import httpx
 import pytest
 
 from ekko.core.engine import EkkoEngine
-from ekko.core.models import ModelResponse, ToolCall
+from ekko.core.models import ModelResponse, RawSignal, SignalStatus, ToolCall
 from ekko.memory.in_memory import InMemoryMemory
-from ekko.memory.models import RawSignal, SignalStatus
 from ekko.tools.read_resource import ReadResourceTool
 from ekko.tools.registry import ToolRegistry
 from ekko.tools.scan_inbox import ScanInboxTool

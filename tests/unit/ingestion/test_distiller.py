@@ -5,9 +5,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
-from ekko.core.models import ModelResponse
+from ekko.core.models import ModelResponse, RawSignal, SignalStatus
 from ekko.ingestion.distiller import SignalDistiller
-from ekko.memory.models import RawSignal, SignalStatus
 
 
 @pytest.fixture

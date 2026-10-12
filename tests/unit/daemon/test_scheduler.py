@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
+from ekko.core.models import RawSignal, SignalStatus, SourceState
 from ekko.daemon.scheduler import IngestionCoordinator, parse_interval_seconds
-from ekko.memory.models import RawSignal, SignalStatus, SourceState
 from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
 
 
