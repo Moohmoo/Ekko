@@ -10,7 +10,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from ekko.core.engine import EkkoEngine
+from ekko.core.ports import EmbedderPort
 from ekko.ingestion.distiller import SignalDistiller
+from ekko.memory.embedder import TextEmbedder
 from ekko.memory.hybrid_store import HybridStore
 from ekko.core.models import RawSignal, SignalStatus
 from ekko.logger import get_logger
@@ -80,11 +82,13 @@ class IPCServer:
         engine: EkkoEngine | None = None,
         distiller: SignalDistiller | None = None,
         distillation_semaphore: asyncio.Semaphore | None = None,
+        embedder: EmbedderPort | None = None,
     ) -> None:
         self.socket_path = Path(socket_path)
         self.db_manager = db_manager or HybridStore()
         self.engine = engine
         self.distiller = distiller
+        self.embedder = embedder
         self._server: asyncio.Server | None = None
         self._background_tasks: set[asyncio.Task[object]] = set()
         self._active_writers: set[asyncio.StreamWriter] = set()
@@ -193,7 +197,7 @@ class IPCServer:
             await self._handle_scan_inbox(req_id, params, writer)
         elif method == "scan_notes":
             await self._handle_scan_notes(req_id, params, writer)
-        elif method == "query_knowledge":
+        elif method in ("query_knowledge", "search_notes"):
             await self._handle_query_knowledge(req_id, params, writer)
         elif method == "ingest_file":
             await self._handle_ingest_file(req_id, params, writer)
@@ -486,8 +490,21 @@ class IPCServer:
             return
         query = str(params.get("query", ""))
         mode = str(params.get("mode", "hybrid"))
-        limit = int(params.get("limit", 5))
-        notes_with_scores = await self.db_manager.search_notes(query=query, mode=mode, limit=limit)
+        limit = int(params.get("limit", 10))
+
+        query_embedding: list[float] | None = None
+        if mode in ("hybrid", "semantic") and self.embedder is not None and query.strip():
+            try:
+                query_embedding = await self.embedder.async_embed_query(query)
+            except Exception as exc:
+                logger.warning("Embedding query generation failed, falling back to lexical: %s", exc)
+
+        notes_with_scores = await self.db_manager.search_notes(
+            query=query,
+            query_embedding=query_embedding,
+            mode=mode,
+            limit=limit,
+        )
         results = [
             {"note": n.model_dump(mode="json"), "score": score}
             for n, score in notes_with_scores

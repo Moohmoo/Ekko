@@ -131,6 +131,7 @@ async def run_daemon(
         engine=engine,
         distiller=coordinator.distiller,
         distillation_semaphore=inference_semaphore,
+        embedder=embedder,
     )
 
     evt = stop_event or asyncio.Event()

@@ -77,7 +77,7 @@ async def test_ipc_server_scan_inbox(socket_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_ipc_server_query_knowledge(socket_path: Path) -> None:
-    """Ensure query_knowledge executes hybrid search and returns results."""
+    """Ensure query_knowledge and search_notes execute hybrid search and return results."""
     mock_db = MagicMock()
     note = KnowledgeNote(
         id="n1",
@@ -89,19 +89,28 @@ async def test_ipc_server_query_knowledge(socket_path: Path) -> None:
         sources=[],
     )
     mock_db.search_notes = AsyncMock(return_value=[(note, 0.035)])
+    mock_embedder = MagicMock()
+    mock_embedder.async_embed_query = AsyncMock(return_value=[0.1] * 384)
 
-    server = IPCServer(socket_path=socket_path, db_manager=mock_db)
+    server = IPCServer(socket_path=socket_path, db_manager=mock_db, embedder=mock_embedder)
     await server.start()
 
     client = IPCClient(socket_path=socket_path)
+    # Test query_knowledge
     response = await client.call("query_knowledge", {"query": "AI research", "mode": "hybrid"})
-
     assert len(response) == 1
     assert response[0]["note"]["id"] == "n1"
     assert response[0]["score"] == 0.035
+    mock_embedder.async_embed_query.assert_awaited_with("AI research")
+
+    # Test search_notes alias/method
+    response2 = await client.call("search_notes", {"query": "Deep learning", "mode": "hybrid"})
+    assert len(response2) == 1
+    assert response2[0]["note"]["id"] == "n1"
 
     await client.close()
     await server.stop()
+
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt } from './transport/socket-client';
@@ -131,9 +131,29 @@ ipcMain.handle('daemon:ping', async () => {
 
 ipcMain.handle('daemon:get_notes', async () => {
   try {
-    return await sendJsonRpc<unknown[]>('scan_notes', { limit: 20 });
+    return await sendJsonRpc<unknown[]>('scan_notes', { limit: 50 });
   } catch (_e) {
-    return await sendJsonRpc<unknown[]>('scan_inbox', { limit: 20 });
+    return await sendJsonRpc<unknown[]>('scan_inbox', { limit: 50 });
+  }
+});
+
+ipcMain.handle(
+  'daemon:search_notes',
+  async (
+    _event,
+    {
+      query,
+      mode = 'hybrid',
+      limit = 20,
+    }: { query: string; mode?: 'hybrid' | 'lexical' | 'semantic'; limit?: number }
+  ) => {
+    return await sendJsonRpc<unknown[]>('search_notes', { query, mode, limit });
+  }
+);
+
+ipcMain.handle('shell:open_external', async (_event, url: string) => {
+  if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+    await shell.openExternal(url);
   }
 });
 

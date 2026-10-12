@@ -5,14 +5,51 @@ interface EchoState {
   notes: NoteItem[];
   latestNote: NoteItem | null;
   isLoading: boolean;
+  isOffline: boolean;
+  searchQuery: string;
+  selectedTag: string | null;
   fetchNotes: () => Promise<void>;
+  searchNotes: (query: string) => Promise<void>;
+  filterByTag: (tag: string | null) => void;
   setLatestNote: (note: NoteItem) => void;
 }
 
-export const useEchoStore = create<EchoState>((set) => ({
+function mapRawNote(item: Record<string, unknown>): NoteItem {
+  // Support both direct note format and wrapped { note: {...}, score: ... }
+  const noteData = (item && typeof item === 'object' && item.note && typeof item.note === 'object')
+    ? (item.note as Record<string, unknown>)
+    : item;
+
+  const score = typeof item.score === 'number' ? item.score : undefined;
+  const sources = Array.isArray(noteData.sources)
+    ? (noteData.sources as string[])
+    : noteData.source
+    ? [String(noteData.source)]
+    : [];
+
+  const rawTags = Array.isArray(noteData.tags) ? (noteData.tags as string[]) : [];
+  const tags = rawTags.length > 0 ? rawTags : [String(noteData.source_id || 'pkm')];
+
+  return {
+    id: String(noteData.id || noteData.slug || ''),
+    title: String(noteData.title || 'Signal brut'),
+    summary: String(noteData.summary || noteData.clean_content || ''),
+    content: typeof noteData.content === 'string' ? noteData.content : undefined,
+    source: String(sources[0] || noteData.source_id || 'ekko'),
+    sources,
+    tags,
+    created_at: typeof noteData.created_at === 'string' ? noteData.created_at : undefined,
+    score,
+  };
+}
+
+export const useEchoStore = create<EchoState>((set, get) => ({
   notes: [],
   latestNote: null,
   isLoading: false,
+  isOffline: false,
+  searchQuery: '',
+  selectedTag: null,
 
   setLatestNote: (note: NoteItem) => {
     set((state) => ({
@@ -21,32 +58,65 @@ export const useEchoStore = create<EchoState>((set) => ({
     }));
   },
 
+  filterByTag: (tag: string | null) => {
+    set({ selectedTag: tag });
+  },
+
   fetchNotes: async () => {
     if (!window.ekkoAPI) return;
     set({ isLoading: true });
     try {
       const raw = await window.ekkoAPI.getNotes();
-      const mapped: NoteItem[] = (raw as Record<string, unknown>[]).map((item) => ({
-        id: String(item.id || item.slug || ''),
-        title: String(item.title || 'Signal brut'),
-        summary: String(item.summary || item.clean_content || ''),
-        source: String(
-          (Array.isArray(item.sources) && item.sources[0]) ||
-          item.source_id ||
-          'ekko'
-        ),
-        tags: Array.isArray(item.tags)
-          ? (item.tags as string[])
-          : [String(item.source_id || 'inbox')],
-      }));
-      set({
-        notes: mapped,
-        latestNote: mapped.length > 0 ? mapped[0] : null,
-        isLoading: false,
-      });
+      if (Array.isArray(raw)) {
+        const mapped: NoteItem[] = (raw as Record<string, unknown>[]).map(mapRawNote);
+        set({
+          notes: mapped,
+          latestNote: mapped.length > 0 ? mapped[0] : null,
+          isLoading: false,
+          isOffline: false,
+        });
+      } else {
+        // Non-array response (unexpected IPC reply) -> retain existing cache
+        set({ isLoading: false, isOffline: true });
+      }
     } catch (e) {
-      console.warn('[EchoStore] Erreur récupération notes:', e);
-      set({ isLoading: false });
+      console.warn('[EchoStore] Erreur récupération notes (conservation du cache):', e);
+      // Resilience contract: NEVER wipe existing notes on network/socket disconnect
+      set({ isLoading: false, isOffline: true });
+    }
+  },
+
+  searchNotes: async (query: string) => {
+    set({ searchQuery: query });
+    const trimmed = query.trim();
+
+    if (!trimmed) {
+      // Revert to full list of recent notes
+      await get().fetchNotes();
+      return;
+    }
+
+    if (!window.ekkoAPI?.searchNotes) {
+      // Fallback local filtering if searchNotes IPC is absent
+      return;
+    }
+
+    set({ isLoading: true });
+    try {
+      const raw = await window.ekkoAPI.searchNotes(trimmed, { mode: 'hybrid', limit: 30 });
+      if (Array.isArray(raw)) {
+        const mapped = (raw as Record<string, unknown>[]).map(mapRawNote);
+        set({
+          notes: mapped,
+          isLoading: false,
+          isOffline: false,
+        });
+      } else {
+        set({ isLoading: false });
+      }
+    } catch (e) {
+      console.warn('[EchoStore] Erreur recherche hybride:', e);
+      set({ isLoading: false, isOffline: true });
     }
   },
 }));

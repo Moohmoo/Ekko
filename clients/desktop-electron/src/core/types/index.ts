@@ -2,8 +2,12 @@ export interface NoteItem {
   id: string;
   title: string;
   summary: string;
+  content?: string;
   source: string;
+  sources?: string[];
   tags: string[];
+  created_at?: string;
+  score?: number;
 }
 
 export interface ChatMessage {
@@ -46,9 +50,16 @@ export interface IngestResult {
   note?: { id: string; title: string; slug: string; summary: string; source?: string };
 }
 
+export interface SearchNotesParams {
+  query: string;
+  mode?: 'hybrid' | 'lexical' | 'semantic';
+  limit?: number;
+}
+
 export interface EkkoAPI {
   ping: () => Promise<PingResult | null>;
   getNotes: () => Promise<unknown[]>;
+  searchNotes: (query: string, options?: { mode?: 'hybrid' | 'lexical' | 'semantic'; limit?: number }) => Promise<unknown[]>;
   getPendingSignals: () => Promise<SignalsResult | Signal[]>;
   resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{ status: string; signal_id?: string; action?: string }>;
   resolveAllPendingSignals: (action: 'archive' | 'discard') => Promise<{ status: string; action?: string; count?: number }>;
@@ -56,6 +67,7 @@ export interface EkkoAPI {
   ingestFile: (filePath: string) => Promise<IngestResult>;
   ingestUrl: (url: string) => Promise<IngestResult>;
   getDroppedFilePath: (file: File) => string;
+  openExternal: (url: string) => Promise<void>;
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;

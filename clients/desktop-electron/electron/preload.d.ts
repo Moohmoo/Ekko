@@ -32,6 +32,10 @@ export interface EkkoAPI {
         timestamp: string;
     } | null>;
     getNotes: () => Promise<unknown[]>;
+    searchNotes: (query: string, options?: {
+        mode?: 'hybrid' | 'lexical' | 'semantic';
+        limit?: number;
+    }) => Promise<unknown[]>;
     getPendingSignals: () => Promise<SignalsResult | Signal[]>;
     resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{
         status: string;
@@ -47,6 +51,7 @@ export interface EkkoAPI {
     ingestFile: (filePath: string) => Promise<IngestResult>;
     ingestUrl: (url: string) => Promise<IngestResult>;
     getDroppedFilePath: (file: File) => string;
+    openExternal: (url: string) => Promise<void>;
     closeWindow: () => Promise<void>;
     resizeWindow: (width: number, height: number) => Promise<void>;
     onPromptChunk: (callback: (chunk: string) => void) => () => void;

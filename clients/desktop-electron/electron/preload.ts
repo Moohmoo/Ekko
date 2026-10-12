@@ -28,6 +28,7 @@ export interface IngestResult {
 export interface EkkoAPI {
   ping: () => Promise<{ status: string; timestamp: string } | null>;
   getNotes: () => Promise<unknown[]>;
+  searchNotes: (query: string, options?: { mode?: 'hybrid' | 'lexical' | 'semantic'; limit?: number }) => Promise<unknown[]>;
   getPendingSignals: () => Promise<SignalsResult | Signal[]>;
   resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{ status: string; signal_id?: string; action?: string }>;
   resolveAllPendingSignals: (action: 'archive' | 'discard') => Promise<{ status: string; action?: string; count?: number }>;
@@ -35,6 +36,7 @@ export interface EkkoAPI {
   ingestFile: (filePath: string) => Promise<IngestResult>;
   ingestUrl: (url: string) => Promise<IngestResult>;
   getDroppedFilePath: (file: File) => string;
+  openExternal: (url: string) => Promise<void>;
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
@@ -43,6 +45,8 @@ export interface EkkoAPI {
 const api: EkkoAPI = {
   ping: () => ipcRenderer.invoke('daemon:ping'),
   getNotes: () => ipcRenderer.invoke('daemon:get_notes'),
+  searchNotes: (query: string, options?: { mode?: 'hybrid' | 'lexical' | 'semantic'; limit?: number }) =>
+    ipcRenderer.invoke('daemon:search_notes', { query, ...options }),
   getPendingSignals: () => ipcRenderer.invoke('daemon:get_pending_signals'),
   resolveSignal: (signalId: string, action: 'archive' | 'discard') =>
     ipcRenderer.invoke('daemon:resolve_signal', { signalId, action }),
@@ -59,6 +63,7 @@ const api: EkkoAPI = {
       return '';
     }
   },
+  openExternal: (url: string) => ipcRenderer.invoke('shell:open_external', url),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   resizeWindow: (width: number, height: number) => ipcRenderer.invoke('window:resize', { width, height }),
   onPromptChunk: (callback: (chunk: string) => void) => {

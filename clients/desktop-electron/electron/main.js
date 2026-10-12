@@ -34,7 +34,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt } from './transport/socket-client';
@@ -161,13 +161,35 @@ ipcMain.handle('daemon:get_notes', function () { return __awaiter(void 0, void 0
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 4]);
-                return [4 /*yield*/, sendJsonRpc('scan_notes', { limit: 20 })];
+                return [4 /*yield*/, sendJsonRpc('scan_notes', { limit: 50 })];
             case 1: return [2 /*return*/, _a.sent()];
             case 2:
                 _e_1 = _a.sent();
-                return [4 /*yield*/, sendJsonRpc('scan_inbox', { limit: 20 })];
+                return [4 /*yield*/, sendJsonRpc('scan_inbox', { limit: 50 })];
             case 3: return [2 /*return*/, _a.sent()];
             case 4: return [2 /*return*/];
+        }
+    });
+}); });
+ipcMain.handle('daemon:search_notes', function (_event_1, _a) { return __awaiter(void 0, [_event_1, _a], void 0, function (_event, _b) {
+    var query = _b.query, _c = _b.mode, mode = _c === void 0 ? 'hybrid' : _c, _d = _b.limit, limit = _d === void 0 ? 20 : _d;
+    return __generator(this, function (_f) {
+        switch (_f.label) {
+            case 0: return [4 /*yield*/, sendJsonRpc('search_notes', { query: query, mode: mode, limit: limit })];
+            case 1: return [2 /*return*/, _f.sent()];
+        }
+    });
+}); });
+ipcMain.handle('shell:open_external', function (_event, url) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                if (!(url && (url.startsWith('http://') || url.startsWith('https://')))) return [3 /*break*/, 2];
+                return [4 /*yield*/, shell.openExternal(url)];
+            case 1:
+                _a.sent();
+                _a.label = 2;
+            case 2: return [2 /*return*/];
         }
     });
 }); });
