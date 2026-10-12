@@ -39,3 +39,14 @@ def build_system_prompt(
     sections.append("")
     sections.extend(_render_user_section(user))
     return "\n".join(sections)
+
+
+def build_default_system_prompt() -> str:
+    """Provide minimal baseline system prompt for standalone execution and testing."""
+    return (
+        "# Identity & Mission\n"
+        "You are Ekko, a modular agentic OS assistant. Be precise, helpful, and concise.\n\n"
+        "# Guardrails\n"
+        "- Provide concise, accurate responses.\n"
+        "- Execute appropriate tools when external actions or data lookups are requested."
+    )

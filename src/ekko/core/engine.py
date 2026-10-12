@@ -2,8 +2,7 @@
 
 import json
 import time
-from collections.abc import AsyncIterator
-from typing import Any
+from collections.abc import AsyncIterator, Mapping
 from ekko.core.errors import ProviderError
 from ekko.core.events import (
     EngineError,
@@ -15,14 +14,11 @@ from ekko.core.events import (
     TurnCompleted,
 )
 from ekko.core.models import Message, ToolCall, ToolResult
-from ekko.core.ports import LLMProviderPort, MemoryPort
+from ekko.core.ports import LLMProviderPort, MemoryPort, ToolPort
+from ekko.core.prompt import build_default_system_prompt
 from ekko.logger import get_logger
 
 logger = get_logger("core.engine")
-
-DEFAULT_SYSTEM_PROMPT = (
-    "You are Ekko, a modular agentic OS assistant. Be precise, helpful, and concise."
-)
 
 
 def _validate_user_input(text: str) -> str:
@@ -33,7 +29,7 @@ def _validate_user_input(text: str) -> str:
     return cleaned
 
 
-async def _execute_tool_call(tools: Any, call: ToolCall) -> ToolResult:
+async def _execute_tool_call(tools: Mapping[str, ToolPort] | None, call: ToolCall) -> ToolResult:
     """Execute a single tool call through registry or fallback to error result."""
     if tools is not None:
         tool = tools.get(call.name)
@@ -46,7 +42,7 @@ async def _execute_tool_call(tools: Any, call: ToolCall) -> ToolResult:
     )
 
 
-def _is_streaming_provider(provider: Any) -> bool:
+def _is_streaming_provider(provider: object) -> bool:
     """Determine whether the provider supports explicit real-time streaming."""
     cls = type(provider)
     if hasattr(cls, "generate_stream") and cls.__name__ not in ("AsyncMock", "MagicMock", "Mock"):
@@ -97,15 +93,15 @@ class EkkoEngine:
         self,
         provider: LLMProviderPort,
         memory: MemoryPort,
-        tools: Any = None,
-        system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+        tools: Mapping[str, ToolPort] | None = None,
+        system_prompt: str | None = None,
         max_iterations: int = 5,
         history_limit: int = 50,
     ) -> None:
         self.provider = provider
         self.memory = memory
         self.tools = tools
-        self.system_prompt = system_prompt
+        self.system_prompt = system_prompt if system_prompt is not None else build_default_system_prompt()
         self.max_iterations = max_iterations
         self.history_limit = history_limit
 
@@ -164,7 +160,7 @@ class EkkoEngine:
 
         logger.info("Starting streaming message turn for session '%s'", session_id)
         await self.memory.add_message(session_id, Message(role="user", content=sanitized))
-        tool_schemas = self.tools.get_schemas() if self.tools else None
+        tool_schemas = self.tools.get_schemas() if self.tools and hasattr(self.tools, "get_schemas") else None
         executed_calls: set[tuple[str, str]] = set()
 
         for iteration in range(self.max_iterations):
