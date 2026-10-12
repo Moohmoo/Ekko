@@ -100,7 +100,7 @@ export const EchoView: React.FC<EchoViewProps> = () => {
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Recherche hybride (titre, contenu, sémantique)..."
+                  placeholder="Rechercher une note, une idée..."
                   className="w-full pl-8 pr-7 py-1.5 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-500/50 focus:bg-white/[0.06] transition-colors"
                 />
                 {searchInput && (

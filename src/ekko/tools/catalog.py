@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ekko.core.ports import EmbedderPort, HybridMemoryPort
 from ekko.tools.base import BaseTool
+from ekko.tools.get_recent_notes import GetRecentNotesTool
 from ekko.tools.query_knowledge import QueryKnowledgeTool
 from ekko.tools.read_resource import ReadResourceTool
 from ekko.tools.registry import ToolRegistry
@@ -27,6 +28,8 @@ def _instantiate_tool(
         return SaveNoteTool(notes_dir=notes_dir, db_manager=db_manager, embedder=embedder)
     if name == "query_knowledge":
         return QueryKnowledgeTool(db_manager=db_manager, embedder=embedder)
+    if name == "get_recent_notes":
+        return GetRecentNotesTool(db_manager=db_manager)
     if name == "scan_inbox":
         return ScanInboxTool(db_manager=db_manager)
     return cls()
@@ -42,6 +45,7 @@ class ToolCatalog:
             self.register(ReadResourceTool)
             self.register(SaveNoteTool)
             self.register(QueryKnowledgeTool)
+            self.register(GetRecentNotesTool)
             self.register(ScanInboxTool)
 
     def register(self, tool_cls: type[BaseTool]) -> None:

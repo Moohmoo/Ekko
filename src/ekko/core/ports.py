@@ -90,6 +90,10 @@ class HybridMemoryPort(Protocol):
         """Search knowledge notes with hybrid lexical/semantic ranking."""
         ...
 
+    async def get_recent_notes(self, limit: int = 5) -> list[KnowledgeNote]:
+        """Retrieve most recent knowledge notes ordered by creation time DESC."""
+        ...
+
     async def get_raw_signals(
         self,
         source_id: str | None = None,

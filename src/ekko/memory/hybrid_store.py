@@ -685,7 +685,7 @@ class HybridStore:
 
     def _list_knowledge_notes_sync(self, limit: int) -> list[KnowledgeNote]:
         """List knowledge notes ordered by creation time synchronously."""
-        sql = "SELECT * FROM knowledge_notes ORDER BY created_at DESC LIMIT ?;"
+        sql = "SELECT id, slug, title, summary, content, tags, sources, created_at, updated_at FROM knowledge_notes ORDER BY created_at DESC LIMIT ?;"
         with self._connection() as conn:
             rows = conn.execute(sql, (limit,)).fetchall()
             return [_row_to_knowledge_note(row) for row in rows]
@@ -693,6 +693,10 @@ class HybridStore:
     async def list_knowledge_notes(self, limit: int = 50) -> list[KnowledgeNote]:
         """List knowledge notes asynchronously."""
         return await asyncio.to_thread(self._list_knowledge_notes_sync, limit)
+
+    async def get_recent_notes(self, limit: int = 5) -> list[KnowledgeNote]:
+        """Retrieve most recent knowledge notes ordered by creation time DESC."""
+        return await self.list_knowledge_notes(limit=limit)
 
     def _get_popular_tags_sync(self, limit: int = 30) -> list[str]:
         """Fetch most frequently used tags across all knowledge notes synchronously."""

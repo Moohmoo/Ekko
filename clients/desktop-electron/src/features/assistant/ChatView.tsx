@@ -2,23 +2,25 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDaemonStore } from '../../core/stores/useDaemonStore';
 import { useChatStore } from '../../core/stores/useChatStore';
 import { MarkdownRenderer } from '../echo/MarkdownRenderer';
-import { Send, AlertCircle, Trash2, Loader2, CheckCircle2, ChevronRight, ChevronDown, Wrench } from 'lucide-react';
+import { Send, AlertCircle, Trash2, Loader2, CheckCircle2, ChevronRight, ChevronDown, Sparkles } from 'lucide-react';
 import type { ToolCallStep } from '../../core/types';
 
 function formatToolTitle(tool: string): string {
   switch (tool) {
     case 'query_knowledge':
-      return 'Consultation du coffre PKM';
+      return 'Recherche dans le coffre';
+    case 'get_recent_notes':
+      return 'Consultation des derniers échos';
     case 'read_resource':
       return 'Lecture de ressource';
     case 'save_note':
       return 'Enregistrement de note';
     case 'scan_inbox':
-      return 'Analyse de l\'inbox';
+      return 'Consultation des signaux';
     case 'system_info':
-      return 'Inspection système';
+      return 'Diagnostic système';
     default:
-      return `Exécution d'outil (${tool})`;
+      return `Outil : ${tool}`;
   }
 }
 
@@ -49,11 +51,6 @@ const ToolBadge: React.FC<ToolBadgeProps> = ({ toolCall }) => {
           <span className="font-medium text-slate-200 truncate">
             {formatToolTitle(toolCall.tool)}
           </span>
-          {toolCall.duration_ms !== undefined && !isRunning && (
-            <span className="text-[10px] text-slate-400 shrink-0">
-              ({toolCall.duration_ms} ms)
-            </span>
-          )}
         </div>
         <div className="text-slate-400 shrink-0">
           {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -132,9 +129,9 @@ export const ChatView: React.FC = () => {
     <div className="flex-1 flex flex-col h-full overflow-hidden p-3 gap-2 select-none relative">
       {/* Top Bar with Clear Action and Offline Warning */}
       <div className="flex items-center justify-between shrink-0 px-1">
-        <div className="flex items-center gap-1.5 text-xs text-slate-400">
-          <Wrench className="w-3.5 h-3.5 text-sky-400" />
-          <span className="font-medium text-slate-300">Copilote PKM</span>
+        <div className="flex items-center gap-1.5 text-xs text-slate-300">
+          <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+          <span className="font-medium tracking-tight">✦ Copilote</span>
         </div>
         {messages.length > 0 && (
           <button
@@ -148,13 +145,19 @@ export const ChatView: React.FC = () => {
         )}
       </div>
 
-      {/* Offline / Error Banner */}
-      {(!isOnline || errorMessage) && (
+      {/* Offline / Standby Status Banner */}
+      {!isOnline && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 text-amber-200/90 text-[11px] shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80 animate-pulse shrink-0" />
+          <span className="truncate">Assistant en veille</span>
+        </div>
+      )}
+
+      {/* Error Banner */}
+      {errorMessage && isOnline && (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-950/40 border border-red-500/30 text-red-200 text-xs shrink-0">
           <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-          <span className="truncate">
-            {errorMessage || 'Daemon hors ligne. Lancez `uv run ekko daemon`.'}
-          </span>
+          <span className="truncate">{errorMessage}</span>
         </div>
       )}
 
@@ -163,11 +166,11 @@ export const ChatView: React.FC = () => {
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center px-6 gap-2 select-none">
             <div className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-sky-400">
-              <Wrench className="w-5 h-5" />
+              <Sparkles className="w-5 h-5" />
             </div>
             <p className="font-medium text-slate-300">Comment puis-je vous aider ?</p>
             <p className="text-[11px] text-slate-400 max-w-sm">
-              Posez une question, demandez une synthèse de vos notes PKM ou analysez un sujet de veille.
+              Posez une question, explorez vos fiches de connaissances ou parcourez les dernières veilles.
             </p>
           </div>
         )}

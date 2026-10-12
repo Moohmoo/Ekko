@@ -3,5 +3,6 @@ enabled_tools:
   - read_resource
   - save_note
   - query_knowledge
+  - get_recent_notes
   - scan_inbox
 
