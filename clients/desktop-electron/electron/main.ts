@@ -137,7 +137,23 @@ ipcMain.handle('daemon:get_notes', async () => {
   }
 });
 
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
+
 ipcMain.handle('daemon:ingest_file', async (_event, filePath: string) => {
+  try {
+    const stats = fs.statSync(filePath);
+    if (stats.size > MAX_FILE_SIZE_BYTES) {
+      return {
+        status: 'rejected',
+        reason: 'file_too_large',
+        message: `Fichier trop volumineux (${stats.size} octets > ${MAX_FILE_SIZE_BYTES} octets max).`,
+        max_bytes: MAX_FILE_SIZE_BYTES,
+      };
+    }
+  } catch (err) {
+    // If stat fails, continue and let daemon return proper error
+  }
+
   return await sendJsonRpc<{ status: string; filename?: string; message?: string; note?: { id: string; title: string; slug: string; summary: string } }>(
     'ingest_file',
     { file_path: filePath }

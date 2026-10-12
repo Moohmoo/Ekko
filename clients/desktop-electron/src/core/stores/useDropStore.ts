@@ -111,6 +111,18 @@ export const useDropStore = create<DropState>((set, get) => ({
 
       const res = await window.ekkoAPI.ingestFile(filePath);
 
+      // Handle guardrails responses
+      if (res && res.status === 'already_exists') {
+        get().setError('Document déjà indexé dans le coffre');
+        return false;
+      }
+
+      if (res && res.status === 'rejected') {
+        const msg = res.reason === 'file_too_large' ? 'Fichier trop volumineux · 25 Mo max' : (res.message || 'Fichier rejeté');
+        get().setError(msg);
+        return false;
+      }
+
       // If backend returned completed note synchronously (test/mock fallback)
       if (res && typeof res === 'object' && res.note) {
         const completedNote: NoteItem = {
@@ -210,6 +222,12 @@ export const useDropStore = create<DropState>((set, get) => ({
       }
 
       const res = await window.ekkoAPI.ingestUrl(trimmed);
+
+      // Handle guardrails responses
+      if (res && res.status === 'already_exists') {
+        get().setError('Lien web déjà indexé dans le coffre');
+        return false;
+      }
 
       // If backend returned completed note synchronously (test/mock fallback)
       if (res && typeof res === 'object' && res.note) {

@@ -6,8 +6,12 @@ var api = {
     resolveSignal: function (signalId, action) {
         return ipcRenderer.invoke('daemon:resolve_signal', { signalId: signalId, action: action });
     },
+    resolveAllPendingSignals: function (action) {
+        return ipcRenderer.invoke('daemon:resolve_all_pending_signals', { action: action });
+    },
     submitPrompt: function (prompt) { return ipcRenderer.invoke('daemon:submit_prompt', prompt); },
     ingestFile: function (filePath) { return ipcRenderer.invoke('daemon:ingest_file', filePath); },
+    ingestUrl: function (url) { return ipcRenderer.invoke('daemon:ingest_url', url); },
     getDroppedFilePath: function (file) {
         try {
             return webUtils.getPathForFile(file);

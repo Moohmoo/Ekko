@@ -19,6 +19,9 @@ export interface IngestResult {
   filename?: string;
   url?: string;
   message?: string;
+  reason?: string;
+  content_hash?: string;
+  max_bytes?: number;
   note?: { id: string; title: string; slug: string; summary: string; source?: string };
 }
 

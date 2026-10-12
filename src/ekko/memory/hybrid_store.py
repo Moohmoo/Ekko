@@ -630,6 +630,48 @@ class HybridStore:
         """Fetch chunk contents for a given note_id asynchronously."""
         return await asyncio.to_thread(self._get_note_chunks_sync, note_id)
 
+    def _has_content_hash_sync(self, content_hash: str) -> bool:
+        """Check if a document with this SHA-256 hash or text ID prefix already exists in database."""
+        with self._connection() as conn:
+            # Check raw_signals id (e.g. text_<hash> or sig_<hash>)
+            sig_exists = conn.execute(
+                "SELECT 1 FROM raw_signals WHERE id LIKE ? OR external_id = ? LIMIT 1;",
+                (f"%{content_hash}%", content_hash),
+            ).fetchone()
+            if sig_exists:
+                return True
+
+            # Check knowledge_notes id or sources
+            note_exists = conn.execute(
+                "SELECT 1 FROM knowledge_notes WHERE id LIKE ? OR sources LIKE ? LIMIT 1;",
+                (f"%{content_hash}%", f"%{content_hash}%"),
+            ).fetchone()
+            return bool(note_exists)
+
+    async def has_content_hash(self, content_hash: str) -> bool:
+        """Check if document hash already exists in raw signals or knowledge notes asynchronously."""
+        return await asyncio.to_thread(self._has_content_hash_sync, content_hash)
+
+    def _has_source_url_sync(self, url: str) -> bool:
+        """Check if an external URL is already present in raw_signals or knowledge_notes."""
+        with self._connection() as conn:
+            sig_exists = conn.execute(
+                "SELECT 1 FROM raw_signals WHERE url = ? OR source_url = ? LIMIT 1;",
+                (url, url),
+            ).fetchone()
+            if sig_exists:
+                return True
+
+            note_exists = conn.execute(
+                "SELECT 1 FROM knowledge_notes WHERE sources LIKE ? LIMIT 1;",
+                (f"%{url}%",),
+            ).fetchone()
+            return bool(note_exists)
+
+    async def has_source_url(self, url: str) -> bool:
+        """Check if source URL is already indexed in database asynchronously."""
+        return await asyncio.to_thread(self._has_source_url_sync, url)
+
     def _get_knowledge_note_by_slug_sync(self, slug: str) -> KnowledgeNote | None:
         """Query knowledge note by unique slug synchronously."""
         sql = "SELECT * FROM knowledge_notes WHERE slug = ?;"

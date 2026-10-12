@@ -43,6 +43,7 @@ function truncateMiddle(str: string, maxLength: number = 20): string {
 export const HomeView: React.FC = () => {
   const setViewMode = useViewStore((state) => state.setViewMode);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isIngesting, setIsIngesting] = React.useState<boolean>(false);
 
   const {
     dropStatus,
@@ -68,7 +69,7 @@ export const HomeView: React.FC = () => {
   const displayEmotion =
     dropStatus === 'hover'
       ? 'hover_drop'
-      : dropStatus === 'processing'
+      : dropStatus === 'processing' || isIngesting
       ? 'ingesting'
       : dropStatus === 'ready'
       ? 'ready'
@@ -85,7 +86,9 @@ export const HomeView: React.FC = () => {
   // Global paste handler on Home view for rapid URL absorption (Ctrl+V)
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
-      // Do not intercept paste if an input or textarea is currently focused
+      // Do not intercept paste if an input or textarea is currently focused or if ingestion in progress
+      if (isIngesting) return;
+
       const activeEl = document.activeElement;
       if (
         activeEl &&
@@ -103,7 +106,12 @@ export const HomeView: React.FC = () => {
       if (firstLine.startsWith('http://') || firstLine.startsWith('https://')) {
         e.preventDefault();
         console.log('[Paste:Event] Ingestion URL détectée via presse-papiers :', firstLine);
-        await ingestUrlInPlace(firstLine);
+        setIsIngesting(true);
+        try {
+          await ingestUrlInPlace(firstLine);
+        } finally {
+          setIsIngesting(false);
+        }
       }
     };
 
@@ -111,12 +119,14 @@ export const HomeView: React.FC = () => {
     return () => {
       window.removeEventListener('paste', handlePaste);
     };
-  }, [ingestUrlInPlace]);
+  }, [ingestUrlInPlace, isIngesting]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setHover(true);
+    if (!isIngesting) {
+      setHover(true);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -132,51 +142,63 @@ export const HomeView: React.FC = () => {
     e.stopPropagation();
     setHover(false);
 
-    // Cas A : Présence d'au moins un fichier local
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      const realPath = window.ekkoAPI?.getDroppedFilePath
-        ? window.ekkoAPI.getDroppedFilePath(file)
-        : '';
-
-      console.log('[Drop:Event] Chemin absolu extrait via webUtils :', realPath);
-
-      if (realPath) {
-        await ingestFileInPlace(realPath);
-        return;
-      }
-    }
-
-    // Cas B : Dépôt de texte / lien web (text/uri-list, text/plain ou URL)
-    const rawUri =
-      e.dataTransfer.getData('text/uri-list') ||
-      e.dataTransfer.getData('text/plain') ||
-      e.dataTransfer.getData('URL') ||
-      '';
-
-    const cleanedUri = rawUri
-      .split('\n')
-      .map((l) => l.trim())
-      .find((l) => l.length > 0 && !l.startsWith('#'));
-
-    if (cleanedUri && (cleanedUri.startsWith('http://') || cleanedUri.startsWith('https://'))) {
-      console.log('[Drop:Event] URL extraite via drag-and-drop :', cleanedUri);
-      await ingestUrlInPlace(cleanedUri);
+    if (isIngesting) {
+      console.warn('[Drop:Event] Ingestion déjà en cours, dépôt ignoré.');
       return;
     }
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setError('Impossible de résoudre le chemin système du fichier.');
-    } else {
-      setError('Format non supporté · Déposez un fichier local ou une URL valide');
+    setIsIngesting(true);
+    try {
+      // Cas A : Présence d'au moins un fichier local
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        const realPath = window.ekkoAPI?.getDroppedFilePath
+          ? window.ekkoAPI.getDroppedFilePath(file)
+          : '';
+
+        console.log('[Drop:Event] Chemin absolu extrait via webUtils :', realPath);
+
+        if (realPath) {
+          await ingestFileInPlace(realPath);
+          return;
+        }
+      }
+
+      // Cas B : Dépôt de texte / lien web (text/uri-list, text/plain ou URL)
+      const rawUri =
+        e.dataTransfer.getData('text/uri-list') ||
+        e.dataTransfer.getData('text/plain') ||
+        e.dataTransfer.getData('URL') ||
+        '';
+
+      const cleanedUri = rawUri
+        .split('\n')
+        .map((l) => l.trim())
+        .find((l) => l.length > 0 && !l.startsWith('#'));
+
+      if (cleanedUri && (cleanedUri.startsWith('http://') || cleanedUri.startsWith('https://'))) {
+        console.log('[Drop:Event] URL extraite via drag-and-drop :', cleanedUri);
+        await ingestUrlInPlace(cleanedUri);
+        return;
+      }
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        setError('Impossible de résoudre le chemin système du fichier.');
+      } else {
+        setError('Format non supporté · Déposez un fichier local ou une URL valide');
+      }
+    } finally {
+      setIsIngesting(false);
     }
   };
 
   const handleBrowseFile = () => {
+    if (isIngesting) return;
     fileInputRef.current?.click();
   };
 
   const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isIngesting) return;
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       const realPath = window.ekkoAPI?.getDroppedFilePath
@@ -188,7 +210,12 @@ export const HomeView: React.FC = () => {
         return;
       }
 
-      await ingestFileInPlace(realPath);
+      setIsIngesting(true);
+      try {
+        await ingestFileInPlace(realPath);
+      } finally {
+        setIsIngesting(false);
+      }
       e.target.value = '';
     }
   };
@@ -229,14 +256,14 @@ export const HomeView: React.FC = () => {
               PDF, notes Markdown ou texte brut (.txt)
             </span>
           </div>
-        ) : dropStatus === 'processing' ? (
-          /* État 3 : En cours de distillation (async) */
-          <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneProcessing} flex flex-col items-center justify-center gap-2 text-center p-3 relative select-none`}>
+        ) : dropStatus === 'processing' || isIngesting ? (
+          /* État 3 : En cours de distillation (async) / Verrou d'ingestion */
+          <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneProcessing} flex flex-col items-center justify-center gap-2 text-center p-3 relative select-none pointer-events-none`}>
             <div className="absolute inset-0 bg-sky-400/[0.03] animate-pulse rounded-xl pointer-events-none" />
             <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
             <div className="flex flex-col z-10 max-w-[280px]">
               <span className="text-xs text-slate-200 font-medium">
-                Distillation de {fileName ? truncateMiddle(fileName, 20) : 'document'} en cours...
+                {fileName ? `Distillation de ${truncateMiddle(fileName, 20)} en cours...` : 'Ingestion en cours...'}
               </span>
               <span className="text-[10px] text-sky-400/80 mt-0.5 animate-pulse">
                 Extraction et synthèse cognitives

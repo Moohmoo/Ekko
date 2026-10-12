@@ -3,6 +3,7 @@
 import asyncio
 from collections.abc import Coroutine
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -28,6 +29,8 @@ def _resolve_default_socket_path() -> Path:
 
 
 DEFAULT_SOCKET_PATH = _resolve_default_socket_path()
+
+MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024  # 25 MB hard cap on ingested files
 
 
 
@@ -254,10 +257,61 @@ class IPCServer:
             await writer.drain()
             return
 
+        # 1. Size guardrail: reject files exceeding MAX_FILE_SIZE_BYTES
+        try:
+            file_size = target_path.stat().st_size
+            if file_size > MAX_FILE_SIZE_BYTES:
+                writer.write(
+                    _rpc_result(
+                        req_id,
+                        {
+                            "status": "rejected",
+                            "reason": "file_too_large",
+                            "message": f"Fichier trop volumineux ({file_size} octets > {MAX_FILE_SIZE_BYTES} octets max).",
+                            "max_bytes": MAX_FILE_SIZE_BYTES,
+                        },
+                    ).encode("utf-8")
+                )
+                await writer.drain()
+                return
+        except OSError as exc:
+            writer.write(_rpc_error(req_id, -32003, f"Impossible de lire la taille du fichier : {exc}").encode("utf-8"))
+            await writer.drain()
+            return
+
+        # 2. SHA-256 content hash deduplication
+        try:
+            hasher = hashlib.sha256()
+            with target_path.open("rb") as f:
+                while chunk := f.read(65536):
+                    hasher.update(chunk)
+            content_hash = hasher.hexdigest()[:16]
+        except Exception as exc:
+            logger.warning("Failed to compute SHA-256 for file %s: %s", target_path, exc)
+            content_hash = ""
+
+        if content_hash and self.db_manager and hasattr(self.db_manager, "has_content_hash"):
+            already_exists = await self.db_manager.has_content_hash(content_hash)
+            if already_exists:
+                writer.write(
+                    _rpc_result(
+                        req_id,
+                        {
+                            "status": "already_exists",
+                            "filename": target_path.name,
+                            "content_hash": content_hash,
+                            "message": "Document déjà indexé dans le coffre.",
+                        },
+                    ).encode("utf-8")
+                )
+                await writer.drain()
+                return
+
         # Return instant JSON-RPC response (< 50ms) as per Drop & Forget contract
         reply = {
             "status": "accepted",
             "filename": target_path.name,
+            "content_hash": content_hash,
             "message": "Document absorbé · Distillation en cours",
         }
         writer.write(_rpc_result(req_id, reply).encode("utf-8"))
@@ -309,6 +363,24 @@ class IPCServer:
             )
             await writer.drain()
             return
+
+        # Deduplication on URL if already present in database
+        if self.db_manager and hasattr(self.db_manager, "has_source_url"):
+            already_exists = await self.db_manager.has_source_url(url_str)
+            if already_exists:
+                writer.write(
+                    _rpc_result(
+                        req_id,
+                        {
+                            "status": "already_exists",
+                            "url": url_str,
+                            "filename": parsed.netloc,
+                            "message": "Lien web déjà indexé dans le coffre.",
+                        },
+                    ).encode("utf-8")
+                )
+                await writer.drain()
+                return
 
         host = parsed.netloc
         reply = {

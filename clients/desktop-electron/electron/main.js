@@ -171,10 +171,35 @@ ipcMain.handle('daemon:get_notes', function () { return __awaiter(void 0, void 0
         }
     });
 }); });
+var MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
 ipcMain.handle('daemon:ingest_file', function (_event, filePath) { return __awaiter(void 0, void 0, void 0, function () {
+    var stats;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, sendJsonRpc('ingest_file', { file_path: filePath })];
+            case 0:
+                try {
+                    stats = fs.statSync(filePath);
+                    if (stats.size > MAX_FILE_SIZE_BYTES) {
+                        return [2 /*return*/, {
+                                status: 'rejected',
+                                reason: 'file_too_large',
+                                message: "Fichier trop volumineux (".concat(stats.size, " octets > ").concat(MAX_FILE_SIZE_BYTES, " octets max)."),
+                                max_bytes: MAX_FILE_SIZE_BYTES,
+                            }];
+                    }
+                }
+                catch (err) {
+                    // If stat fails, continue and let daemon return proper error
+                }
+                return [4 /*yield*/, sendJsonRpc('ingest_file', { file_path: filePath })];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); });
+ipcMain.handle('daemon:ingest_url', function (_event, url) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, sendJsonRpc('ingest_url', { url: url })];
             case 1: return [2 /*return*/, _a.sent()];
         }
     });
@@ -182,7 +207,7 @@ ipcMain.handle('daemon:ingest_file', function (_event, filePath) { return __awai
 ipcMain.handle('daemon:get_pending_signals', function () { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, sendJsonRpc('get_pending_signals', { limit: 5 })];
+            case 0: return [4 /*yield*/, sendJsonRpc('get_pending_signals', { limit: 20 })];
             case 1: return [2 /*return*/, _a.sent()];
         }
     });
@@ -192,6 +217,15 @@ ipcMain.handle('daemon:resolve_signal', function (_event_1, _a) { return __await
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0: return [4 /*yield*/, sendJsonRpc('resolve_signal', { signal_id: signalId, action: action })];
+            case 1: return [2 /*return*/, _c.sent()];
+        }
+    });
+}); });
+ipcMain.handle('daemon:resolve_all_pending_signals', function (_event_1, _a) { return __awaiter(void 0, [_event_1, _a], void 0, function (_event, _b) {
+    var action = _b.action;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0: return [4 /*yield*/, sendJsonRpc('resolve_all_pending_signals', { action: action })];
             case 1: return [2 /*return*/, _c.sent()];
         }
     });
