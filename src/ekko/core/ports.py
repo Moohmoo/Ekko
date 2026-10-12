@@ -100,8 +100,9 @@ class HybridMemoryPort(Protocol):
         ...
 
     async def get_pending_signals(self, limit: int = 5) -> list[RawSignal]:
-        """Retrieve un-distilled raw signals in pending status."""
+        """Retrieve un-distilled raw signals in retained status."""
         ...
+
 
     async def mark_signal_status(self, signal_id: str, status: SignalStatus | str) -> None:
         """Update the processing status of a raw signal."""

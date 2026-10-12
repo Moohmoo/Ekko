@@ -60,7 +60,38 @@ async def test_scan_inbox_handles_infrastructure_error() -> None:
 
     tool = ScanInboxTool(db_manager=mock_db)
     result = await tool._run(status="pending")
-
     assert result.success is False
     assert result.error == "ScanInboxError"
     assert "Erreur lors de la lecture des signaux" in result.content
+
+
+
+def test_scan_inbox_input_defaults_to_retained() -> None:
+    """Ensure ScanInboxInput defaults status to retained."""
+    schema = ScanInboxInput()
+    assert schema.status == "retained"
+
+
+@pytest.mark.asyncio
+async def test_scan_inbox_maps_pending_to_retained() -> None:
+    """Ensure ScanInboxTool maps 'pending' synonym to SignalStatus.RETAINED."""
+    mock_db = MagicMock()
+    mock_db.get_raw_signals = AsyncMock(return_value=[])
+
+    tool = ScanInboxTool(db_manager=mock_db)
+    # 1. Default run
+    await tool._run()
+    mock_db.get_raw_signals.assert_awaited_with(
+        source_id=None,
+        status=SignalStatus.RETAINED,
+        limit=10,
+    )
+
+    # 2. Explicit 'pending' synonym
+    await tool._run(status="pending")
+    mock_db.get_raw_signals.assert_awaited_with(
+        source_id=None,
+        status=SignalStatus.RETAINED,
+        limit=10,
+    )
+

@@ -19,8 +19,9 @@ def sample_signal() -> RawSignal:
         url="https://arxiv.org/abs/1706.03762",
         raw_content="The dominant sequence transduction models are based on complex recurrent or convolutional neural networks.",
         clean_content="The dominant sequence transduction models are based on complex recurrent or convolutional neural networks.",
-        status=SignalStatus.PENDING,
+        status=SignalStatus.RETAINED,
     )
+
 
 
 @pytest.mark.asyncio

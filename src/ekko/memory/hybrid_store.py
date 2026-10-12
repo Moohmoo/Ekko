@@ -295,8 +295,9 @@ class HybridStore:
         await asyncio.to_thread(self._update_signal_status_sync, signal_id, status)
 
     async def get_pending_signals(self, limit: int = 5) -> list[RawSignal]:
-        """Retrieve un-distilled raw signals in pending status asynchronously."""
-        return await self.get_raw_signals(status=SignalStatus.PENDING, limit=limit)
+        """Retrieve un-distilled raw signals in retained status asynchronously."""
+        return await self.get_raw_signals(status=SignalStatus.RETAINED, limit=limit)
+
 
     async def mark_signal_status(self, signal_id: str, status: str | SignalStatus) -> None:
         """Update signal processing status with string or enum value."""

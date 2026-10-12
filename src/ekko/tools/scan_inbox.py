@@ -15,9 +15,12 @@ logger = get_logger("tools.scan_inbox")
 class ScanInboxInput(BaseModel):
     """Input parameters for inspecting raw ingested signals in the inbox."""
 
-    status: Literal["pending", "retained", "discarded", "archived"] | None = Field(
-        default="pending",
-        description="Statut du signal à filtrer ('pending', 'retained', 'discarded', 'archived') ou None pour tout.",
+    status: Literal["retained", "archived", "discarded", "processed", "pending"] | None = Field(
+        default="retained",
+        description=(
+            "Statut du signal à filtrer ('retained' pour les dépêches de veille en attente de triage, "
+            "'archived', 'discarded', 'processed', ou None pour tous)."
+        ),
     )
     source_id: str | None = Field(
         default=None,
@@ -64,13 +67,15 @@ class ScanInboxTool(BaseTool):
 
     async def _run(
         self,
-        status: Literal["pending", "retained", "discarded", "archived"] | None = "pending",
+        status: Literal["retained", "archived", "discarded", "processed", "pending"] | None = "retained",
         source_id: str | None = None,
         limit: int = 10,
     ) -> ToolResult:
         """Fetch raw signals matching criteria and format into markdown."""
         try:
-            status_enum = SignalStatus(status) if status else None
+            # Map 'pending' synonym to 'retained' for LLM tolerance
+            effective_status = "retained" if status == "pending" else status
+            status_enum = SignalStatus(effective_status) if effective_status else None
             signals = await self.db_manager.get_raw_signals(
                 source_id=source_id,
                 status=status_enum,

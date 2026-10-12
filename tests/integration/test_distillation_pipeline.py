@@ -35,14 +35,15 @@ async def test_end_to_end_distillation_pipeline(tmp_path: Path) -> None:
         url="https://arxiv.org/abs/2501.12948",
         raw_content="We present DeepSeek-R1, which utilizes large-scale reinforcement learning to develop reasoning behaviors.",
         clean_content="We present DeepSeek-R1, which utilizes large-scale reinforcement learning to develop reasoning behaviors.",
-        status=SignalStatus.PENDING,
+        status=SignalStatus.RETAINED,
     )
     await store.save_raw_signals([signal])
 
     # Check signal is pending initially
     pending_before = await store.get_pending_signals(limit=5)
     assert len(pending_before) == 1
-    assert pending_before[0].status == SignalStatus.PENDING
+    assert pending_before[0].status == SignalStatus.RETAINED
+
 
     # Setup mock LLM provider returning structured distillation
     distill_payload = json.dumps({

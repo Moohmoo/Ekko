@@ -12,10 +12,21 @@ from ekko.ingestion.distiller import SignalDistiller
 from ekko.memory.hybrid_store import HybridStore
 from ekko.core.models import RawSignal, SignalStatus
 from ekko.logger import get_logger
+from ekko.settings import Settings
 
 logger = get_logger("daemon.server")
 
-DEFAULT_SOCKET_PATH = Path("/tmp/ekko.sock")
+
+def _resolve_default_socket_path() -> Path:
+    """Resolve default UNIX IPC socket path from environment/settings with fallback."""
+    try:
+        return Path(Settings().ipc_socket_path)
+    except Exception:
+        return Path("/tmp/ekko.sock")
+
+
+DEFAULT_SOCKET_PATH = _resolve_default_socket_path()
+
 
 
 def _rpc_error(req_id: str | int | None, code: int, message: str) -> str:
