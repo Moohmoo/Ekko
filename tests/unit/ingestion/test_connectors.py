@@ -159,7 +159,48 @@ async def test_rest_api_connector_parses_json_hits() -> None:
     assert sig.title == "Open Source Foundation Model Release"
     assert sig.url == "https://example.com/os-model"
     assert sig.author == "dev_guru"
+    assert sig.clean_content == ""
+    assert sig.raw_content == ""
     assert new_state.etag == '"api_etag"'
+
+
+@pytest.mark.asyncio
+async def test_rest_api_connector_extracts_story_text_and_never_leaks_raw_json() -> None:
+    """Ensure editorial story_text is extracted cleanly while raw JSON dictionary is never dumped."""
+    json_with_metadata = """{
+      "hits": [
+        {
+          "objectID": "55555",
+          "title": "Show HN: Local AI Project",
+          "url": "https://news.ycombinator.com/item?id=55555",
+          "story_text": "We built a new local agentic PKM system with SQLite.",
+          "_highlightResult": {"title": {"value": "Show HN..."}},
+          "_tags": ["story", "author_dev"]
+        }
+      ]
+    }"""
+    mock_http = AsyncMock()
+    mock_http.get.return_value = HttpResponseResult(
+        status_code=200,
+        not_modified=False,
+        text=json_with_metadata,
+        etag='"api_etag"',
+    )
+
+    connector = RestApiConnector(http_client=mock_http)
+    source = SourceConfig(
+        id="hn_signals",
+        type="rest_api",
+        url="https://hn.algolia.com/api/v1/search",
+        json_items_path="hits",
+    )
+
+    signals, _ = await connector.fetch_signals(source)
+    assert len(signals) == 1
+    sig = signals[0]
+    assert sig.clean_content == "We built a new local agentic PKM system with SQLite."
+    assert "_highlightResult" not in sig.clean_content
+    assert not sig.clean_content.startswith("{")
 
 
 @pytest.mark.asyncio

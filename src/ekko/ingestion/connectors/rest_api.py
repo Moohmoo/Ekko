@@ -34,8 +34,18 @@ def _project_item(item: dict[str, Any], source_id: str) -> RawSignal:
     url = str(item.get("url") or "")
     author = str(item.get("author") or item.get("by") or "") or None
 
-    content = json.dumps(item, ensure_ascii=False)
-    sig_id = compute_signal_id(url=url or ext_id, title=title, content=content)
+    # Extract editorial content from standard text fields without dumping raw JSON dictionary
+    candidate_text = (
+        item.get("story_text")
+        or item.get("comment_text")
+        or item.get("body")
+        or item.get("description")
+        or ""
+    )
+    content = str(candidate_text).strip() if isinstance(candidate_text, str) else ""
+
+    # Compute deterministic signal ID using external ID/URL, title, and content
+    sig_id = compute_signal_id(url=url or ext_id, title=title, content=content or title)
 
     return RawSignal(
         id=sig_id,

@@ -237,3 +237,40 @@ async def test_resolve_signal_errors(socket_path: Path, db_store: HybridStore) -
         assert "Invalid action" in str(exc_info2.value)
 
     await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_get_pending_signals_sanitizes_raw_json_leak(socket_path: Path, db_store: HybridStore) -> None:
+    """Ensure signals with raw JSON or Algolia _highlightResult have their summary sanitized to empty string."""
+    raw_algolia_json = '{"objectID": "999", "title": "HN Leaked Story", "_highlightResult": {"title": "..."}}'
+    with db_store._get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO raw_signals (id, source_type, source_url, title, raw_content, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+            """,
+            (
+                "sig_leaked_json",
+                "hn_tech",
+                "https://news.ycombinator.com/item?id=999",
+                "HN Leaked Story",
+                raw_algolia_json,
+                "retained",
+                "2026-10-11T12:00:00",
+            ),
+        )
+
+    server = IPCServer(socket_path=socket_path, db_manager=db_store)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        signals = await client.call("get_pending_signals")
+        assert len(signals) == 1
+        s = signals[0]
+        assert s["id"] == "sig_leaked_json"
+        # Summary must NOT be the raw JSON
+        assert s["summary"] == ""
+        assert not s["summary"].startswith("{")
+        assert "_highlightResult" not in s["summary"]
+
+    await server.stop()

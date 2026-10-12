@@ -20,6 +20,17 @@ import {
   Check,
 } from 'lucide-react';
 
+const TICKER_INTERVAL_MS = 6000;
+
+/**
+ * Defensive pure helper detecting raw JSON dumps or Algolia metadata payloads.
+ */
+export function isJsonPayload(text?: string | null): boolean {
+  if (!text) return false;
+  const trimmed = text.trim();
+  return trimmed.startsWith('{') || trimmed.includes('_highlightResult') || trimmed.includes('"objectID"');
+}
+
 /**
  * Truncate filename in the middle to prevent visual overflow while preserving extension.
  */
@@ -45,10 +56,28 @@ export const HomeView: React.FC = () => {
     ingestFileInPlace,
   } = useDropStore();
 
-  const { latestNote, fetchNotes } = useEchoStore();
+  const { notes, latestNote, fetchNotes } = useEchoStore();
   const currentSignal = useSignalStore((state) => state.currentSignal);
   const dismissCurrent = useSignalStore((state) => state.dismissCurrent);
   const isSignalLoading = useSignalStore((state) => state.isLoading);
+
+  // Calmed ticker rotation state with pause on hover
+  const [tickerIndex, setTickerIndex] = React.useState<number>(0);
+  const [isTickerPaused, setIsTickerPaused] = React.useState<boolean>(false);
+
+  useEffect(() => {
+    if (notes.length <= 1 || isTickerPaused) return;
+
+    const interval = setInterval(() => {
+      setTickerIndex((prev) => (prev + 1) % notes.length);
+    }, TICKER_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [notes.length, isTickerPaused]);
+
+  // Derived current note for ticker ensuring safe index boundary
+  const activeTickerNote = notes.length > 0 ? notes[tickerIndex % notes.length] : latestNote;
+  const cleanSummary = currentSignal?.summary && !isJsonPayload(currentSignal.summary) ? currentSignal.summary : null;
 
   // Derived mascot emotion prioritizing active drag/ingestion/error, then blindspot alert, then idle
   const displayEmotion =
@@ -215,14 +244,14 @@ export const HomeView: React.FC = () => {
               <h3 className="text-sm font-medium text-white line-clamp-2 leading-snug">
                 {currentSignal.title}
               </h3>
-              {currentSignal.summary && (
+              {cleanSummary && (
                 <p className="text-xs text-white/60 line-clamp-2 leading-relaxed">
-                  {currentSignal.summary}
+                  {cleanSummary}
                 </p>
               )}
             </div>
 
-            {/* Actions: Écarter (secondaire) & Retenir (primaire) */}
+            {/* Actions: Écarter (secondaire) & Archiver (primaire) */}
             <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/[0.04]">
               <button
                 onClick={() => dismissCurrent('discard')}
@@ -238,10 +267,10 @@ export const HomeView: React.FC = () => {
                 onClick={() => dismissCurrent('archive')}
                 disabled={isSignalLoading}
                 className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-all text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
-                title="Conserver et intégrer au PKM"
+                title="Conserver et archiver dans le PKM"
               >
                 <Check className="w-3.5 h-3.5 text-amber-400" />
-                <span>Retenir</span>
+                <span>Archiver</span>
               </button>
             </div>
           </div>
@@ -265,6 +294,8 @@ export const HomeView: React.FC = () => {
             {/* Partie inférieure (~35 %) : ligne "Dernier Écho" posée à plat */}
             <div
               onClick={() => setViewMode('echo')}
+              onMouseEnter={() => setIsTickerPaused(true)}
+              onMouseLeave={() => setIsTickerPaused(false)}
               className={`flex-[0.35] rounded-xl ${SURFACE_CARD} ${SURFACE_CARD_HOVER} px-3 py-1.5 flex items-center justify-between cursor-pointer transition-all group select-none`}
             >
               <div className="flex items-center gap-2.5 min-w-0 pr-2">
@@ -276,7 +307,7 @@ export const HomeView: React.FC = () => {
                     Dernier Écho
                   </span>
                   <p className="text-xs text-slate-200 font-medium truncate">
-                    {latestNote?.title || 'Tampon cognitif vide'}
+                    {activeTickerNote?.title || 'Tampon cognitif vide'}
                   </p>
                 </div>
               </div>

@@ -2,6 +2,16 @@ import { create } from 'zustand';
 import type { Signal } from '../../../electron/preload';
 import { playSuccessChime, playDropBlip } from '../audio/soundManager';
 
+export const MAX_PENDING_SIGNALS = 50;
+
+function areSignalIdsEqual(a: Signal[], b: Signal[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id) return false;
+  }
+  return true;
+}
+
 interface SignalState {
   pendingSignals: Signal[];
   currentSignal: Signal | null;
@@ -21,19 +31,28 @@ export const useSignalStore = create<SignalState>((set, get) => ({
     if (!window.ekkoAPI?.getPendingSignals) return;
     try {
       const raw = await window.ekkoAPI.getPendingSignals();
-      const signals: Signal[] = Array.isArray(raw) ? raw : [];
+      const rawSignals: Signal[] = Array.isArray(raw) ? raw : [];
+      // Bound the buffer to prevent memory leakage
+      const boundedSignals = rawSignals.slice(0, MAX_PENDING_SIGNALS);
+
+      const prevSignals = get().pendingSignals;
       const current = get().currentSignal;
+
+      // Shallow check on signal IDs to avoid spurious re-renders every heartbeat
+      if (areSignalIdsEqual(prevSignals, boundedSignals)) {
+        return;
+      }
 
       // Retain current if still present, or pick first pending
       const nextCurrent =
-        current && signals.some((s) => s.id === current.id)
+        current && boundedSignals.some((s) => s.id === current.id)
           ? current
-          : signals.length > 0
-          ? signals[0]
+          : boundedSignals.length > 0
+          ? boundedSignals[0]
           : null;
 
       set({
-        pendingSignals: signals,
+        pendingSignals: boundedSignals,
         currentSignal: nextCurrent,
       });
     } catch (err) {

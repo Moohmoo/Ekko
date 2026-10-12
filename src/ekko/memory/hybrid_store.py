@@ -404,6 +404,14 @@ class HybridStore:
         ORDER BY COALESCE(created_at, ingested_at) DESC
         LIMIT ?;
         """
+        def _clean_summary(raw: str | None) -> str:
+            if not raw:
+                return ""
+            trimmed = raw.strip()
+            if trimmed.startswith("{") or "_highlightResult" in trimmed:
+                return ""
+            return trimmed
+
         with self._connection() as conn:
             rows = conn.execute(sql, (limit,)).fetchall()
             return [
@@ -412,7 +420,7 @@ class HybridStore:
                     "title": row["title"],
                     "source_type": row["source_type"],
                     "source_url": row["source_url"],
-                    "summary": row["summary"],
+                    "summary": _clean_summary(row["summary"]),
                     "created_at": str(row["created_at"]) if row["created_at"] is not None else None,
                 }
                 for row in rows
