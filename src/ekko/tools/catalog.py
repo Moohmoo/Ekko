@@ -5,10 +5,10 @@ from typing import Any
 
 from ekko.core.ports import HybridMemoryPort
 from ekko.tools.base import BaseTool
-from ekko.tools.note_writer import NoteWriterTool
 from ekko.tools.query_knowledge import QueryKnowledgeTool
 from ekko.tools.read_resource import ReadResourceTool
 from ekko.tools.registry import ToolRegistry
+from ekko.tools.save_note import SaveNoteTool
 from ekko.tools.scan_inbox import ScanInboxTool
 from ekko.tools.system_info import SystemInfoTool
 from ekko.logger import get_logger
@@ -25,7 +25,7 @@ def _instantiate_tool(
     """Instantiate a tool class injecting optional dependencies."""
     name = getattr(cls, "name", "")
     if name == "save_note":
-        return NoteWriterTool(notes_dir=notes_dir, db_manager=db_manager, embedder=embedder)
+        return SaveNoteTool(notes_dir=notes_dir, db_manager=db_manager, embedder=embedder)
     if name in {"query_knowledge", "scan_inbox"}:
         return cls(db_manager=db_manager)  # type: ignore[call-arg]
     return cls()
@@ -39,7 +39,7 @@ class ToolCatalog:
         if include_defaults:
             self.register(SystemInfoTool)
             self.register(ReadResourceTool)
-            self.register(NoteWriterTool)
+            self.register(SaveNoteTool)
             self.register(QueryKnowledgeTool)
             self.register(ScanInboxTool)
 

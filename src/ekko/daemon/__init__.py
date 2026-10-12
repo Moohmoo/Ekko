@@ -1,6 +1,5 @@
 """Daemon package providing scheduling, hardware confinement, and IPC server."""
 
-from ekko.daemon.distiller import SignalDistiller
 from ekko.daemon.ipc_client import IPCClient, IPCClientError
 from ekko.daemon.resources import ResourceManager
 from ekko.daemon.scheduler import IngestionCoordinator
@@ -14,6 +13,5 @@ __all__ = [
     "IPCServer",
     "IngestionCoordinator",
     "ResourceManager",
-    "SignalDistiller",
     "run_daemon",
 ]

@@ -8,10 +8,10 @@ from typing import Any
 
 from ekko.config.loader import load_sources_config
 from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
-from ekko.daemon.distiller import SignalDistiller
 from ekko.ingestion.connectors.base import BaseConnector
 from ekko.ingestion.connectors.rest_api import RestApiConnector
 from ekko.ingestion.connectors.rss import RssConnector
+from ekko.ingestion.distiller import SignalDistiller
 from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.models import RawSignal, SourceState
 from ekko.logger import get_logger

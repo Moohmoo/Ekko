@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from ekko.core.models import ModelResponse
-from ekko.daemon.distiller import SignalDistiller
+from ekko.ingestion.distiller import SignalDistiller
 from ekko.memory.models import RawSignal, SignalStatus
 
 

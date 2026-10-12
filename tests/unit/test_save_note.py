@@ -1,4 +1,4 @@
-"""Unit tests for NoteWriterTool, SaveNoteInput, slugification, and atomic markdown note creation."""
+"""Unit tests for SaveNoteTool, SaveNoteInput, slugification, and atomic markdown note creation."""
 
 from pathlib import Path
 import pytest
@@ -6,8 +6,8 @@ from pydantic import ValidationError
 
 from ekko.core.models import ToolResult
 from ekko.tools.base import BaseTool
-from ekko.tools.note_writer import (
-    NoteWriterTool,
+from ekko.tools.save_note import (
+    SaveNoteTool,
     SaveNoteInput,
     _determine_unique_path,
     _format_markdown_note,
@@ -48,9 +48,9 @@ def test_save_note_input_validation_empty_fields() -> None:
         SaveNoteInput(title="Titre", content="")
 
 
-def test_note_writer_tool_contract() -> None:
-    """Ensure NoteWriterTool adheres to BaseTool protocol and exposes schema."""
-    tool = NoteWriterTool()
+def test_save_note_tool_contract() -> None:
+    """Ensure SaveNoteTool adheres to BaseTool protocol and exposes schema."""
+    tool = SaveNoteTool()
     assert isinstance(tool, BaseTool)
     assert tool.name == "save_note"
     assert tool.args_schema is SaveNoteInput
@@ -147,9 +147,9 @@ def test_determine_unique_path_collision_avoidance(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_note_writer_run_nominal(tmp_path: Path) -> None:
-    """Ensure NoteWriterTool writes note cleanly to target notes directory."""
-    tool = NoteWriterTool(notes_dir=tmp_path)
+async def test_save_note_run_nominal(tmp_path: Path) -> None:
+    """Ensure SaveNoteTool writes note cleanly to target notes directory."""
+    tool = SaveNoteTool(notes_dir=tmp_path)
     result = await tool._run(
         title="DNA Folding Analysis",
         content="Synthèse approfondie sur le repliement de séquences.",
@@ -169,9 +169,9 @@ async def test_note_writer_run_nominal(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_note_writer_security_path_traversal(tmp_path: Path) -> None:
+async def test_save_note_security_path_traversal(tmp_path: Path) -> None:
     """Ensure path traversal attempts are safely quarantined within notes_dir."""
-    tool = NoteWriterTool(notes_dir=tmp_path)
+    tool = SaveNoteTool(notes_dir=tmp_path)
     result = await tool._run(
         title="../../etc/passwd",
         content="Contenu malveillant.",
@@ -188,12 +188,12 @@ async def test_note_writer_security_path_traversal(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_note_writer_explicit_path_traversal_rejection(tmp_path: Path) -> None:
+async def test_save_note_explicit_path_traversal_rejection(tmp_path: Path) -> None:
     """Ensure that if an absolute escape path is directly injected, it is blocked."""
-    tool = NoteWriterTool(notes_dir=tmp_path)
+    tool = SaveNoteTool(notes_dir=tmp_path)
 
     # Monkeypatch slugify to simulate an evasion bypass returning path separators
-    import ekko.tools.note_writer as nw
+    import ekko.tools.save_note as nw
     original_slugify = nw._slugify
     try:
         nw._slugify = lambda t: "../escaped_note"
@@ -206,8 +206,8 @@ async def test_note_writer_explicit_path_traversal_rejection(tmp_path: Path) -> 
 
 
 @pytest.mark.asyncio
-async def test_note_writer_with_hybrid_memory_injection(tmp_path: Path) -> None:
-    """Ensure NoteWriterTool persists note to disk and updates hybrid store and embeddings."""
+async def test_save_note_with_hybrid_memory_injection(tmp_path: Path) -> None:
+    """Ensure SaveNoteTool persists note to disk and updates hybrid store and embeddings."""
     from unittest.mock import AsyncMock, MagicMock
 
     mock_db = MagicMock()
@@ -215,7 +215,7 @@ async def test_note_writer_with_hybrid_memory_injection(tmp_path: Path) -> None:
     mock_embedder = MagicMock()
     mock_embedder.embed_query.return_value = [0.1] * 384
 
-    tool = NoteWriterTool(notes_dir=tmp_path, db_manager=mock_db, embedder=mock_embedder)
+    tool = SaveNoteTool(notes_dir=tmp_path, db_manager=mock_db, embedder=mock_embedder)
     result = await tool._run(
         title="CRISPR Analysis",
         content="Research into gene targeting precision.",

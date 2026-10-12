@@ -6,8 +6,8 @@ import pytest
 from ekko.core.models import ToolResult
 from ekko.tools.base import BaseTool
 from ekko.tools.catalog import ToolCatalog
-from ekko.tools.note_writer import NoteWriterTool
 from ekko.tools.read_resource import ReadResourceTool
+from ekko.tools.save_note import SaveNoteTool
 from ekko.tools.system_info import SystemInfoTool
 
 
@@ -46,9 +46,9 @@ def test_catalog_default_includes_read_resource() -> None:
 
 
 def test_catalog_default_includes_save_note() -> None:
-    """Ensure default catalog contains NoteWriterTool."""
+    """Ensure default catalog contains SaveNoteTool."""
     catalog = ToolCatalog(include_defaults=True)
-    assert catalog.get_class("save_note") is NoteWriterTool
+    assert catalog.get_class("save_note") is SaveNoteTool
 
 
 def test_catalog_default_includes_query_knowledge() -> None:
@@ -91,7 +91,7 @@ def test_catalog_build_registry_injects_dependencies() -> None:
     )
 
     save_note = registry.get("save_note")
-    assert isinstance(save_note, NoteWriterTool)
+    assert isinstance(save_note, SaveNoteTool)
     assert save_note.db_manager is mock_db
 
     query_tool = registry.get("query_knowledge")

@@ -1,4 +1,4 @@
-"""Integration test verifying end-to-end ReAct flow with NoteWriterTool and EkkoEngine."""
+"""Integration test verifying end-to-end ReAct flow with SaveNoteTool and EkkoEngine."""
 
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -7,15 +7,15 @@ import pytest
 from ekko.core.engine import EkkoEngine
 from ekko.core.models import ModelResponse, ToolCall
 from ekko.memory.in_memory import InMemoryMemory
-from ekko.tools.note_writer import NoteWriterTool
 from ekko.tools.registry import ToolRegistry
+from ekko.tools.save_note import SaveNoteTool
 
 
 @pytest.mark.asyncio
 async def test_save_note_tool_integration_in_engine(tmp_path: Path) -> None:
-    """Ensure engine delegates to NoteWriterTool and physically writes markdown file."""
+    """Ensure engine delegates to SaveNoteTool and physically writes markdown file."""
     registry = ToolRegistry()
-    note_tool = NoteWriterTool(notes_dir=tmp_path)
+    note_tool = SaveNoteTool(notes_dir=tmp_path)
     registry.register(note_tool)
 
     mock_provider = AsyncMock()

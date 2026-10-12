@@ -1,4 +1,4 @@
-"""NoteWriterTool persisting notes both to Obsidian Markdown files and the SQLite hybrid store."""
+"""SaveNoteTool persisting notes both to Obsidian Markdown files and the SQLite hybrid store."""
 
 import asyncio
 from datetime import datetime, timezone
@@ -14,7 +14,7 @@ from ekko.memory.models import KnowledgeNote
 from ekko.tools.base import BaseTool
 from ekko.logger import get_logger
 
-logger = get_logger("tools.note_writer")
+logger = get_logger("tools.save_note")
 
 
 class SaveNoteInput(BaseModel):
@@ -136,7 +136,7 @@ async def _sync_hybrid_store(
     logger.info("Note '%s' synced to hybrid memory store.", note.slug)
 
 
-class NoteWriterTool(BaseTool):
+class SaveNoteTool(BaseTool):
     """Save synthesized reports and research notes into local Markdown files and hybrid DB."""
 
     name: str = "save_note"

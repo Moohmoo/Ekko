@@ -11,6 +11,7 @@ from ekko.ingestion.connectors import (
     RestApiConnector,
     RssConnector,
 )
+from ekko.ingestion.distiller import SignalDistiller
 from ekko.ingestion.rate_limiter import DomainRateLimiter, TokenBucket
 from ekko.ingestion.ssrf import SSRFValidator, SSRFViolationError
 
@@ -25,5 +26,6 @@ __all__ = [
     "RssConnector",
     "SSRFValidator",
     "SSRFViolationError",
+    "SignalDistiller",
     "TokenBucket",
 ]

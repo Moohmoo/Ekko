@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ekko.core.engine import EkkoEngine
-from ekko.daemon.distiller import SignalDistiller
+from ekko.ingestion.distiller import SignalDistiller
 from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.models import RawSignal, SignalStatus
 from ekko.logger import get_logger

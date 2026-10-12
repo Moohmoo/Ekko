@@ -9,16 +9,15 @@ from typing import Any
 
 from ekko.core.models import Message
 from ekko.core.ports import HybridMemoryPort, LLMProviderPort
-from ekko.daemon.resources import ResourceManager
 from ekko.logger import get_logger
 from ekko.memory.models import KnowledgeNote, RawSignal
-from ekko.tools.note_writer import (
+from ekko.tools.save_note import (
     _determine_unique_path,
     _format_markdown_note,
     _slugify,
 )
 
-logger = get_logger("daemon.distiller")
+logger = get_logger("ingestion.distiller")
 
 
 def _build_distill_prompt(signal: RawSignal) -> str:
@@ -67,12 +66,13 @@ class SignalDistiller:
         llm_provider: LLMProviderPort,
         notes_dir: Path | str = "data/notes",
         embedder: Any | None = None,
+        resource_manager: Any | None = None,
     ) -> None:
         self.store = store
         self.llm_provider = llm_provider
         self.notes_dir = Path(notes_dir)
         self.embedder = embedder
-        self.resource_manager = ResourceManager()
+        self.resource_manager = resource_manager
 
     def _write_physical_note(self, note: KnowledgeNote, date_str: str, slug: str) -> None:
         """Write note markdown file with YAML frontmatter to notes directory."""
@@ -120,7 +120,10 @@ class SignalDistiller:
         """Run LLM inference with VRAM confinement and save distilled note."""
         prompt = _build_distill_prompt(signal)
         messages = [Message(role="user", content=prompt)]
-        call_kwargs = self.resource_manager.inject_unload_vram()
+        if self.resource_manager is not None and hasattr(self.resource_manager, "inject_unload_vram"):
+            call_kwargs = self.resource_manager.inject_unload_vram()
+        else:
+            call_kwargs = {"extra_body": {"keep_alive": 0}}
 
         response = await self.llm_provider.generate(messages, **call_kwargs)
         title, summary, body, tags = _parse_distillation(response.content, signal.title)

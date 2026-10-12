@@ -7,10 +7,10 @@ import signal
 from ekko.config.loader import load_core_prompt, load_plugins_config, load_user_context
 from ekko.core.engine import EkkoEngine
 from ekko.core.prompt import build_system_prompt
-from ekko.daemon.distiller import SignalDistiller
 from ekko.daemon.resources import ResourceManager
 from ekko.daemon.scheduler import IngestionCoordinator
 from ekko.daemon.server import DEFAULT_SOCKET_PATH, IPCServer
+from ekko.ingestion.distiller import SignalDistiller
 from ekko.logger import get_logger, setup_logger
 from ekko.memory.hybrid_store import HybridStore
 from ekko.memory.sqlite_memory import SqliteMemory
