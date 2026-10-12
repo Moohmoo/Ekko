@@ -101,7 +101,7 @@ class ResilientHttpClient:
         for attempt in range(self.max_retries + 1):
             try:
                 resp = await self._client.get(url, params=params, headers=headers)
-                if resp.status_code in {429, 503} and attempt < self.max_retries:
+                if resp.status_code in {429, 502, 503, 504} and attempt < self.max_retries:
                     retry_after = resp.headers.get("retry-after")
                     wait_time = float(retry_after) if retry_after and retry_after.isdigit() else self._calculate_backoff(attempt)
                     await asyncio.sleep(wait_time)
@@ -171,7 +171,13 @@ class ResilientHttpClient:
                 current_last_modified = None
                 continue
 
-            resp.raise_for_status()
+            try:
+                resp.raise_for_status()
+            except httpx.HTTPStatusError as err:
+                raise HttpFetchError(
+                    f"HTTP {err.response.status_code} error for '{current_url}': {err}"
+                ) from err
+
             return HttpResponseResult(
                 status_code=resp.status_code,
                 not_modified=False,

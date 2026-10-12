@@ -223,3 +223,52 @@ async def test_resilient_http_client_blocks_ssrf_on_redirect_target() -> None:
             await client.get("https://api.example.com/feed")
 
     await client.close()
+
+
+@pytest.mark.asyncio
+async def test_resilient_http_client_retries_on_gateway_errors() -> None:
+    """Ensure client retries 502 and 504 errors before succeeding."""
+    client = ResilientHttpClient(max_retries=2, base_backoff=0.01, jitter=0.01)
+
+    bad_gateway_resp = httpx.Response(
+        status_code=502,
+        request=httpx.Request("GET", "https://api.example.com/gw"),
+    )
+    success_resp = httpx.Response(
+        status_code=200,
+        text="Gateway recovered",
+        request=httpx.Request("GET", "https://api.example.com/gw"),
+    )
+
+    with patch.object(client.ssrf_validator, "validate_url", side_effect=lambda u: u):
+        with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = [bad_gateway_resp, success_resp]
+
+            result = await client.get("https://api.example.com/gw")
+            assert result.status_code == 200
+            assert result.text == "Gateway recovered"
+            assert mock_get.call_count == 2
+
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_resilient_http_client_encapsulates_http_status_error() -> None:
+    """Ensure HTTPStatusError (e.g. 404 Not Found) is wrapped in HttpFetchError."""
+    from ekko.ingestion.client import HttpFetchError
+
+    client = ResilientHttpClient()
+
+    not_found_resp = httpx.Response(
+        status_code=404,
+        request=httpx.Request("GET", "https://api.example.com/missing"),
+    )
+
+    with patch.object(client.ssrf_validator, "validate_url", side_effect=lambda u: u):
+        with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = not_found_resp
+
+            with pytest.raises(HttpFetchError, match="HTTP 404 error"):
+                await client.get("https://api.example.com/missing")
+
+    await client.close()
