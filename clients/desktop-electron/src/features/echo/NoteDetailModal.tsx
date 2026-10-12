@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import type { NoteItem } from '../../core/types';
-import { X, Copy, Check, ExternalLink, Calendar, Tag, FileText } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, Calendar, Tag, FileText, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SPRING_SNAPPY } from '../../design-system/tokens';
+import { MarkdownRenderer } from './MarkdownRenderer';
+import { formatSourceDisplay, normalizeTag } from '../../core/utils/formatters';
 
 interface NoteDetailModalProps {
   note: NoteItem;
@@ -64,8 +66,8 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   };
 
   const formattedDate = formatDate(note.created_at);
-  const primarySource = (note.sources && note.sources[0]) || note.source;
-  const isWebUrl = primarySource && (primarySource.startsWith('http://') || primarySource.startsWith('https://'));
+  const primarySourceRaw = (note.sources && note.sources[0]) || note.source;
+  const sourceInfo = formatSourceDisplay(primarySourceRaw);
 
   return (
     <motion.div
@@ -73,7 +75,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="absolute inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3"
+      className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 select-none"
       onClick={onClose}
     >
       <motion.div
@@ -82,13 +84,13 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         exit={{ scale: 0.96, opacity: 0, y: 8 }}
         transition={SPRING_SNAPPY}
         onClick={(e) => e.stopPropagation()}
-        className="w-full h-full max-h-[420px] bg-surfaceCard border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl text-slate-100"
+        className="w-full h-full max-h-[85vh] bg-surfaceCard border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl text-slate-100"
       >
-        {/* Header bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.08] bg-white/[0.02] shrink-0">
+        {/* 1. Header bar (shrink-0) */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.08] bg-white/[0.02] shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="p-1 rounded-md bg-sky-500/10 text-sky-400">
-              <FileText className="w-4 h-4" />
+            <span className="p-1 rounded-md bg-sky-500/10 text-sky-400 shrink-0">
+              <FileText className="w-3.5 h-3.5" />
             </span>
             <span className="text-[11px] font-medium text-slate-400 truncate">
               Fiche de connaissance PKM
@@ -124,8 +126,8 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Content body */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3.5 text-xs">
+        {/* 2. Content body (flex-1 min-h-0 overflow-y-auto) */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3.5 text-xs min-h-0">
           {/* Title & Metadata */}
           <div className="space-y-1.5">
             <h2 className="text-base font-semibold text-slate-100 leading-snug">
@@ -140,26 +142,24 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                 </div>
               )}
 
-              {isWebUrl && (
+              {sourceInfo.isUrl ? (
                 <button
-                  onClick={() => handleOpenSource(primarySource)}
-                  className="flex items-center gap-1 text-sky-400 hover:text-sky-300 hover:underline max-w-[260px] truncate"
-                  title={primarySource}
+                  onClick={() => handleOpenSource(sourceInfo.raw)}
+                  className="flex items-center gap-1 text-sky-400 hover:text-sky-300 hover:underline max-w-[280px] truncate"
+                  title={sourceInfo.raw}
                 >
                   <ExternalLink className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{primarySource}</span>
+                  <span className="truncate">{sourceInfo.label}</span>
                 </button>
-              )}
-
-              {!isWebUrl && primarySource && (
-                <span className="text-slate-500 truncate max-w-[200px]">
-                  Source: {primarySource}
+              ) : (
+                <span className="text-slate-400 truncate max-w-[240px]">
+                  {sourceInfo.label}
                 </span>
               )}
 
               {note.score !== undefined && (
                 <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 text-[10px] font-mono">
-                  Score RRF {(note.score * 100).toFixed(1)}%
+                  ✦ hybride
                 </span>
               )}
             </div>
@@ -169,28 +169,48 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           {note.tags && note.tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
               <Tag className="w-3 h-3 text-slate-500 shrink-0" />
-              {note.tags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => {
-                    if (onSelectTag) {
-                      onSelectTag(tag);
-                      onClose();
-                    }
-                  }}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-white/[0.05] hover:bg-sky-500/20 text-slate-300 hover:text-sky-200 border border-white/5 transition-colors cursor-pointer"
-                  title={`Filtrer par #${tag}`}
-                >
-                  #{tag}
-                </button>
-              ))}
+              {note.tags.map((tag) => {
+                const norm = normalizeTag(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => {
+                      if (onSelectTag) {
+                        onSelectTag(norm);
+                        onClose();
+                      }
+                    }}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-white/[0.05] hover:bg-sky-500/20 text-slate-300 hover:text-sky-200 border border-white/5 transition-colors cursor-pointer"
+                    title={`Filtrer par #${norm}`}
+                  >
+                    #{norm}
+                  </button>
+                );
+              })}
             </div>
           )}
 
-          {/* Main Markdown Body */}
-          <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2 text-slate-300 leading-relaxed font-sans select-text whitespace-pre-wrap">
-            {note.content || note.summary}
+          {/* Main Markdown Body rendered with MarkdownRenderer */}
+          <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-slate-300 text-xs">
+            <MarkdownRenderer content={note.content || note.summary} />
           </div>
+        </div>
+
+        {/* 3. Footer bar (shrink-0 border-t) */}
+        <div className="flex items-center justify-between px-4 py-2 border-t border-zinc-800 bg-white/[0.01] shrink-0 text-[10.5px] text-slate-500">
+          <div className="flex items-center gap-1">
+            <span className="px-1.5 py-0.5 rounded bg-white/5 font-mono text-[9.5px] text-slate-400 border border-white/5">
+              Échap
+            </span>
+            <span>pour fermer</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            <span>Retour à la liste</span>
+          </button>
         </div>
       </motion.div>
     </motion.div>

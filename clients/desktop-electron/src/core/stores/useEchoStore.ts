@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { NoteItem } from '../types';
 
+export type EchoViewMode = 'browse' | 'search' | 'tag';
+
 interface EchoState {
   notes: NoteItem[];
   latestNote: NoteItem | null;
@@ -8,9 +10,14 @@ interface EchoState {
   isOffline: boolean;
   searchQuery: string;
   selectedTag: string | null;
+  viewMode: EchoViewMode;
+  searchSeq: number;
+
+  // Actions
   fetchNotes: () => Promise<void>;
   searchNotes: (query: string) => Promise<void>;
   filterByTag: (tag: string | null) => void;
+  refresh: () => Promise<void>;
   setLatestNote: (note: NoteItem) => void;
 }
 
@@ -50,6 +57,8 @@ export const useEchoStore = create<EchoState>((set, get) => ({
   isOffline: false,
   searchQuery: '',
   selectedTag: null,
+  viewMode: 'browse',
+  searchSeq: 0,
 
   setLatestNote: (note: NoteItem) => {
     set((state) => ({
@@ -59,11 +68,20 @@ export const useEchoStore = create<EchoState>((set, get) => ({
   },
 
   filterByTag: (tag: string | null) => {
-    set({ selectedTag: tag });
+    set((state) => ({
+      selectedTag: tag,
+      viewMode: tag ? 'tag' : state.searchQuery.trim() ? 'search' : 'browse',
+    }));
   },
 
   fetchNotes: async () => {
     if (!window.ekkoAPI) return;
+
+    // Strict heartbeat isolation: DO NOT overwrite active search results with browse notes
+    if (get().viewMode === 'search') {
+      return;
+    }
+
     set({ isLoading: true });
     try {
       const raw = await window.ekkoAPI.getNotes();
@@ -74,6 +92,7 @@ export const useEchoStore = create<EchoState>((set, get) => ({
           latestNote: mapped.length > 0 ? mapped[0] : null,
           isLoading: false,
           isOffline: false,
+          viewMode: get().selectedTag ? 'tag' : 'browse',
         });
       } else {
         // Non-array response (unexpected IPC reply) -> retain existing cache
@@ -87,8 +106,15 @@ export const useEchoStore = create<EchoState>((set, get) => ({
   },
 
   searchNotes: async (query: string) => {
-    set({ searchQuery: query });
     const trimmed = query.trim();
+
+    // Sequence tracking for IPC race condition elimination
+    const currentSeq = get().searchSeq + 1;
+    set({
+      searchQuery: query,
+      searchSeq: currentSeq,
+      viewMode: trimmed ? 'search' : get().selectedTag ? 'tag' : 'browse',
+    });
 
     if (!trimmed) {
       // Revert to full list of recent notes
@@ -97,13 +123,18 @@ export const useEchoStore = create<EchoState>((set, get) => ({
     }
 
     if (!window.ekkoAPI?.searchNotes) {
-      // Fallback local filtering if searchNotes IPC is absent
       return;
     }
 
     set({ isLoading: true });
     try {
       const raw = await window.ekkoAPI.searchNotes(trimmed, { mode: 'hybrid', limit: 30 });
+
+      // Discard stale responses if a newer keystroke has already fired
+      if (get().searchSeq !== currentSeq) {
+        return;
+      }
+
       if (Array.isArray(raw)) {
         const mapped = (raw as Record<string, unknown>[]).map(mapRawNote);
         set({
@@ -115,8 +146,18 @@ export const useEchoStore = create<EchoState>((set, get) => ({
         set({ isLoading: false });
       }
     } catch (e) {
+      if (get().searchSeq !== currentSeq) return;
       console.warn('[EchoStore] Erreur recherche hybride:', e);
       set({ isLoading: false, isOffline: true });
+    }
+  },
+
+  refresh: async () => {
+    const { searchQuery, viewMode } = get();
+    if (viewMode === 'search' && searchQuery.trim()) {
+      await get().searchNotes(searchQuery);
+    } else {
+      await get().fetchNotes();
     }
   },
 }));

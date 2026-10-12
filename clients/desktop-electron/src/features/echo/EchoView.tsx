@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { NoteItem } from '../../core/types';
 import { useEchoStore } from '../../core/stores/useEchoStore';
-import { Layers, Copy, Check, Search, X, AlertTriangle, Tag, Sparkles } from 'lucide-react';
+import { Layers, Copy, Check, Search, X, AlertTriangle, Tag, Sparkles, RotateCw } from 'lucide-react';
 import { NoteDetailModal } from './NoteDetailModal';
 import { AnimatePresence } from 'framer-motion';
+import { formatSourceDisplay, normalizeTag } from '../../core/utils/formatters';
 
 interface EchoViewProps {
   notes?: NoteItem[];
@@ -18,9 +19,9 @@ export const EchoView: React.FC<EchoViewProps> = () => {
   const isLoading = useEchoStore((state) => state.isLoading);
   const isOffline = useEchoStore((state) => state.isOffline);
   const selectedTag = useEchoStore((state) => state.selectedTag);
-  const fetchNotes = useEchoStore((state) => state.fetchNotes);
   const searchNotes = useEchoStore((state) => state.searchNotes);
   const filterByTag = useEchoStore((state) => state.filterByTag);
+  const refresh = useEchoStore((state) => state.refresh);
 
   const [searchInput, setSearchInput] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -38,9 +39,9 @@ export const EchoView: React.FC<EchoViewProps> = () => {
   // Client-side filtering by selected tag if set
   const displayedNotes = useMemo(() => {
     if (!selectedTag) return notes;
-    const lowerTag = selectedTag.toLowerCase();
+    const lowerTag = normalizeTag(selectedTag);
     return notes.filter((n) =>
-      n.tags.some((t) => t.toLowerCase() === lowerTag)
+      n.tags.some((t) => normalizeTag(t) === lowerTag)
     );
   }, [notes, selectedTag]);
 
@@ -73,8 +74,8 @@ export const EchoView: React.FC<EchoViewProps> = () => {
         </div>
       )}
 
-      {/* Top Bar: Search Input + Refresh Button */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* Top Bar: Search Input + Compact Icon Refresh Button */}
+      <div className="flex items-center gap-1.5 shrink-0">
         <div className="flex-1 relative flex items-center">
           <Search className="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none" />
           <input
@@ -95,12 +96,14 @@ export const EchoView: React.FC<EchoViewProps> = () => {
           )}
         </div>
 
+        {/* Compact reload icon button */}
         <button
-          onClick={() => fetchNotes()}
+          onClick={() => refresh()}
           disabled={isLoading}
-          className="px-2.5 py-1.5 text-[11px] font-medium text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 rounded-xl disabled:opacity-40 transition-colors shrink-0"
+          className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-400 hover:text-sky-300 disabled:opacity-40 transition-colors shrink-0"
+          title="Actualiser la liste (conserve la recherche en cours)"
         >
-          {isLoading ? 'Sync...' : 'Rafraîchir'}
+          <RotateCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-sky-400' : ''}`} />
         </button>
       </div>
 
@@ -174,67 +177,77 @@ export const EchoView: React.FC<EchoViewProps> = () => {
             )}
           </div>
         ) : (
-          displayedNotes.map((note) => (
-            <div
-              key={note.id}
-              onClick={() => setActiveNote(note)}
-              className="p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-sky-500/30 hover:bg-white/[0.05] transition-all cursor-pointer flex flex-col gap-1.5 group"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-semibold text-slate-100 text-[11px] line-clamp-1 group-hover:text-sky-200 transition-colors">
-                  {note.title}
-                </span>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {note.score !== undefined && (
-                    <span className="text-[9px] text-sky-400/80 font-mono px-1 rounded bg-sky-500/10">
-                      {(note.score * 100).toFixed(0)}%
-                    </span>
-                  )}
-                  <button
-                    onClick={(e) => handleCopy(e, note)}
-                    className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors"
-                    title="Copier en Markdown"
-                  >
-                    {copiedId === note.id ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
+          displayedNotes.map((note) => {
+            const primarySource = (note.sources && note.sources[0]) || note.source;
+            const sourceDisplay = formatSourceDisplay(primarySource);
+
+            return (
+              <div
+                key={note.id}
+                onClick={() => setActiveNote(note)}
+                className="p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-sky-500/30 hover:bg-white/[0.05] transition-all cursor-pointer flex flex-col gap-1.5 group"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-semibold text-slate-100 text-[11px] line-clamp-1 group-hover:text-sky-200 transition-colors">
+                    {note.title}
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {note.score !== undefined && (
+                      <span className="text-[9.5px] text-sky-400 font-mono px-1 rounded bg-sky-500/10">
+                        ✦ hybride
+                      </span>
                     )}
-                  </button>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
-                {note.summary}
-              </p>
-
-              <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                <span className="truncate max-w-[180px]">{note.source}</span>
-                <div className="flex items-center gap-1 shrink-0">
-                  {note.tags.slice(0, 3).map((tag) => (
                     <button
-                      key={tag}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        filterByTag(tag);
-                      }}
-                      className={`px-1.5 py-0.5 rounded transition-colors ${
-                        selectedTag === tag
-                          ? 'bg-sky-500/20 text-sky-300 font-medium'
-                          : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
-                      }`}
-                      title={`Filtrer par #${tag}`}
+                      onClick={(e) => handleCopy(e, note)}
+                      className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-slate-200 transition-colors"
+                      title="Copier en Markdown"
                     >
-                      #{tag}
+                      {copiedId === note.id ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
                     </button>
-                  ))}
-                  {note.tags.length > 3 && (
-                    <span className="text-[9px] text-slate-500">+{note.tags.length - 3}</span>
-                  )}
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                  {note.summary}
+                </p>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                  <span className="truncate max-w-[200px]" title={sourceDisplay.raw}>
+                    {sourceDisplay.label}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {note.tags.slice(0, 3).map((tag) => {
+                      const norm = normalizeTag(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            filterByTag(norm);
+                          }}
+                          className={`px-1.5 py-0.5 rounded transition-colors ${
+                            selectedTag === norm
+                              ? 'bg-sky-500/20 text-sky-300 font-medium'
+                              : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
+                          }`}
+                          title={`Filtrer par #${norm}`}
+                        >
+                          #{norm}
+                        </button>
+                      );
+                    })}
+                    {note.tags.length > 3 && (
+                      <span className="text-[9px] text-slate-500">+{note.tags.length - 3}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
