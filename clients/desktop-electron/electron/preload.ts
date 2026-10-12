@@ -40,6 +40,7 @@ export interface EkkoAPI {
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
+  onToolEvent: (callback: (event: any) => void) => () => void;
 }
 
 const api: EkkoAPI = {
@@ -71,6 +72,13 @@ const api: EkkoAPI = {
     ipcRenderer.on('daemon:prompt_chunk', handler);
     return () => {
       ipcRenderer.removeListener('daemon:prompt_chunk', handler);
+    };
+  },
+  onToolEvent: (callback: (event: any) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, eventData: any) => callback(eventData);
+    ipcRenderer.on('daemon:tool_event', handler);
+    return () => {
+      ipcRenderer.removeListener('daemon:tool_event', handler);
     };
   },
 };

@@ -223,6 +223,9 @@ ipcMain.handle('daemon:submit_prompt', async (event, prompt: string) => {
       },
       (err) => {
         reject(new Error(err));
+      },
+      (toolEvent) => {
+        event.sender.send('daemon:tool_event', toolEvent);
       }
     );
   });

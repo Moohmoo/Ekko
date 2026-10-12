@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { ChatMessage } from './core/types';
 import { useDaemonHeartbeat } from './core/hooks/useDaemonHeartbeat';
 import { useEchoStore } from './core/stores/useEchoStore';
 import { useViewStore } from './core/stores/useViewStore';
@@ -18,76 +17,6 @@ export const App: React.FC = () => {
 
   const { viewMode, setViewMode } = useViewStore();
   const { notes, isLoading: isLoadingNotes, fetchNotes } = useEchoStore();
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Handle Send Message
-  const handleSendMessage = async (text: string) => {
-    if (!window.ekkoAPI) return;
-
-    const userMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      sender: 'user',
-      content: text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    setIsStreaming(true);
-    setErrorMessage(null);
-
-    const assistantMsgId = `bot-${Date.now()}`;
-    let accumulated = '';
-
-    const cleanup = window.ekkoAPI.onPromptChunk((chunk) => {
-      accumulated += chunk;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last && last.id === assistantMsgId) {
-          return [...prev.slice(0, -1), { ...last, content: accumulated }];
-        } else {
-          return [
-            ...prev,
-            {
-              id: assistantMsgId,
-              sender: 'ekko',
-              content: accumulated,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            },
-          ];
-        }
-      });
-    });
-
-    try {
-      const fullResponse = await window.ekkoAPI.submitPrompt(text);
-      setIsStreaming(false);
-      cleanup();
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last && last.id === assistantMsgId) {
-          return [...prev.slice(0, -1), { ...last, content: fullResponse }];
-        } else {
-          return [
-            ...prev,
-            {
-              id: assistantMsgId,
-              sender: 'ekko',
-              content: fullResponse,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            },
-          ];
-        }
-      });
-    } catch (e: unknown) {
-      cleanup();
-      setIsStreaming(false);
-      setErrorMessage((e as Error).message || 'Erreur lors de la réponse.');
-    }
-  };
-
 
   const handleClose = () => {
     window.ekkoAPI?.closeWindow();
@@ -151,12 +80,7 @@ export const App: React.FC = () => {
               transition={SPRING_SNAPPY}
               className="flex-1 flex flex-col overflow-hidden"
             >
-              <ChatView
-                messages={messages}
-                onSendMessage={handleSendMessage}
-                isStreaming={isStreaming}
-                errorMessage={errorMessage}
-              />
+              <ChatView />
             </motion.div>
           )}
 

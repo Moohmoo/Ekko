@@ -10,11 +10,22 @@ export interface NoteItem {
   score?: number;
 }
 
+export interface ToolCallStep {
+  id: string;
+  tool: string;
+  input?: Record<string, unknown>;
+  output?: string;
+  status: 'running' | 'completed' | 'error';
+  duration_ms?: number;
+}
+
 export interface ChatMessage {
   id: string;
-  sender: 'user' | 'ekko';
+  sender: 'user' | 'assistant';
   content: string;
-  timestamp: string;
+  timestamp: number;
+  status: 'pending' | 'streaming' | 'complete' | 'error';
+  toolCalls?: ToolCallStep[];
 }
 
 export type PodTab = 'home' | 'chat' | 'echo';
@@ -71,6 +82,7 @@ export interface EkkoAPI {
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
+  onToolEvent: (callback: (event: any) => void) => () => void;
 }
 
 declare global {

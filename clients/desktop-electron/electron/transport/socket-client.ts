@@ -86,6 +86,16 @@ export function sendJsonRpc<T = unknown>(
   });
 }
 
+export interface ToolEventPayload {
+  type: 'tool_call_started' | 'tool_call_completed';
+  tool_call_id: string;
+  tool_name: string;
+  arguments?: Record<string, unknown>;
+  success?: boolean;
+  summary?: string;
+  duration_ms?: number;
+}
+
 /**
  * Stream prompt execution over UNIX domain socket line-by-line (NDJSON EngineEvents).
  */
@@ -94,6 +104,7 @@ export function streamPrompt(
   onChunk: (chunk: string) => void,
   onComplete: (fullText: string) => void,
   onError: (error: string) => void,
+  onToolEvent?: (event: ToolEventPayload) => void,
   socketPath: string = DEFAULT_SOCKET_PATH
 ): void {
   console.log(`[IPC:REQ] streamPrompt started on ${socketPath}`);
@@ -136,6 +147,22 @@ export function streamPrompt(
         if (type === 'token_chunk') {
           fullText += evt.delta || '';
           onChunk(evt.delta || '');
+        } else if (type === 'tool_call_started' || type === 'ToolCallStarted') {
+          onToolEvent?.({
+            type: 'tool_call_started',
+            tool_call_id: evt.tool_call_id,
+            tool_name: evt.tool_name,
+            arguments: evt.arguments,
+          });
+        } else if (type === 'tool_call_completed' || type === 'ToolCallCompleted') {
+          onToolEvent?.({
+            type: 'tool_call_completed',
+            tool_call_id: evt.tool_call_id,
+            tool_name: evt.tool_name,
+            success: evt.success,
+            summary: evt.summary,
+            duration_ms: evt.duration_ms,
+          });
         } else if (type === 'turn_completed' || type === 'TurnCompleted') {
           const finalAns = evt.response || fullText;
           console.log(`[IPC:RES] streamPrompt completed (${finalAns.length} chars)`);
