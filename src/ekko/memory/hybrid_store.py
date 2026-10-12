@@ -1,6 +1,8 @@
 """Thread-safe SQLite database manager for Ekko unified persistence and hybrid search."""
 
 import asyncio
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import datetime
 import json
 from pathlib import Path
@@ -72,7 +74,7 @@ class HybridStore:
         if auto_init:
             self.init_schema()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    def _create_connection(self) -> sqlite3.Connection:
         """Create connection with sqlite-vec extension, WAL mode, timeout, and foreign keys enabled."""
         conn = sqlite3.connect(self.db_path, timeout=10.0)
         conn.row_factory = sqlite3.Row
@@ -83,30 +85,35 @@ class HybridStore:
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
 
+    @contextmanager
+    def _connection(self) -> Generator[sqlite3.Connection, None, None]:
+        """Context manager guaranteeing connection closure and transaction commit/rollback."""
+        conn = self._create_connection()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
+    def _get_connection(self) -> sqlite3.Connection:
+        """Create standalone connection for backwards compatibility (prefer _connection context manager)."""
+        return self._create_connection()
+
     def init_schema(self) -> None:
         """Initialize unified database tables, FTS5 index, and vec0 virtual tables."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.executescript(INIT_UNIFIED_SCHEMA_SQL)
-            cols = {row["name"] for row in conn.execute("PRAGMA table_info(raw_signals);").fetchall()}
-            if "source_type" not in cols:
-                conn.execute("ALTER TABLE raw_signals ADD COLUMN source_type TEXT;")
-            if "source_url" not in cols:
-                conn.execute("ALTER TABLE raw_signals ADD COLUMN source_url TEXT;")
-            if "summary" not in cols:
-                conn.execute("ALTER TABLE raw_signals ADD COLUMN summary TEXT;")
-            if "created_at" not in cols:
-                conn.execute("ALTER TABLE raw_signals ADD COLUMN created_at TEXT;")
         logger.debug("Unified SQLite schema initialized at %s", self.db_path)
 
     def is_wal_mode(self) -> bool:
         """Check if SQLite is configured in WAL journal mode."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             row = conn.execute("PRAGMA journal_mode;").fetchone()
             return bool(row and row[0].lower() == "wal")
 
     def get_table_names(self) -> list[str]:
         """Fetch list of all user-defined table names in the database."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             rows = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
             ).fetchall()
@@ -128,7 +135,7 @@ class HybridStore:
             consecutive_errors = excluded.consecutive_errors,
             backoff_until = excluded.backoff_until;
         """
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.execute(
                 sql,
                 (
@@ -151,7 +158,7 @@ class HybridStore:
     def _get_source_state_sync(self, source_id: str) -> SourceState | None:
         """Retrieve source state by identifier synchronously."""
         sql = "SELECT * FROM source_states WHERE id = ?;"
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             row = conn.execute(sql, (source_id,)).fetchone()
             if not row:
                 return None
@@ -174,7 +181,7 @@ class HybridStore:
     def _list_source_states_sync(self) -> list[SourceState]:
         """Fetch all source states synchronously."""
         sql = "SELECT * FROM source_states ORDER BY id ASC;"
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             rows = conn.execute(sql).fetchall()
             return [
                 SourceState(
@@ -204,7 +211,7 @@ class HybridStore:
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         inserted_count = 0
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             for s in signals:
                 cur = conn.execute(
                     sql,
@@ -249,7 +256,7 @@ class HybridStore:
         sql = f"SELECT * FROM raw_signals {where} ORDER BY ingested_at DESC LIMIT ?;"
         params.append(limit)
 
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             rows = conn.execute(sql, tuple(params)).fetchall()
             return [
                 RawSignal(
@@ -280,7 +287,7 @@ class HybridStore:
     def _update_signal_status_sync(self, signal_id: str, status: SignalStatus) -> None:
         """Update signal status synchronously."""
         sql = "UPDATE raw_signals SET status = ? WHERE id = ?;"
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.execute(sql, (status.value, signal_id))
 
     async def update_signal_status(self, signal_id: str, status: SignalStatus) -> None:
@@ -299,7 +306,7 @@ class HybridStore:
     def _get_retained_signals_sync(self, limit: int = 5) -> list[dict[str, str | None]]:
         """Fetch pending retained signals for UC-1 proactive alert."""
         sql = """
-        SELECT id, title, COALESCE(source_type, source_id, 'veille') as source_type,
+        SELECT id, title, COALESCE(source_type, source_id, '') as source_type,
                COALESCE(source_url, url, '') as source_url,
                COALESCE(summary, raw_content, clean_content, '') as summary,
                COALESCE(created_at, ingested_at) as created_at
@@ -308,7 +315,7 @@ class HybridStore:
         ORDER BY COALESCE(created_at, ingested_at) DESC
         LIMIT ?;
         """
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             rows = conn.execute(sql, (limit,)).fetchall()
             return [
                 {
@@ -329,7 +336,7 @@ class HybridStore:
     def _get_raw_signal_by_id_sync(self, signal_id: str) -> dict[str, object] | None:
         """Fetch raw signal record by ID synchronously."""
         sql = "SELECT * FROM raw_signals WHERE id = ?;"
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             row = conn.execute(sql, (signal_id,)).fetchone()
             return dict(row) if row else None
 
@@ -346,7 +353,7 @@ class HybridStore:
 
         sql_check = "SELECT id FROM raw_signals WHERE id = ?;"
         sql_update = "UPDATE raw_signals SET status = ? WHERE id = ?;"
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             exists = conn.execute(sql_check, (signal_id,)).fetchone()
             if not exists:
                 return False
@@ -367,7 +374,8 @@ class HybridStore:
         INSERT INTO knowledge_notes (
             id, slug, title, summary, content, tags, sources, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(slug) DO UPDATE SET
+        ON CONFLICT(id) DO UPDATE SET
+            slug = excluded.slug,
             title = excluded.title,
             summary = excluded.summary,
             content = excluded.content,
@@ -376,7 +384,7 @@ class HybridStore:
             updated_at = excluded.updated_at;
         """
         tags_json = json.dumps(note.tags)
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.execute(
                 insert_note_sql,
                 (
@@ -417,7 +425,7 @@ class HybridStore:
     def _get_knowledge_note_by_slug_sync(self, slug: str) -> KnowledgeNote | None:
         """Query knowledge note by unique slug synchronously."""
         sql = "SELECT * FROM knowledge_notes WHERE slug = ?;"
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             row = conn.execute(sql, (slug,)).fetchone()
             return _row_to_knowledge_note(row) if row else None
 
@@ -428,7 +436,7 @@ class HybridStore:
     def _list_knowledge_notes_sync(self, limit: int) -> list[KnowledgeNote]:
         """List knowledge notes ordered by creation time synchronously."""
         sql = "SELECT * FROM knowledge_notes ORDER BY created_at DESC LIMIT ?;"
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             rows = conn.execute(sql, (limit,)).fetchall()
             return [_row_to_knowledge_note(row) for row in rows]
 
@@ -466,10 +474,11 @@ class HybridStore:
         k: int,
     ) -> list[tuple[KnowledgeNote, float]]:
         """Execute hybrid, lexical, or semantic note retrieval using RRF fusion."""
-        with self._get_connection() as conn:
-            fts_ranks = self._run_fts_search(conn, query, limit * 3) if mode in {"lexical", "hybrid"} else {}
+        candidate_pool_size = max(limit * 5, 50)
+        with self._connection() as conn:
+            fts_ranks = self._run_fts_search(conn, query, candidate_pool_size) if mode in {"lexical", "hybrid"} else {}
             vec_ranks = (
-                self._run_vec_search(conn, query_embedding, limit * 3)
+                self._run_vec_search(conn, query_embedding, candidate_pool_size)
                 if mode in {"semantic", "hybrid"} and query_embedding is not None
                 else {}
             )

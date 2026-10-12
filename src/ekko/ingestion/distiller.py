@@ -122,7 +122,11 @@ class SignalDistiller:
             created_at=now,
             updated_at=now,
         )
-        vec = self.embedder.embed_query(f"{title}\n{body}") if self.embedder else None
+        vec = (
+            await asyncio.to_thread(self.embedder.embed_query, f"{title}\n{body}")
+            if self.embedder
+            else None
+        )
         await self.store.save_knowledge_note(note, embedding=vec)
         await asyncio.to_thread(self._write_physical_note, note, date_str, slug)
         return note

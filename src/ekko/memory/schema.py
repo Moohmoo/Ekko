@@ -1,6 +1,8 @@
 """SQLite unified schema definitions and migrations for Ekko V2."""
 
-INIT_UNIFIED_SCHEMA_SQL = """
+from ekko.memory.embedder import EMBEDDING_DIM
+
+INIT_UNIFIED_SCHEMA_SQL = f"""
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
@@ -62,6 +64,6 @@ CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(
 
 CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_vectors USING vec0(
     note_id TEXT PRIMARY KEY,
-    embedding float[384]
+    embedding float[{EMBEDDING_DIM}]
 );
 """

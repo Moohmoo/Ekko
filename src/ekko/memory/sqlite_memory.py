@@ -1,6 +1,8 @@
 """Local-first SQLite session persistence adapter fulfilling MemoryPort."""
 
 import asyncio
+from collections.abc import Generator
+from contextlib import contextmanager
 import json
 from pathlib import Path
 import sqlite3
@@ -59,16 +61,26 @@ class SqliteMemory:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
+    def _create_connection(self) -> sqlite3.Connection:
         """Create a connection with busy timeout and WAL mode pragmas."""
         conn = sqlite3.connect(self.db_path, timeout=10.0)
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA busy_timeout = 10000;")
         return conn
 
+    @contextmanager
+    def _connection(self) -> Generator[sqlite3.Connection, None, None]:
+        """Context manager guaranteeing connection closure and transaction commit/rollback."""
+        conn = self._create_connection()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
     def _init_db(self) -> None:
         """Initialize SQLite database schema and WAL mode."""
-        with self._connect() as conn:
+        with self._connection() as conn:
             conn.executescript(INIT_SQL)
 
     def _insert_message_sync(self, session_id: str, message: Message) -> None:
@@ -78,7 +90,7 @@ class SqliteMemory:
             "INSERT INTO messages (session_id, role, content, tool_call_id, tool_calls_json) "
             "VALUES (?, ?, ?, ?, ?)"
         )
-        with self._connect() as conn:
+        with self._connection() as conn:
             conn.execute(
                 sql,
                 (session_id, message.role, message.content, message.tool_call_id, tool_calls_json),
@@ -86,7 +98,7 @@ class SqliteMemory:
 
     def _query_messages_sync(self, session_id: str, limit: int) -> list[Message]:
         """Fetch chronological messages bounded by limit synchronously."""
-        with self._connect() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(SELECT_MESSAGES_SQL, (session_id, limit))
             rows = cursor.fetchall()
@@ -106,7 +118,7 @@ class SqliteMemory:
 
     def _delete_session_sync(self, session_id: str) -> None:
         """Remove all messages for a session synchronously."""
-        with self._connect() as conn:
+        with self._connection() as conn:
             conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
 
     async def add_message(self, session_id: str, message: Message) -> None:

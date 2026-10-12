@@ -189,3 +189,34 @@ async def test_save_and_get_knowledge_note(db_manager: HybridStore) -> None:
     notes = await db_manager.list_knowledge_notes(limit=10)
     assert len(notes) == 1
     assert notes[0].slug == "2026-10-10-mistral-architecture"
+
+    # Upsert with same ID updates the note attributes properly
+    updated_note = KnowledgeNote(
+        id="note_1",
+        slug="2026-10-10-mistral-architecture-updated",
+        title="Mistral Architecture v2",
+        summary="Updated summary.",
+        content="# Mistral Architecture Updated",
+        tags=["ai", "llm", "mistral", "v2"],
+        sources=["https://mistral.ai/news/large-4"],
+    )
+    await db_manager.save_knowledge_note(updated_note)
+
+    fetched_updated = await db_manager.get_knowledge_note_by_slug("2026-10-10-mistral-architecture-updated")
+    assert fetched_updated is not None
+    assert fetched_updated.title == "Mistral Architecture v2"
+    assert fetched_updated.tags == ["ai", "llm", "mistral", "v2"]
+    assert len(await db_manager.list_knowledge_notes(limit=10)) == 1
+
+
+@pytest.mark.asyncio
+async def test_connection_closure_guaranteed(db_manager: HybridStore) -> None:
+    """Ensure _connection context manager cleanly closes the connection upon completion."""
+    captured_conn = None
+    with db_manager._connection() as conn:
+        captured_conn = conn
+        assert conn.total_changes is not None  # Connection is open
+
+    # After leaving the context, connection must be closed
+    with pytest.raises(Exception):
+        captured_conn.execute("SELECT 1;")

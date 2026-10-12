@@ -148,3 +148,15 @@ async def test_sqlite_memory_concurrent_access(tmp_path: Path) -> None:
     history_b = await mem_b.get_messages("sess_beta", limit=100)
     assert len(history_a) == 20
     assert len(history_b) == 20
+
+
+def test_sqlite_memory_connection_closure_guaranteed(tmp_path: Path) -> None:
+    """Ensure SqliteMemory._connection context manager closes connection on exit."""
+    mem = SqliteMemory(db_path=tmp_path / "leak_test.db")
+    captured_conn = None
+    with mem._connection() as conn:
+        captured_conn = conn
+        assert conn.total_changes is not None
+
+    with pytest.raises(Exception):
+        captured_conn.execute("SELECT 1;")

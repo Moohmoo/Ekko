@@ -1,5 +1,7 @@
 """CPU text embedding service encapsulating FastEmbed (bge-small-en-v1.5)."""
 
+import asyncio
+
 from fastembed import TextEmbedding
 
 from ekko.logger import get_logger
@@ -36,3 +38,11 @@ class TextEmbedder:
         """Generate embedding vector for a single query string."""
         results = self.embed([query])
         return results[0] if results else [0.0] * EMBEDDING_DIM
+
+    async def async_embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate dense embedding vectors asynchronously on a worker thread."""
+        return await asyncio.to_thread(self.embed, texts)
+
+    async def async_embed_query(self, query: str) -> list[float]:
+        """Generate embedding vector for a single query string asynchronously on a worker thread."""
+        return await asyncio.to_thread(self.embed_query, query)

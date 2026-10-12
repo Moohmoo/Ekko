@@ -86,7 +86,7 @@ async def _sync_hybrid_store(
     """Index note into SQLite tables, FTS5 index, and sqlite-vec embeddings."""
     embedding = None
     if embedder is not None and hasattr(embedder, "embed_query"):
-        embedding = embedder.embed_query(f"{note.title}\n{note.content}")
+        embedding = await asyncio.to_thread(embedder.embed_query, f"{note.title}\n{note.content}")
     await db_manager.save_knowledge_note(note, embedding=embedding)
     logger.info("Note '%s' synced to hybrid memory store.", note.slug)
 
