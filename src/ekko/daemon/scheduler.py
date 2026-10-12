@@ -4,7 +4,6 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
-from typing import Any
 
 from ekko.config.loader import load_sources_config
 from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
@@ -58,6 +57,7 @@ class IngestionCoordinator:
         self.rest_connector = rest_connector or RestApiConnector()
         self.distiller = distiller
         self._running = False
+        self._lock = asyncio.Lock()
         self._loop_task: asyncio.Task[None] | None = None
 
     def _get_connector(self, source_type: str) -> BaseConnector | None:
@@ -120,25 +120,35 @@ class IngestionCoordinator:
             return []
 
     async def run_once(self) -> dict[str, int]:
-        """Execute evaluation pass across sources and distill pending signals."""
-        results: dict[str, int] = {}
-        for source in self.catalog.sources:
-            signals = await self.poll_source(source)
-            results[source.id] = len(signals)
+        """Execute evaluation pass across sources and distill pending signals with anti-overlap lock."""
+        if self._lock.locked():
+            logger.warning("Previous polling cycle still in progress. Skipping pass.")
+            return {}
 
-        if self.distiller:
-            results["distilled"] = await self.distiller.distill_batch()
+        async with self._lock:
+            results: dict[str, int] = {}
+            for source in self.catalog.sources:
+                signals = await self.poll_source(source)
+                results[source.id] = len(signals)
 
-        return results
+            if self.distiller:
+                results["distilled"] = await self.distiller.distill_batch()
+
+            return results
 
     async def _run_loop(self, poll_interval_seconds: float) -> None:
         """Background continuous scheduler loop."""
         while self._running:
             try:
                 await self.run_once()
+            except asyncio.CancelledError:
+                break
             except Exception as exc:
                 logger.error("Unexpected error in daemon scheduler pass: %s", exc)
-            await asyncio.sleep(poll_interval_seconds)
+            try:
+                await asyncio.sleep(poll_interval_seconds)
+            except asyncio.CancelledError:
+                break
 
     async def start(self, poll_interval_seconds: float = 60.0) -> None:
         """Start asynchronous background polling scheduler."""
@@ -149,7 +159,7 @@ class IngestionCoordinator:
         logger.info("Ingestion coordinator scheduler started (interval: %ss).", poll_interval_seconds)
 
     async def stop(self) -> None:
-        """Stop background scheduler cleanly."""
+        """Stop background scheduler cleanly and cancel pending loop task."""
         self._running = False
         if self._loop_task:
             self._loop_task.cancel()

@@ -125,3 +125,22 @@ async def test_scheduler_triggers_distiller_after_polling() -> None:
     assert results["distilled"] == 3
     mock_distiller.distill_batch.assert_awaited_once()
 
+
+@pytest.mark.asyncio
+async def test_coordinator_anti_overlap_skips_when_locked() -> None:
+    """Ensure run_once skips execution and returns empty dict when another cycle holds the lock."""
+    mock_db = MagicMock()
+    coordinator = IngestionCoordinator(
+        db_manager=mock_db,
+        catalog=SourcesCatalogConfig(sources=[]),
+    )
+
+    # Simulate locked coordinator (in-flight run_once)
+    await coordinator._lock.acquire()
+    try:
+        results = await coordinator.run_once()
+        assert results == {}
+    finally:
+        coordinator._lock.release()
+
+

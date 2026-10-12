@@ -222,3 +222,55 @@ async def test_ipc_server_ingest_file_unreadable(socket_path: Path, tmp_path: Pa
         locked_file.chmod(0o644)
         await server.stop()
 
+
+@pytest.mark.asyncio
+async def test_ipc_server_malformed_json_and_invalid_request(socket_path: Path) -> None:
+    """Ensure malformed JSON and invalid request structures return JSON-RPC error without crashing daemon."""
+    server = IPCServer(socket_path=socket_path)
+    await server.start()
+
+    reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
+
+    # 1. Malformed JSON (-32700)
+    writer.write(b"this is not json\n")
+    await writer.drain()
+    line = await reader.readline()
+    resp1 = json.loads(line.decode("utf-8"))
+    assert resp1["error"]["code"] == -32700
+
+    # 2. JSON root that is not a dict (-32600)
+    writer.write(b'["not", "a", "dict"]\n')
+    await writer.drain()
+    line = await reader.readline()
+    resp2 = json.loads(line.decode("utf-8"))
+    assert resp2["error"]["code"] == -32600
+
+    # 3. Invalid params type: string instead of object (-32602)
+    writer.write(b'{"jsonrpc": "2.0", "id": 42, "method": "ping", "params": "invalid"}\n')
+    await writer.drain()
+    line = await reader.readline()
+    resp3 = json.loads(line.decode("utf-8"))
+    assert resp3["error"]["code"] == -32602
+
+    writer.close()
+    await writer.wait_closed()
+    await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_ipc_server_supervised_tasks_cleanup_on_stop(socket_path: Path) -> None:
+    """Ensure background tasks registered with _spawn_background_task are cleanly tracked and cancelled upon server.stop()."""
+    server = IPCServer(socket_path=socket_path)
+    await server.start()
+
+    async def long_task() -> None:
+        await asyncio.sleep(10.0)
+
+    task = server._spawn_background_task(long_task(), name="test_long_task")
+    assert task in server._background_tasks
+    assert not task.done()
+
+    await server.stop()
+    assert task.done()
+    assert len(server._background_tasks) == 0
+

@@ -1,11 +1,11 @@
 """Asynchronous UNIX domain socket server driving Ekko via JSON-RPC 2.0."""
 
 import asyncio
+from collections.abc import Coroutine
 from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
-from typing import Any
 
 from ekko.core.engine import EkkoEngine
 from ekko.ingestion.distiller import SignalDistiller
@@ -18,7 +18,7 @@ logger = get_logger("daemon.server")
 DEFAULT_SOCKET_PATH = Path("/tmp/ekko.sock")
 
 
-def _rpc_error(req_id: Any, code: int, message: str) -> str:
+def _rpc_error(req_id: str | int | None, code: int, message: str) -> str:
     """Format standard JSON-RPC 2.0 error line."""
     payload = {
         "jsonrpc": "2.0",
@@ -28,17 +28,17 @@ def _rpc_error(req_id: Any, code: int, message: str) -> str:
     return json.dumps(payload) + "\n"
 
 
-def _rpc_result(req_id: Any, result: Any) -> str:
+def _rpc_result(req_id: str | int | None, result: object) -> str:
     """Format standard JSON-RPC 2.0 success response line."""
     payload = {"jsonrpc": "2.0", "result": result, "id": req_id}
     return json.dumps(payload) + "\n"
 
 
-def _log_task_exception(task: asyncio.Task[Any]) -> None:
+def _log_task_exception(task: asyncio.Task[object]) -> None:
     """Done-callback that surfaces exceptions from fire-and-forget background tasks.
 
     asyncio silently discards unhandled task exceptions unless retrieved via
-    task.exception().  Attaching this callback to every create_task() call
+    task.exception(). Attaching this callback to every create_task() call
     ensures any failure is immediately emitted to the daemon log.
     """
     if task.cancelled():
@@ -69,6 +69,20 @@ class IPCServer:
         self.engine = engine
         self.distiller = distiller
         self._server: asyncio.Server | None = None
+        self._background_tasks: set[asyncio.Task[object]] = set()
+        self._active_writers: set[asyncio.StreamWriter] = set()
+
+    def _spawn_background_task(
+        self,
+        coro: Coroutine[object, object, object],
+        name: str | None = None,
+    ) -> asyncio.Task[object]:
+        """Spawn and register a supervised background task with lifetime retention and error logging."""
+        task = asyncio.create_task(coro, name=name)
+        self._background_tasks.add(task)
+        task.add_done_callback(_log_task_exception)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
     async def start(self) -> None:
         """Start listening on UNIX socket, cleaning up stale socket files."""
@@ -82,11 +96,28 @@ class IPCServer:
         logger.info("IPC UNIX socket server listening on %s", self.socket_path)
 
     async def stop(self) -> None:
-        """Stop server and delete the UNIX socket file."""
+        """Stop server, close active connections, cancel background tasks, and delete socket file."""
         if self._server:
             self._server.close()
             await self._server.wait_closed()
             self._server = None
+
+        # Close all active client connections
+        for writer in list(self._active_writers):
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+        self._active_writers.clear()
+
+        # Cancel remaining background tasks
+        if self._background_tasks:
+            for task in list(self._background_tasks):
+                task.cancel()
+            await asyncio.gather(*list(self._background_tasks), return_exceptions=True)
+            self._background_tasks.clear()
+
         if self.socket_path.exists():
             self.socket_path.unlink()
         logger.info("IPC UNIX socket server stopped.")
@@ -97,25 +128,44 @@ class IPCServer:
         writer: asyncio.StreamWriter,
     ) -> None:
         """Handle incoming client connection streaming and requests."""
-        while not reader.at_eof():
-            line = await reader.readline()
-            if not line:
-                break
-            try:
-                req = json.loads(line.decode("utf-8"))
-            except Exception:
-                writer.write(_rpc_error(None, -32700, "Parse error").encode("utf-8"))
-                await writer.drain()
-                continue
-            await self._dispatch_rpc(req, writer)
-        writer.close()
-        await writer.wait_closed()
+        self._active_writers.add(writer)
+        try:
+            while not reader.at_eof():
+                line = await reader.readline()
+                if not line:
+                    break
+                try:
+                    req = json.loads(line.decode("utf-8"))
+                except Exception:
+                    writer.write(_rpc_error(None, -32700, "Parse error").encode("utf-8"))
+                    await writer.drain()
+                    continue
 
-    async def _dispatch_rpc(self, req: dict[str, Any], writer: asyncio.StreamWriter) -> None:
+                if not isinstance(req, dict):
+                    writer.write(_rpc_error(None, -32600, "Invalid Request: root must be a JSON object").encode("utf-8"))
+                    await writer.drain()
+                    continue
+
+                await self._dispatch_rpc(req, writer)
+        finally:
+            self._active_writers.discard(writer)
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+
+    async def _dispatch_rpc(self, req: dict[str, object], writer: asyncio.StreamWriter) -> None:
         """Route JSON-RPC method call to corresponding handler."""
-        req_id = req.get("id")
-        method = req.get("method", "")
-        params = req.get("params") or {}
+        raw_id = req.get("id")
+        req_id = raw_id if isinstance(raw_id, (str, int)) else None
+        method = str(req.get("method") or "")
+        raw_params = req.get("params")
+        if raw_params is not None and not isinstance(raw_params, dict):
+            writer.write(_rpc_error(req_id, -32602, "Invalid params: must be a JSON object").encode("utf-8"))
+            await writer.drain()
+            return
+        params = raw_params or {}
 
         if method == "ping":
             now_iso = datetime.now(timezone.utc).isoformat()
@@ -141,12 +191,12 @@ class IPCServer:
 
     async def _handle_ingest_file(
         self,
-        req_id: Any,
-        params: dict[str, Any],
+        req_id: str | int | None,
+        params: dict[str, object],
         writer: asyncio.StreamWriter,
     ) -> None:
         """Validate, extract, distill and persist a local file into a knowledge note."""
-        file_path_str = params.get("file_path") or params.get("path")
+        file_path_str = str(params.get("file_path") or params.get("path") or "")
         if not file_path_str:
             writer.write(_rpc_error(req_id, -32602, "Missing 'file_path' parameter").encode("utf-8"))
             await writer.drain()
@@ -194,9 +244,11 @@ class IPCServer:
         writer.write(_rpc_result(req_id, reply).encode("utf-8"))
         await writer.drain()
 
-        # Fire-and-forget: task errors are surfaced via _log_task_exception callback.
-        _task = asyncio.create_task(self._distill_and_save_async(target_path, suffix))
-        _task.add_done_callback(_log_task_exception)
+        # Supervised background task: lifetime retention + unhandled exception logging
+        self._spawn_background_task(
+            self._distill_and_save_async(target_path, suffix),
+            name=f"ingest_file_{target_path.name}",
+        )
 
     async def _distill_and_save_async(self, target_path: Path, suffix: str) -> None:
         """Background asynchronous text extraction and cognitive distillation."""
@@ -238,8 +290,8 @@ class IPCServer:
 
     async def _handle_scan_notes(
         self,
-        req_id: Any,
-        params: dict[str, Any],
+        req_id: str | int | None,
+        params: dict[str, object],
         writer: asyncio.StreamWriter,
     ) -> None:
         """Query knowledge notes and write JSON-RPC result."""
@@ -255,8 +307,8 @@ class IPCServer:
 
     async def _handle_scan_inbox(
         self,
-        req_id: Any,
-        params: dict[str, Any],
+        req_id: str | int | None,
+        params: dict[str, object],
         writer: asyncio.StreamWriter,
     ) -> None:
         """Query raw signals inbox and write JSON-RPC result."""
@@ -265,8 +317,8 @@ class IPCServer:
             await writer.drain()
             return
         status_val = params.get("status")
-        status = SignalStatus(status_val) if status_val else None
-        source_id = params.get("source_id")
+        status = SignalStatus(str(status_val)) if status_val else None
+        source_id = str(params["source_id"]) if "source_id" in params and params["source_id"] is not None else None
         limit = int(params.get("limit", 20))
         signals = await self.db_manager.get_raw_signals(
             source_id=source_id,
@@ -279,8 +331,8 @@ class IPCServer:
 
     async def _handle_query_knowledge(
         self,
-        req_id: Any,
-        params: dict[str, Any],
+        req_id: str | int | None,
+        params: dict[str, object],
         writer: asyncio.StreamWriter,
     ) -> None:
         """Execute hybrid search on knowledge notes and return JSON-RPC response."""
@@ -288,8 +340,8 @@ class IPCServer:
             writer.write(_rpc_result(req_id, []).encode("utf-8"))
             await writer.drain()
             return
-        query = params.get("query", "")
-        mode = params.get("mode", "hybrid")
+        query = str(params.get("query", ""))
+        mode = str(params.get("mode", "hybrid"))
         limit = int(params.get("limit", 5))
         notes_with_scores = await self.db_manager.search_notes(query=query, mode=mode, limit=limit)
         results = [
@@ -301,13 +353,13 @@ class IPCServer:
 
     async def _handle_submit_prompt(
         self,
-        req_id: Any,
-        params: dict[str, Any],
+        req_id: str | int | None,
+        params: dict[str, object],
         writer: asyncio.StreamWriter,
     ) -> None:
         """Stream EngineEvents line-by-line as NDJSON for prompt execution."""
-        prompt = params.get("prompt", "")
-        session_id = params.get("session_id", "default")
+        prompt = str(params.get("prompt", ""))
+        session_id = str(params.get("session_id", "default"))
         if not self.engine:
             writer.write(_rpc_error(req_id, -32603, "Engine not available").encode("utf-8"))
             await writer.drain()
@@ -320,8 +372,8 @@ class IPCServer:
 
     async def _handle_get_pending_signals(
         self,
-        req_id: Any,
-        params: dict[str, Any],
+        req_id: str | int | None,
+        params: dict[str, object],
         writer: asyncio.StreamWriter,
     ) -> None:
         """Query retained raw signals for UC-1 proactive alert display."""
@@ -334,7 +386,7 @@ class IPCServer:
         writer.write(_rpc_result(req_id, signals).encode("utf-8"))
         await writer.drain()
 
-    async def _distill_signal_async(self, signal_data: dict[str, Any]) -> None:
+    async def _distill_signal_async(self, signal_data: dict[str, object]) -> None:
         """Background asynchronous cognitive distillation and note persistence for archived signal."""
         try:
             if not self.distiller:
@@ -380,13 +432,13 @@ class IPCServer:
 
     async def _handle_resolve_signal(
         self,
-        req_id: Any,
-        params: dict[str, Any],
+        req_id: str | int | None,
+        params: dict[str, object],
         writer: asyncio.StreamWriter,
     ) -> None:
         """Resolve a signal by setting its status to archived or discarded."""
-        signal_id = params.get("signal_id")
-        action = params.get("action")
+        signal_id = str(params.get("signal_id") or "")
+        action = str(params.get("action") or "")
         if not signal_id:
             writer.write(_rpc_error(req_id, -32602, "Missing 'signal_id' parameter").encode("utf-8"))
             await writer.drain()
@@ -416,9 +468,11 @@ class IPCServer:
         await self.db_manager.resolve_signal(signal_id, action)
 
         if action == "archive":
-            # Fire-and-forget: task errors are surfaced via _log_task_exception callback.
-            _task = asyncio.create_task(self._distill_signal_async(signal_data))
-            _task.add_done_callback(_log_task_exception)
+            # Supervised background task: lifetime retention + unhandled exception logging
+            self._spawn_background_task(
+                self._distill_signal_async(signal_data),
+                name=f"distill_signal_{signal_id}",
+            )
             reply = {
                 "status": "ok",
                 "signal_id": signal_id,
