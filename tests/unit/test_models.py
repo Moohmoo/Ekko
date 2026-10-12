@@ -98,3 +98,29 @@ def test_model_response_supports_tool_calls() -> None:
     assert len(response.tool_calls) == 1
     assert response.tool_calls[0].name == "bash"
 
+
+def test_core_domain_entities_instantiation() -> None:
+    """Ensure core models RawSignal, KnowledgeNote, SourceState, and SignalStatus instantiate cleanly."""
+    from ekko.core.models import KnowledgeNote, RawSignal, SignalStatus, SourceState
+
+    state = SourceState(id="src_1", source_type="rss", url_or_path="https://example.com/rss")
+    assert state.id == "src_1"
+    assert state.consecutive_errors == 0
+
+    signal = RawSignal(id="sig_1", title="New LLM Breakthrough", url="https://example.com/ai")
+    assert signal.id == "sig_1"
+    assert signal.status == SignalStatus.PENDING
+
+    note = KnowledgeNote(
+        id="note_1",
+        slug="new-llm-breakthrough",
+        title="New LLM Breakthrough",
+        summary="A summary of the breakthrough",
+        content="Full markdown content",
+        tags=["ai", "research"],
+        sources=["https://example.com/ai"],
+    )
+    assert note.id == "note_1"
+    assert note.tags == ["ai", "research"]
+    assert note.slug == "new-llm-breakthrough"
+

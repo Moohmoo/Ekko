@@ -9,7 +9,7 @@ import sqlite3
 from typing import Any
 import sqlite_vec
 
-from ekko.memory.models import (
+from ekko.core.models import (
     KnowledgeNote,
     RawSignal,
     SignalStatus,

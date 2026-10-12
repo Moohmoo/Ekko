@@ -3,10 +3,9 @@
 from typing import Literal
 from pydantic import BaseModel, Field
 
-from ekko.core.models import ToolResult
+from ekko.core.models import RawSignal, SignalStatus, ToolResult
 from ekko.core.ports import HybridMemoryPort
 from ekko.memory.hybrid_store import HybridStore
-from ekko.memory.models import RawSignal, SignalStatus
 from ekko.tools.base import BaseTool
 from ekko.logger import get_logger
 

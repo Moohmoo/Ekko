@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 from ekko.config.schemas import SourceConfig
 from ekko.ingestion.client import ResilientHttpClient
 from ekko.ingestion.connectors.base import BaseConnector
-from ekko.memory.models import RawSignal, SignalStatus, SourceState
+from ekko.core.models import RawSignal, SignalStatus, SourceState
 from ekko.logger import get_logger
 
 logger = get_logger("ekko.ingestion.connectors.rss")

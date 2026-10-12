@@ -2,7 +2,16 @@
 
 from collections.abc import AsyncIterator
 from typing import Any, Protocol, runtime_checkable
-from ekko.core.models import Message, ModelResponse, ToolResult
+from ekko.core.events import TokenChunk
+from ekko.core.models import (
+    KnowledgeNote,
+    Message,
+    ModelResponse,
+    RawSignal,
+    SignalStatus,
+    ToolCall,
+    ToolResult,
+)
 
 
 @runtime_checkable
@@ -28,8 +37,8 @@ class StreamingLLMProviderPort(LLMProviderPort, Protocol):
         messages: list[Message],
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
-    ) -> AsyncIterator[Any]:
-        """Stream response chunks from the underlying LLM provider."""
+    ) -> AsyncIterator[TokenChunk | ToolCall]:
+        """Stream normalized response chunks and tool calls from the underlying LLM provider."""
         ...
 
 
@@ -77,30 +86,30 @@ class HybridMemoryPort(Protocol):
         query_embedding: list[float] | None = None,
         mode: str = "hybrid",
         limit: int = 5,
-    ) -> list[tuple[Any, float]]:
+    ) -> list[tuple[KnowledgeNote, float]]:
         """Search knowledge notes with hybrid lexical/semantic ranking."""
         ...
 
     async def get_raw_signals(
         self,
         source_id: str | None = None,
-        status: Any = None,
+        status: SignalStatus | str | None = None,
         limit: int = 10,
-    ) -> list[Any]:
+    ) -> list[RawSignal]:
         """Fetch raw signals matching source and status criteria."""
         ...
 
-    async def get_pending_signals(self, limit: int = 5) -> list[Any]:
+    async def get_pending_signals(self, limit: int = 5) -> list[RawSignal]:
         """Retrieve un-distilled raw signals in pending status."""
         ...
 
-    async def mark_signal_status(self, signal_id: str, status: str) -> None:
+    async def mark_signal_status(self, signal_id: str, status: SignalStatus | str) -> None:
         """Update the processing status of a raw signal."""
         ...
 
     async def save_knowledge_note(
         self,
-        note: Any,
+        note: KnowledgeNote,
         embedding: list[float] | None = None,
     ) -> None:
         """Persist a distilled knowledge note with FTS and vector indexing."""

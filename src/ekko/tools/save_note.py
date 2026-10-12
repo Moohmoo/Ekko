@@ -8,9 +8,8 @@ from typing import Any
 import unicodedata
 from pydantic import BaseModel, Field, field_validator
 
-from ekko.core.models import ToolResult
+from ekko.core.models import KnowledgeNote, ToolResult
 from ekko.core.ports import HybridMemoryPort
-from ekko.memory.models import KnowledgeNote
 from ekko.tools.base import BaseTool
 from ekko.logger import get_logger
 

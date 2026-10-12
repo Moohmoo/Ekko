@@ -283,12 +283,10 @@ class MockStreamingProvider:
 @pytest.mark.asyncio
 async def test_run_stream_incremental_text_chunks() -> None:
     """Verify distinct TokenChunk events are yielded sequentially during streaming, ending with TurnCompleted."""
-    from types import SimpleNamespace
-
     chunks = [
-        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Un ", tool_calls=None))]),
-        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="deux ", tool_calls=None))]),
-        SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="trois.", tool_calls=None))]),
+        TokenChunk(delta="Un "),
+        TokenChunk(delta="deux "),
+        TokenChunk(delta="trois."),
     ]
     provider = MockStreamingProvider([chunks])
     memory = InMemoryMemory()
@@ -321,71 +319,12 @@ async def test_run_stream_incremental_text_chunks() -> None:
 
 @pytest.mark.asyncio
 async def test_run_stream_accumulates_fragmented_tool_call_deltas() -> None:
-    """Verify fragmented tool call deltas are accumulated into a complete ToolCall without emitting TokenChunk."""
-    from types import SimpleNamespace
-
+    """Verify provider streaming ToolCall triggers tool execution without emitting TokenChunk."""
     step1_tool_chunks = [
-        SimpleNamespace(
-            choices=[
-                SimpleNamespace(
-                    delta=SimpleNamespace(
-                        content=None,
-                        tool_calls=[
-                            SimpleNamespace(
-                                index=0,
-                                id="call_arxiv_1",
-                                function=SimpleNamespace(name="arxiv", arguments='{"query": '),
-                            )
-                        ],
-                    )
-                )
-            ]
-        ),
-        SimpleNamespace(
-            choices=[
-                SimpleNamespace(
-                    delta=SimpleNamespace(
-                        content=None,
-                        tool_calls=[
-                            SimpleNamespace(
-                                index=0,
-                                id=None,
-                                function=SimpleNamespace(name=None, arguments='"test"'),
-                            )
-                        ],
-                    )
-                )
-            ]
-        ),
-        SimpleNamespace(
-            choices=[
-                SimpleNamespace(
-                    delta=SimpleNamespace(
-                        content=None,
-                        tool_calls=[
-                            SimpleNamespace(
-                                index=0,
-                                id=None,
-                                function=SimpleNamespace(name=None, arguments="}"),
-                            )
-                        ],
-                    )
-                )
-            ]
-        ),
+        ToolCall(id="call_arxiv_1", name="arxiv", arguments={"query": "test"})
     ]
-
     step2_final_chunks = [
-        SimpleNamespace(
-            choices=[
-                SimpleNamespace(
-                    delta=SimpleNamespace(
-                        content="Voici la synthèse sur test.",
-                        tool_calls=None,
-                    )
-                )
-            ]
-        )
+        TokenChunk(delta="Voici la synthèse sur test.")
     ]
 
     provider = MockStreamingProvider([step1_tool_chunks, step2_final_chunks])
@@ -428,17 +367,15 @@ async def test_run_stream_accumulates_fragmented_tool_call_deltas() -> None:
 
 @pytest.mark.asyncio
 async def test_run_stream_accumulates_dict_format_tool_call_chunks() -> None:
-    """Verify tool call accumulation works seamlessly when chunks are dictionaries."""
-    step1_dict_chunks = [
-        {"choices": [{"delta": {"tool_calls": [{"index": 0, "id": "call_d1", "name": "arxiv", "arguments": '{"query": "'}]}}]},
-        {"choices": [{"delta": {"tool_calls": [{"index": 0, "arguments": 'dict_test"'}]}}]},
-        {"choices": [{"delta": {"tool_calls": [{"index": 0, "arguments": '}'}]}}]},
+    """Verify multiple streaming tool calls are handled sequentially by the engine."""
+    step1_chunks = [
+        ToolCall(id="call_d1", name="arxiv", arguments={"query": "dict_test"})
     ]
-    step2_dict_chunks = [
-        {"choices": [{"delta": {"content": "Fin de recherche."}}]}
+    step2_chunks = [
+        TokenChunk(delta="Fin de recherche.")
     ]
 
-    provider = MockStreamingProvider([step1_dict_chunks, step2_dict_chunks])
+    provider = MockStreamingProvider([step1_chunks, step2_chunks])
     tool = MockTool(ToolResult(content="Found dict paper", success=True))
     registry = MockToolRegistry({"arxiv": tool})
     memory = InMemoryMemory()

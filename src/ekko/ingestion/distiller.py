@@ -7,10 +7,9 @@ from pathlib import Path
 import re
 from typing import Any
 
-from ekko.core.models import Message
+from ekko.core.models import KnowledgeNote, Message, RawSignal
 from ekko.core.ports import HybridMemoryPort, LLMProviderPort
 from ekko.logger import get_logger
-from ekko.memory.models import KnowledgeNote, RawSignal
 from ekko.tools.save_note import (
     _determine_unique_path,
     _format_markdown_note,

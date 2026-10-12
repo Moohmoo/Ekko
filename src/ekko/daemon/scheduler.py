@@ -13,7 +13,7 @@ from ekko.ingestion.connectors.rest_api import RestApiConnector
 from ekko.ingestion.connectors.rss import RssConnector
 from ekko.ingestion.distiller import SignalDistiller
 from ekko.memory.hybrid_store import HybridStore
-from ekko.memory.models import RawSignal, SourceState
+from ekko.core.models import RawSignal, SourceState
 from ekko.logger import get_logger
 
 logger = get_logger("daemon.scheduler")

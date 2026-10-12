@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from ekko.core.errors import ProviderError
-from ekko.core.models import Message, ModelResponse
+from ekko.core.events import TokenChunk
+from ekko.core.models import Message, ModelResponse, ToolCall
 from ekko.core.ports import LLMProviderPort
 from ekko.providers.litellm_provider import LiteLLMProvider
 
@@ -227,8 +228,10 @@ async def test_litellm_provider_generate_stream_success() -> None:
         collected = [chunk async for chunk in provider.generate_stream(messages)]
 
         assert len(collected) == 2
-        assert collected[0].choices[0].delta.content == "Chunk 1"
-        assert collected[1].choices[0].delta.content == "Chunk 2"
+        assert isinstance(collected[0], TokenChunk)
+        assert collected[0].delta == "Chunk 1"
+        assert isinstance(collected[1], TokenChunk)
+        assert collected[1].delta == "Chunk 2"
 
         mock_acompletion.assert_awaited_once_with(
             model="gemini/gemini-2.5-flash",
@@ -238,6 +241,65 @@ async def test_litellm_provider_generate_stream_success() -> None:
             temperature=0.7,
             stream=True,
         )
+
+
+@pytest.mark.asyncio
+async def test_litellm_provider_generate_stream_accumulates_tool_calls() -> None:
+    """Ensure generate_stream accumulates fragmented tool call deltas and yields ToolCall."""
+    fake_tool_chunks = [
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(
+                        content=None,
+                        tool_calls=[
+                            SimpleNamespace(
+                                index=0,
+                                id="call_1",
+                                function=SimpleNamespace(name="arxiv", arguments='{"query": '),
+                            )
+                        ],
+                    )
+                )
+            ]
+        ),
+        SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    delta=SimpleNamespace(
+                        content=None,
+                        tool_calls=[
+                            SimpleNamespace(
+                                index=0,
+                                id=None,
+                                function=SimpleNamespace(name=None, arguments='"llm"}'),
+                            )
+                        ],
+                    )
+                )
+            ]
+        ),
+    ]
+
+    async def fake_stream(*args, **kwargs):
+        for c in fake_tool_chunks:
+            yield c
+
+    with patch(
+        "litellm.acompletion",
+        new_callable=AsyncMock,
+        return_value=fake_stream(),
+    ):
+        provider = LiteLLMProvider(model="gemini/gemini-2.5-flash")
+        messages = [Message(role="user", content="Search")]
+
+        collected = [chunk async for chunk in provider.generate_stream(messages)]
+
+        assert len(collected) == 1
+        assert isinstance(collected[0], ToolCall)
+        assert collected[0].id == "call_1"
+        assert collected[0].name == "arxiv"
+        assert collected[0].arguments == {"query": "llm"}
 
 
 @pytest.mark.asyncio
@@ -257,5 +319,40 @@ async def test_litellm_provider_generate_stream_maps_exception() -> None:
 
         assert "LLM streaming inference failed" in str(exc_info.value)
         assert isinstance(exc_info.value.cause, RuntimeError)
+
+
+@pytest.mark.asyncio
+async def test_litellm_provider_generate_stream_accumulates_dict_chunks() -> None:
+    """Ensure generate_stream accumulates dictionary-format tool calls seamlessly."""
+    dict_chunks = [
+        {"choices": [{"delta": {"tool_calls": [{"index": 0, "id": "call_d1", "name": "arxiv", "arguments": '{"query": "'}]}}]},
+        {"choices": [{"delta": {"tool_calls": [{"index": 0, "arguments": 'dict_test"'}]}}]},
+        {"choices": [{"delta": {"tool_calls": [{"index": 0, "arguments": '}'}]}}]},
+        {"choices": [{"delta": {"content": "Et c'est tout."}}]},
+    ]
+
+    async def fake_stream(*args, **kwargs):
+        for c in dict_chunks:
+            yield c
+
+    with patch(
+        "litellm.acompletion",
+        new_callable=AsyncMock,
+        return_value=fake_stream(),
+    ):
+        provider = LiteLLMProvider(model="gemini/gemini-2.5-flash")
+        messages = [Message(role="user", content="Test dict")]
+
+        collected = [chunk async for chunk in provider.generate_stream(messages)]
+
+        tokens = [c for c in collected if isinstance(c, TokenChunk)]
+        calls = [c for c in collected if isinstance(c, ToolCall)]
+
+        assert len(tokens) == 1
+        assert tokens[0].delta == "Et c'est tout."
+        assert len(calls) == 1
+        assert calls[0].id == "call_d1"
+        assert calls[0].name == "arxiv"
+        assert calls[0].arguments == {"query": "dict_test"}
 
 

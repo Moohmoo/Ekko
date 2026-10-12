@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from ekko.config.schemas import SourceConfig
-from ekko.memory.models import RawSignal, SourceState
+from ekko.core.models import RawSignal, SourceState
 
 
 class BaseConnector(ABC):
