@@ -79,6 +79,4 @@ export const SURFACES = {
   alertCard: 'bg-amber-500/[0.04] border border-amber-500/25',
   headerTabActive: 'bg-white/[0.08] text-sky-400',
   headerTabInactive: 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]',
-  modalOverlay: 'bg-black/60 backdrop-blur-md',
-  modalContainer: 'bg-surface/95 border border-white/[0.08] shadow-2xl backdrop-blur-xl rounded-2xl',
 } as const;
