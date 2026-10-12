@@ -192,6 +192,7 @@ class EkkoEngine:
             tool_calls: list[ToolCall] = []
             is_streaming = _is_streaming_provider(self.provider)
 
+            buffered_chunks: list[TokenChunk] = []
             try:
                 if is_streaming:
                     stream = self.provider.generate_stream(payload, tools=tool_schemas)
@@ -199,7 +200,7 @@ class EkkoEngine:
                         async for item in stream:
                             if isinstance(item, TokenChunk):
                                 accumulated_text += item.delta
-                                yield item
+                                buffered_chunks.append(item)
                             elif isinstance(item, ToolCall):
                                 tool_calls.append(item)
                     else:
@@ -215,16 +216,21 @@ class EkkoEngine:
                 yield _map_exception_to_engine_error(exc)
                 return
 
-
             if not tool_calls:
+                # Direct reply or final synthesis turn: emit accumulated text
+                if is_streaming:
+                    for chunk in buffered_chunks:
+                        yield chunk
+                elif accumulated_text:
+                    yield TokenChunk(delta=accumulated_text)
+
                 asst_msg = Message(role="assistant", content=accumulated_text)
                 await self.memory.add_message(session_id, asst_msg)
                 logger.info("Completed message turn for session '%s' in %d step(s)", session_id, step_idx)
-                if not is_streaming and accumulated_text:
-                    yield TokenChunk(delta=accumulated_text)
                 yield TurnCompleted(content=accumulated_text, total_steps=step_idx)
                 return
 
+            # Intermediate step calling tools: discard internal narration chunks, record asst call, run tools
             asst_call_msg = Message(
                 role="assistant",
                 content=accumulated_text or None,
