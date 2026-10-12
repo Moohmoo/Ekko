@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from ekko.core.engine import EkkoEngine
 from ekko.ingestion.distiller import SignalDistiller
@@ -13,6 +14,7 @@ from ekko.memory.hybrid_store import HybridStore
 from ekko.core.models import RawSignal, SignalStatus
 from ekko.logger import get_logger
 from ekko.settings import Settings
+from ekko.tools.read_resource import _fetch_web_resource
 
 logger = get_logger("daemon.server")
 
@@ -192,6 +194,8 @@ class IPCServer:
             await self._handle_query_knowledge(req_id, params, writer)
         elif method == "ingest_file":
             await self._handle_ingest_file(req_id, params, writer)
+        elif method == "ingest_url":
+            await self._handle_ingest_url(req_id, params, writer)
         elif method == "get_pending_signals":
             await self._handle_get_pending_signals(req_id, params, writer)
         elif method == "resolve_signal":
@@ -280,6 +284,81 @@ class IPCServer:
             logger.info("File %s successfully distilled in background into note %s", target_path, note.slug)
         except Exception as exc:
             logger.error("Background distillation failed for file %s: %s", target_path, exc)
+
+    async def _handle_ingest_url(
+        self,
+        req_id: str | int | None,
+        params: dict[str, object],
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Validate URL and trigger asynchronous web page cognitive distillation."""
+        url_str = str(params.get("url") or params.get("uri") or "").strip()
+        if not url_str:
+            writer.write(_rpc_error(req_id, -32602, "Missing 'url' parameter").encode("utf-8"))
+            await writer.drain()
+            return
+
+        parsed = urlparse(url_str)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            writer.write(
+                _rpc_error(
+                    req_id,
+                    -32002,
+                    f"Format d'URL non supporté ou invalide : '{url_str}'. Seuls http:// et https:// sont acceptés.",
+                ).encode("utf-8")
+            )
+            await writer.drain()
+            return
+
+        host = parsed.netloc
+        reply = {
+            "status": "accepted",
+            "url": url_str,
+            "filename": host,
+            "message": f"URL absorbée ({host}) · Distillation en cours",
+        }
+        writer.write(_rpc_result(req_id, reply).encode("utf-8"))
+        await writer.drain()
+
+        # Supervised background task: lifetime retention + unhandled exception logging
+        self._spawn_background_task(
+            self._distill_url_async(url_str),
+            name=f"ingest_url_{host}",
+        )
+
+    async def _distill_url_async(self, url: str) -> None:
+        """Background asynchronous web page extraction and cognitive distillation."""
+        try:
+            if not self.distiller:
+                logger.error("Distiller not available for background URL task on %s", url)
+                return
+
+            res = await _fetch_web_resource(url, max_chars=25000)
+            if not res.success or not res.content:
+                logger.error("Failed to fetch web content from %s: %s", url, res.error or res.content)
+                return
+
+            parsed = urlparse(url)
+            fallback_title = f"{parsed.netloc}{parsed.path}".rstrip("/") or parsed.netloc
+
+            if self._distillation_semaphore and getattr(self.distiller, "semaphore", None) is not self._distillation_semaphore:
+                async with self._distillation_semaphore:
+                    note = await self.distiller.distill_raw_content(
+                        raw_content=res.content,
+                        title=fallback_title,
+                        source_id="web_url",
+                        url=url,
+                    )
+            else:
+                note = await self.distiller.distill_raw_content(
+                    raw_content=res.content,
+                    title=fallback_title,
+                    source_id="web_url",
+                    url=url,
+                )
+            logger.info("URL %s successfully distilled in background into note %s", url, note.slug)
+        except Exception as exc:
+            logger.error("Background distillation failed for URL %s: %s", url, exc)
 
     async def _handle_scan_notes(
         self,

@@ -138,9 +138,16 @@ ipcMain.handle('daemon:get_notes', async () => {
 });
 
 ipcMain.handle('daemon:ingest_file', async (_event, filePath: string) => {
-  return await sendJsonRpc<{ status: string; note: { id: string; title: string; slug: string; summary: string } }>(
+  return await sendJsonRpc<{ status: string; filename?: string; message?: string; note?: { id: string; title: string; slug: string; summary: string } }>(
     'ingest_file',
     { file_path: filePath }
+  );
+});
+
+ipcMain.handle('daemon:ingest_url', async (_event, url: string) => {
+  return await sendJsonRpc<{ status: string; filename?: string; url?: string; message?: string; note?: { id: string; title: string; slug: string; summary: string } }>(
+    'ingest_url',
+    { url }
   );
 });
 

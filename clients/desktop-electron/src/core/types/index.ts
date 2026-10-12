@@ -35,6 +35,14 @@ export interface SignalsResult {
   total_count: number;
 }
 
+export interface IngestResult {
+  status: string;
+  filename?: string;
+  url?: string;
+  message?: string;
+  note?: { id: string; title: string; slug: string; summary: string; source?: string };
+}
+
 export interface EkkoAPI {
   ping: () => Promise<PingResult | null>;
   getNotes: () => Promise<unknown[]>;
@@ -42,7 +50,8 @@ export interface EkkoAPI {
   resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{ status: string; signal_id?: string; action?: string }>;
   resolveAllPendingSignals: (action: 'archive' | 'discard') => Promise<{ status: string; action?: string; count?: number }>;
   submitPrompt: (prompt: string) => Promise<string>;
-  ingestFile: (filePath: string) => Promise<{ status: string; filename?: string; message?: string; note?: { id: string; title: string; slug: string; summary: string; source?: string } }>;
+  ingestFile: (filePath: string) => Promise<IngestResult>;
+  ingestUrl: (url: string) => Promise<IngestResult>;
   getDroppedFilePath: (file: File) => string;
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;

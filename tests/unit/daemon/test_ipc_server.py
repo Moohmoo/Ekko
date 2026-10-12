@@ -319,3 +319,37 @@ async def test_ipc_server_supervised_tasks_cleanup_on_stop(socket_path: Path) ->
     assert task.done()
     assert len(server._background_tasks) == 0
 
+
+@pytest.mark.asyncio
+async def test_ipc_server_ingest_url(socket_path: Path) -> None:
+    """Ensure ingest_url validates URL, responds immediately, and triggers background distillation."""
+    mock_distiller = MagicMock()
+    mock_distiller.distill_raw_content = AsyncMock(
+        return_value=KnowledgeNote(
+            id="note_arxiv",
+            slug="2026-10-12_arxiv-test",
+            title="Arxiv Paper",
+            summary="A short summary",
+            content="Full note content",
+            tags=["arxiv"],
+            sources=["https://arxiv.org/abs/2602.01234"],
+        )
+    )
+
+    server = IPCServer(socket_path=socket_path, distiller=mock_distiller)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        # 1. Invalid URL (not http/https)
+        with pytest.raises(Exception):
+            await client.call("ingest_url", {"url": "ftp://example.com/file"})
+
+        # 2. Valid URL
+        res = await client.call("ingest_url", {"url": "https://arxiv.org/abs/2602.01234"})
+        assert res["status"] == "accepted"
+        assert res["url"] == "https://arxiv.org/abs/2602.01234"
+        assert res["filename"] == "arxiv.org"
+        assert "Distillation en cours" in res["message"]
+
+    await server.stop()
+

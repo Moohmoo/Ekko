@@ -20,6 +20,7 @@ interface DropState {
   setHover: (isHovering: boolean) => void;
   setError: (msg: string) => void;
   ingestFileInPlace: (filePath: string) => Promise<boolean>;
+  ingestUrlInPlace: (url: string) => Promise<boolean>;
   onDistillationComplete: (note: NoteItem) => void;
   reset: () => void;
 }
@@ -142,6 +143,99 @@ export const useDropStore = create<DropState>((set, get) => ({
         userMsg = 'Format non supporté · PDF, MD ou TXT uniquement';
       } else if (rawMsg.includes('aucun texte extractible')) {
         userMsg = 'Aucun texte extractible dans ce document';
+      } else if (rawMsg.includes('ECONNREFUSED') || rawMsg.includes('Liaison')) {
+        userMsg = 'Daemon Ekko hors ligne';
+      }
+
+      playErrorThud();
+      set({
+        dropStatus: 'error',
+        fileName: null,
+        mascotEmotion: 'error',
+        statusMessage: 'Erreur assimilation',
+        errorMessage: userMsg,
+        pendingFilePath: null,
+        baselineNoteId: null,
+        baselineNotesCount: 0,
+      });
+
+      setTimeout(() => {
+        if (get().dropStatus === 'error') {
+          set({
+            dropStatus: 'idle',
+            mascotEmotion: 'idle',
+            statusMessage: 'Tampon actif',
+            errorMessage: null,
+          });
+        }
+      }, RESET_ERROR_DELAY_MS);
+
+      return false;
+    }
+  },
+
+  ingestUrlInPlace: async (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      get().setError('Format non supporté · URL http:// ou https:// uniquement');
+      return false;
+    }
+
+    let host = 'lien web';
+    try {
+      const parsed = new URL(trimmed);
+      host = parsed.hostname || 'lien web';
+    } catch {
+      // ignore
+    }
+
+    const baselineNoteId = useEchoStore.getState().latestNote?.id ?? null;
+    const baselineNotesCount = useEchoStore.getState().notes.length;
+
+    playDropBlip();
+    set({
+      dropStatus: 'processing',
+      fileName: host,
+      mascotEmotion: 'ingesting',
+      statusMessage: `Distillation de ${host} en arrière-plan...`,
+      errorMessage: null,
+      pendingFilePath: trimmed,
+      baselineNoteId,
+      baselineNotesCount,
+    });
+
+    try {
+      if (!window.ekkoAPI?.ingestUrl) {
+        throw new Error('IPC non disponible');
+      }
+
+      const res = await window.ekkoAPI.ingestUrl(trimmed);
+
+      // If backend returned completed note synchronously (test/mock fallback)
+      if (res && typeof res === 'object' && res.note) {
+        const completedNote: NoteItem = {
+          id: res.note.id || res.note.slug || String(Date.now()),
+          title: res.note.title,
+          summary: res.note.summary || '',
+          source: res.note.source || trimmed,
+          tags: ['web'],
+        };
+        useEchoStore.getState().setLatestNote(completedNote);
+        get().onDistillationComplete(completedNote);
+        return true;
+      }
+
+      // Drop & Forget: request accepted by daemon (<50ms).
+      return true;
+    } catch (err: unknown) {
+      console.error('[DropStore:Error] Erreur complète ingestion URL:', err);
+      const rawMsg = (err as Error).message || '';
+      let userMsg = "Erreur lors de l'assimilation du lien web";
+
+      if (rawMsg.includes('Format') || rawMsg.includes('invalide')) {
+        userMsg = 'Format d’URL invalide';
+      } else if (rawMsg.includes('SSRF') || rawMsg.includes('Security')) {
+        userMsg = 'Accès URL refusé (sécurité réseau)';
       } else if (rawMsg.includes('ECONNREFUSED') || rawMsg.includes('Liaison')) {
         userMsg = 'Daemon Ekko hors ligne';
       }

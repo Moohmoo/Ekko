@@ -52,6 +52,7 @@ export const HomeView: React.FC = () => {
     setHover,
     setError,
     ingestFileInPlace,
+    ingestUrlInPlace,
   } = useDropStore();
 
   const { latestNote, fetchNotes } = useEchoStore();
@@ -81,6 +82,37 @@ export const HomeView: React.FC = () => {
     fetchNotes();
   }, [fetchNotes]);
 
+  // Global paste handler on Home view for rapid URL absorption (Ctrl+V)
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Do not intercept paste if an input or textarea is currently focused
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+
+      const pastedText = e.clipboardData?.getData('text/plain') || '';
+      const trimmed = pastedText.trim();
+      const firstLine = trimmed.split('\n')[0].trim();
+
+      if (firstLine.startsWith('http://') || firstLine.startsWith('https://')) {
+        e.preventDefault();
+        console.log('[Paste:Event] Ingestion URL détectée via presse-papiers :', firstLine);
+        await ingestUrlInPlace(firstLine);
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [ingestUrlInPlace]);
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -100,6 +132,7 @@ export const HomeView: React.FC = () => {
     e.stopPropagation();
     setHover(false);
 
+    // Cas A : Présence d'au moins un fichier local
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
       const realPath = window.ekkoAPI?.getDroppedFilePath
@@ -108,12 +141,34 @@ export const HomeView: React.FC = () => {
 
       console.log('[Drop:Event] Chemin absolu extrait via webUtils :', realPath);
 
-      if (!realPath) {
-        setError('Impossible de résoudre le chemin système du fichier.');
+      if (realPath) {
+        await ingestFileInPlace(realPath);
         return;
       }
+    }
 
-      await ingestFileInPlace(realPath);
+    // Cas B : Dépôt de texte / lien web (text/uri-list, text/plain ou URL)
+    const rawUri =
+      e.dataTransfer.getData('text/uri-list') ||
+      e.dataTransfer.getData('text/plain') ||
+      e.dataTransfer.getData('URL') ||
+      '';
+
+    const cleanedUri = rawUri
+      .split('\n')
+      .map((l) => l.trim())
+      .find((l) => l.length > 0 && !l.startsWith('#'));
+
+    if (cleanedUri && (cleanedUri.startsWith('http://') || cleanedUri.startsWith('https://'))) {
+      console.log('[Drop:Event] URL extraite via drag-and-drop :', cleanedUri);
+      await ingestUrlInPlace(cleanedUri);
+      return;
+    }
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setError('Impossible de résoudre le chemin système du fichier.');
+    } else {
+      setError('Format non supporté · Déposez un fichier local ou une URL valide');
     }
   };
 
