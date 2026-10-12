@@ -51,7 +51,7 @@ class MemoryPort(Protocol):
         """Persist a message into the specified session."""
         ...
 
-    async def get_messages(self, session_id: str, limit: int = 50) -> list[Message]:
+    async def get_messages(self, session_id: str, limit: int = 10) -> list[Message]:
         """Retrieve conversation history for the session, up to limit turns."""
         ...
 
@@ -103,7 +103,6 @@ class HybridMemoryPort(Protocol):
         """Retrieve un-distilled raw signals in retained status."""
         ...
 
-
     async def mark_signal_status(self, signal_id: str, status: SignalStatus | str) -> None:
         """Update the processing status of a raw signal."""
         ...
@@ -115,6 +114,11 @@ class HybridMemoryPort(Protocol):
     ) -> None:
         """Persist a distilled knowledge note with FTS and vector indexing."""
         ...
+
+    async def get_popular_tags(self, limit: int = 30) -> list[str]:
+        """Fetch most frequently used tags across all knowledge notes."""
+        ...
+
 
 
 @runtime_checkable

@@ -51,6 +51,8 @@ def build_default_system_prompt() -> str:
         "- Execute appropriate tools when external actions or data lookups are requested.\n"
         "- Strict Tool Grounding: Never hallucinate or invent search results, facts, file contents, or system metrics. "
         "If an action or lookup can be performed by an available tool ('system_info', 'query_knowledge', 'read_resource', 'scan_inbox'), "
-        "you MUST invoke the tool rather than explaining how to perform it manually or fabricating answers."
+        "you MUST invoke the tool rather than explaining how to perform it manually or fabricating answers.\n"
+        "- Gestion stricte des échecs d'outils : Si le message d'un outil commence par [ÉCHEC OUTIL], tu DOIS impérativement reconnaître et expliquer l'échec à l'utilisateur. Il est STRICTEMENT INTERDIT d'affirmer qu'une action a réussi si l'outil a retourné une erreur ou un échec."
     )
+
 

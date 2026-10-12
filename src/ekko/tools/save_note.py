@@ -12,8 +12,10 @@ from ekko.logger import get_logger
 from ekko.memory.formatters import (
     determine_unique_path as _determine_unique_path,
     format_markdown_note as _format_markdown_note,
+    normalize_tag as _normalize_tag,
     slugify as _slugify,
 )
+
 
 logger = get_logger("tools.save_note")
 
@@ -149,8 +151,9 @@ class SaveNoteTool(BaseTool):
         except Exception as exc:
             return ToolResult(content=f"Chemin invalide : {exc}", success=False, error="InvalidPath")
 
+        normalized_tags = [_normalize_tag(t) for t in (tags or []) if _normalize_tag(t)]
         note_text = _format_markdown_note(
-            title=title, content=content, tags=tags or [], sources=sources or [], date_str=date_str,
+            title=title, content=content, tags=normalized_tags, sources=sources or [], date_str=date_str,
         )
 
         try:
@@ -166,9 +169,10 @@ class SaveNoteTool(BaseTool):
 
         if self.db_manager is not None:
             try:
-                knote = _build_knowledge_note(title, content, tags, sources, slug, date_str)
+                knote = _build_knowledge_note(title, content, normalized_tags, sources, slug, date_str)
                 await _sync_hybrid_store(self.db_manager, knote, self.embedder)
             except Exception as exc:
+
                 logger.error("Failed to sync note to hybrid store: %s", exc)
                 return ToolResult(
                     content=f"Erreur lors de la sauvegarde : {exc}",

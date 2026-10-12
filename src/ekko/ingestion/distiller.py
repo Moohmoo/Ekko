@@ -13,14 +13,14 @@ from ekko.core.ports import EmbedderPort, HybridMemoryPort, LLMProviderPort, Res
 from ekko.ingestion.compressor import ContentCompressor, ModelProfile
 from ekko.ingestion.extractors import extract_text_from_file
 from ekko.logger import get_logger
-from ekko.memory.formatters import determine_unique_path, format_markdown_note, slugify
+from ekko.memory.formatters import determine_unique_path, format_markdown_note, normalize_tag, slugify
 
 logger = get_logger("ingestion.distiller")
 _compressor = ContentCompressor()
 
 
-def _build_distill_prompt(signal: RawSignal) -> str:
-    """Build a concise, strict distillation prompt with heuristic pruning and token budgeting."""
+def _build_distill_prompt(signal: RawSignal, existing_tags: list[str] | None = None) -> str:
+    """Build a concise, strict distillation prompt with heuristic pruning, token budgeting, and existing tag grounding."""
     content = signal.clean_content or signal.raw_content
     pruned = _compressor.prune_heuristics(content)
     budgeted = _compressor.truncate_to_budget(
@@ -28,11 +28,22 @@ def _build_distill_prompt(signal: RawSignal) -> str:
         profile=ModelProfile.STANDARD,
         custom_budget=1000,  # 1000 tokens ~ 4000 characters
     )
+
+    tag_guidance = ""
+    if existing_tags:
+        tags_str = ", ".join(existing_tags)
+        tag_guidance = (
+            f"\nTags déjà utilisés dans le coffre : {tags_str}.\n"
+            "Règle : réutilise en priorité ces tags existants si le sujet correspond. "
+            "Ne crée un nouveau tag que pour un concept inédit.\n"
+        )
+
     return (
         "You are Ekko's cognitive distillation engine. Extract insights from this signal:\n"
         f"Title: {signal.title}\n"
         f"Source: {signal.source_id}\n"
-        f"Content:\n{budgeted}\n\n"
+        f"Content:\n{budgeted}\n"
+        f"{tag_guidance}\n"
         "Return ONLY a JSON object with this exact structure:\n"
         "{\n"
         '  "title": "Refined and concise title",\n'
@@ -59,11 +70,18 @@ def _parse_distillation(response_text: str, default_title: str) -> tuple[str, st
                 raw_points = data.get("key_points")
                 points = [str(p) for p in raw_points] if isinstance(raw_points, list) else []
                 raw_tags = data.get("tags")
-                tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else ["distilled"]
+                tags = (
+                    [normalize_tag(str(t)) for t in raw_tags if normalize_tag(str(t))]
+                    if isinstance(raw_tags, list)
+                    else ["distilled"]
+                )
+                if not tags:
+                    tags = ["distilled"]
                 body = f"## Summary\n\n{summary}\n\n## Key Takeaways\n\n" + "\n".join(f"- {p}" for p in points)
                 return str(title), str(summary), body, tags
         except json.JSONDecodeError:
             pass
+
 
     summary = cleaned[:300]
     return default_title, summary, cleaned, ["distilled"]
@@ -135,11 +153,19 @@ class SignalDistiller:
 
     async def _execute_distill(self, signal: RawSignal) -> KnowledgeNote:
         """Execute LLM generation and note persistence."""
-        prompt = _build_distill_prompt(signal)
+        existing_tags: list[str] = []
+        if self.store is not None and hasattr(self.store, "get_popular_tags"):
+            try:
+                existing_tags = await self.store.get_popular_tags(limit=30)
+            except Exception as exc:
+                logger.warning("Failed to retrieve popular tags for distillation: %s", exc)
+
+        prompt = _build_distill_prompt(signal, existing_tags=existing_tags)
         messages = [Message(role="user", content=prompt)]
         if self.resource_manager is not None and hasattr(self.resource_manager, "inject_unload_vram"):
             call_kwargs = self.resource_manager.inject_unload_vram()
         else:
+
             call_kwargs = {"extra_body": {"keep_alive": 0}}
 
         try:

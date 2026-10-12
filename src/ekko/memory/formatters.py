@@ -14,6 +14,20 @@ def slugify(text: str) -> str:
     return normalized if normalized else "note"
 
 
+def normalize_tag(tag: str) -> str:
+    """Normalize a PKM tag into clean lowercase kebab-case format."""
+    normalized = unicodedata.normalize("NFKD", tag).encode("ascii", "ignore").decode("ascii")
+    normalized = normalized.lower().strip()
+    # Replace whitespace, underscores, slashes and separators with single hyphen
+    normalized = re.sub(r"[\s_/\\]+", "-", normalized)
+    # Remove all characters except lowercase letters, numbers, and hyphens
+    normalized = re.sub(r"[^a-z0-9-]", "", normalized)
+    # Collapse consecutive hyphens and strip edges
+    normalized = re.sub(r"-+", "-", normalized).strip("-")
+    return normalized
+
+
+
 def format_markdown_note(
     title: str,
     content: str,

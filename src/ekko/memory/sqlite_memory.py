@@ -96,15 +96,49 @@ class SqliteMemory:
                 (session_id, message.role, message.content, message.tool_call_id, tool_calls_json),
             )
 
-    def _query_messages_sync(self, session_id: str, limit: int) -> list[Message]:
-        """Fetch chronological messages bounded by limit synchronously."""
+    def _query_messages_sync(self, session_id: str, limit: int = 10) -> list[Message]:
+        """Fetch chronological messages bounded by limit with ReAct sequence integrity preservation."""
         with self._connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(SELECT_MESSAGES_SQL, (session_id, limit))
+            cursor.execute(
+                """
+                SELECT id, role, content, tool_call_id, tool_calls_json
+                FROM messages
+                WHERE session_id = ?
+                ORDER BY id DESC
+                LIMIT ?;
+                """,
+                (session_id, limit),
+            )
             rows = cursor.fetchall()
 
+            if not rows:
+                return []
+
+            # If the oldest message in window (rows[-1] in DESC order) is a tool message,
+            # look backward to fetch the preceding assistant message with tool_calls
+            oldest_id, oldest_role = rows[-1][0], rows[-1][1]
+            if oldest_role == "tool":
+                cursor.execute(
+                    """
+                    SELECT id, role, content, tool_call_id, tool_calls_json
+                    FROM messages
+                    WHERE session_id = ? AND id < ?
+                    ORDER BY id DESC;
+                    """,
+                    (session_id, oldest_id),
+                )
+                prev_rows = cursor.fetchall()
+                for prev in prev_rows:
+                    rows.append(prev)
+                    if prev[1] == "assistant":
+                        break
+
+        # Re-sort chronologically by id
+        rows.sort(key=lambda r: r[0])
+
         messages: list[Message] = []
-        for role, content, tool_call_id, tool_calls_json in rows:
+        for _, role, content, tool_call_id, tool_calls_json in rows:
             tool_calls = _deserialize_tool_calls(tool_calls_json)
             messages.append(
                 Message(
@@ -125,9 +159,16 @@ class SqliteMemory:
         """Persist a message into the specified session asynchronously."""
         await asyncio.to_thread(self._insert_message_sync, session_id, message)
 
-    async def get_messages(self, session_id: str, limit: int = 50) -> list[Message]:
+    async def get_messages(
+        self,
+        session_id: str,
+        limit: int = 10,
+        window_size: int | None = None,
+    ) -> list[Message]:
         """Retrieve bounded conversation history in chronological order."""
-        return await asyncio.to_thread(self._query_messages_sync, session_id, limit)
+        effective_limit = window_size if window_size is not None else limit
+        return await asyncio.to_thread(self._query_messages_sync, session_id, effective_limit)
+
 
     async def clear_session(self, session_id: str) -> None:
         """Remove all messages associated with the specified session."""

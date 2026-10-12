@@ -198,3 +198,35 @@ async def test_distill_uses_semaphore_lock(tmp_path: Path, sample_signal: RawSig
     # Semaphore should be released after execution
     assert not semaphore.locked()
 
+
+@pytest.mark.asyncio
+async def test_distill_injects_popular_tags_and_normalizes_output(
+    tmp_path: Path, sample_signal: RawSignal
+) -> None:
+    """Ensure SignalDistiller fetches popular tags, injects them in prompt, and normalizes output tags."""
+    mock_store = AsyncMock()
+    mock_store.get_popular_tags.return_value = ["deep-learning", "transformers", "nlp"]
+
+    distill_json = json.dumps({
+        "title": "Normalized Tag Test",
+        "summary": "Testing tag normalization and taxonomy injection.",
+        "key_points": ["Point A"],
+        "tags": ["Machine Learning!", "Deep Learning", "NLP & AI"],
+    })
+    mock_llm = AsyncMock()
+    mock_llm.generate.return_value = ModelResponse(
+        content=distill_json,
+        model_name="mock_model",
+    )
+
+    distiller = SignalDistiller(store=mock_store, llm_provider=mock_llm, notes_dir=tmp_path)
+    note = await distiller.distill_signal(sample_signal)
+
+    mock_store.get_popular_tags.assert_awaited_once_with(limit=30)
+    messages = mock_llm.generate.call_args[0][0]
+    prompt_sent = messages[0].content
+    assert "Tags déjà utilisés dans le coffre : deep-learning, transformers, nlp." in prompt_sent
+    assert "Règle : réutilise en priorité ces tags existants" in prompt_sent
+
+    assert note.tags == ["machine-learning", "deep-learning", "nlp-ai"]
+

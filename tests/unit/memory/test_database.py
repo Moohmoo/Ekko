@@ -220,3 +220,45 @@ async def test_connection_closure_guaranteed(db_manager: HybridStore) -> None:
     # After leaving the context, connection must be closed
     with pytest.raises(Exception):
         captured_conn.execute("SELECT 1;")
+
+
+@pytest.mark.asyncio
+async def test_get_popular_tags(db_manager: HybridStore) -> None:
+    """Ensure get_popular_tags returns the most frequent tags sorted by count."""
+    note1 = KnowledgeNote(
+        id="n1",
+        slug="s1",
+        title="T1",
+        summary="S1",
+        content="C1",
+        tags=["python", "ai", "fastapi"],
+    )
+    note2 = KnowledgeNote(
+        id="n2",
+        slug="s2",
+        title="T2",
+        summary="S2",
+        content="C2",
+        tags=["python", "ai", "llm"],
+    )
+    note3 = KnowledgeNote(
+        id="n3",
+        slug="s3",
+        title="T3",
+        summary="S3",
+        content="C3",
+        tags=["python", "rust"],
+    )
+    await db_manager.save_knowledge_note(note1)
+    await db_manager.save_knowledge_note(note2)
+    await db_manager.save_knowledge_note(note3)
+
+    popular = await db_manager.get_popular_tags(limit=2)
+    assert len(popular) == 2
+    assert popular[0] == "python"
+    assert popular[1] == "ai"
+
+    all_popular = await db_manager.get_popular_tags(limit=10)
+    assert all_popular[0] == "python"
+    assert all_popular[1] == "ai"
+    assert set(all_popular[2:]) == {"fastapi", "llm", "rust"}

@@ -321,4 +321,53 @@ async def test_engine_handles_empty_tool_result_content() -> None:
     assert tool_msg.content == "(Aucun contenu retourné par l'outil)"
 
 
+@pytest.mark.asyncio
+async def test_engine_prefixes_tool_failure_in_message() -> None:
+    """Ensure tool execution failure prefixes the injected tool message with [ÉCHEC OUTIL - ErrorType]."""
+    from pydantic import BaseModel
+    from ekko.core.models import ToolCall, ToolResult
+    from ekko.tools.base import BaseTool
+    from ekko.tools.registry import ToolRegistry
+
+    class FailingArgs(BaseModel):
+        path: str
+
+    class FailingTool(BaseTool):
+        name: str = "failing_tool"
+        description: str = "Simulates failure"
+        args_schema: type[BaseModel] = FailingArgs
+
+        async def _run(self, path: str) -> ToolResult:
+            return ToolResult(
+                content="Accès interdit",
+                success=False,
+                error="SecurityViolation",
+            )
+
+    registry = ToolRegistry()
+    registry.register(FailingTool())
+
+    mock_provider = AsyncMock()
+    mock_provider.generate.side_effect = [
+        ModelResponse(
+            content="",
+            model_name="mock",
+            tool_calls=[ToolCall(id="c_fail", name="failing_tool", arguments={"path": "/etc/shadow"})],
+        ),
+        ModelResponse(content="L'accès a été refusé.", model_name="mock"),
+    ]
+
+    memory = InMemoryMemory()
+    engine = EkkoEngine(provider=mock_provider, memory=memory, tools=registry)
+
+    reply = await engine.process_message("Read /etc/shadow", session_id="fail_test")
+    assert reply == "L'accès a été refusé."
+
+    messages = await memory.get_messages("fail_test")
+    tool_msg = messages[2]
+    assert tool_msg.role == "tool"
+    assert tool_msg.content == "[ÉCHEC OUTIL - SecurityViolation] : Accès interdit"
+
+
+
 

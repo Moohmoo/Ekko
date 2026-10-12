@@ -160,3 +160,32 @@ def test_sqlite_memory_connection_closure_guaranteed(tmp_path: Path) -> None:
 
     with pytest.raises(Exception):
         captured_conn.execute("SELECT 1;")
+
+
+
+@pytest.mark.asyncio
+async def test_sqlite_memory_react_sequence_integrity_preserved(tmp_path: Path) -> None:
+    """Ensure rolling window does not orphan a tool message by including its caller assistant message."""
+    from ekko.core.models import ToolCall
+
+    mem = SqliteMemory(db_path=tmp_path / "react_window.db")
+    session = "react_sess"
+
+    tcall = ToolCall(id="call_x", name="calc", arguments={"v": 42})
+    await mem.add_message(session, Message(role="user", content="Turn 1"))
+    await mem.add_message(session, Message(role="assistant", tool_calls=[tcall]))
+    await mem.add_message(session, Message(role="tool", content="42", tool_call_id="call_x"))
+    await mem.add_message(session, Message(role="assistant", content="Result is 42"))
+    await mem.add_message(session, Message(role="user", content="Turn 2"))
+    await mem.add_message(session, Message(role="assistant", content="Reply 2"))
+
+    # Total 6 messages. If we ask for limit=4, normal limit would take:
+    # [Tool, Assistant(Result), User(Turn 2), Assistant(Reply 2)]
+    # With ReAct integrity, it MUST pull in Assistant(tool_calls=[tcall])
+    window_msgs = await mem.get_messages(session, limit=4)
+    assert len(window_msgs) == 5
+    assert window_msgs[0].role == "assistant"
+    assert len(window_msgs[0].tool_calls) == 1
+    assert window_msgs[1].role == "tool"
+    assert window_msgs[1].tool_call_id == "call_x"
+

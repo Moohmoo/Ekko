@@ -1,6 +1,7 @@
 """Thread-safe SQLite database manager for Ekko unified persistence and hybrid search."""
 
 import asyncio
+from collections import Counter
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
@@ -8,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import sqlite3
+
 import sqlite_vec
 
 from ekko.core.models import (
@@ -447,6 +449,31 @@ class HybridStore:
     async def list_knowledge_notes(self, limit: int = 50) -> list[KnowledgeNote]:
         """List knowledge notes asynchronously."""
         return await asyncio.to_thread(self._list_knowledge_notes_sync, limit)
+
+    def _get_popular_tags_sync(self, limit: int = 30) -> list[str]:
+        """Fetch most frequently used tags across all knowledge notes synchronously."""
+        sql = "SELECT tags FROM knowledge_notes;"
+        tag_counts: Counter[str] = Counter()
+        with self._connection() as conn:
+            rows = conn.execute(sql).fetchall()
+            for row in rows:
+                tags_raw = row["tags"] if isinstance(row, sqlite3.Row) else row[0]
+                if not tags_raw:
+                    continue
+                try:
+                    parsed = json.loads(tags_raw)
+                    if isinstance(parsed, list):
+                        for tag in parsed:
+                            if isinstance(tag, str) and tag.strip():
+                                tag_counts[tag.strip()] += 1
+                except (json.JSONDecodeError, TypeError):
+                    continue
+        return [tag for tag, _ in tag_counts.most_common(limit)]
+
+    async def get_popular_tags(self, limit: int = 30) -> list[str]:
+        """Fetch most frequently used tags across all knowledge notes asynchronously."""
+        return await asyncio.to_thread(self._get_popular_tags_sync, limit)
+
 
     def _run_fts_search(self, conn: sqlite3.Connection, query: str, limit: int) -> dict[str, int]:
         """Execute FTS5 search and return mapping of note_id to 1-based rank."""

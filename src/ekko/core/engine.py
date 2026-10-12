@@ -96,14 +96,16 @@ class EkkoEngine:
         tools: Mapping[str, ToolPort] | None = None,
         system_prompt: str | None = None,
         max_iterations: int = 5,
-        history_limit: int = 50,
+        history_limit: int = 10,
+        window_size: int = 10,
     ) -> None:
         self.provider = provider
         self.memory = memory
         self.tools = tools
         self.system_prompt = system_prompt if system_prompt is not None else build_default_system_prompt()
         self.max_iterations = max_iterations
-        self.history_limit = history_limit
+        self.window_size = window_size
+        self.history_limit = window_size
 
     async def _run_tool_steps(
         self,
@@ -145,6 +147,9 @@ class EkkoEngine:
 
             content_str = (result.content or "").strip()
             msg_content = content_str if content_str else "(Aucun contenu retourné par l'outil)"
+            if not result.success:
+                error_label = result.error or "Erreur"
+                msg_content = f"[ÉCHEC OUTIL - {error_label}] : {msg_content}"
             msg = Message(role="tool", content=msg_content, tool_call_id=call.id)
             await self.memory.add_message(session_id, msg)
 
@@ -172,11 +177,16 @@ class EkkoEngine:
             logger.debug("ReAct loop step %d/%d", step_idx, self.max_iterations)
             yield StepStarted(step_index=step_idx, max_steps=self.max_iterations)
 
-            history = await self.memory.get_messages(session_id, limit=self.history_limit)
+            history = await self.memory.get_messages(session_id, limit=self.window_size)
+            # ReAct integrity guard: never start history payload on an orphan tool response
+            while history and history[0].role == "tool":
+                history = history[1:]
+
             if history and history[0].role == "system":
                 payload = history
             else:
                 payload = [Message(role="system", content=self.system_prompt), *history]
+
 
             accumulated_text = ""
             tool_calls: list[ToolCall] = []

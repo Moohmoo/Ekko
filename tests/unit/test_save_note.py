@@ -248,3 +248,37 @@ async def test_save_note_handles_database_sync_error(tmp_path: Path) -> None:
     assert result.success is False
     assert result.error == "DatabaseSyncError"
     assert "Erreur lors de la sauvegarde" in result.content
+
+
+def test_normalize_tag_edge_cases() -> None:
+    """Ensure normalize_tag formats tags into clean kebab-case across edge cases."""
+    from ekko.memory.formatters import normalize_tag
+
+    assert normalize_tag(" Machine Learning ") == "machine-learning"
+    assert normalize_tag("AI/ML") == "ai-ml"
+    assert normalize_tag("deep__learning!") == "deep-learning"
+    assert normalize_tag("artificial_intelligence") == "artificial-intelligence"
+    assert normalize_tag("#tech") == "tech"
+    assert normalize_tag("--foo--") == "foo"
+    assert normalize_tag("") == ""
+
+
+@pytest.mark.asyncio
+async def test_save_note_normalizes_tags(tmp_path: Path) -> None:
+    """Ensure SaveNoteTool normalizes user-provided tags before saving."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_db = MagicMock()
+    mock_db.save_knowledge_note = AsyncMock()
+
+    tool = SaveNoteTool(notes_dir=tmp_path, db_manager=mock_db)
+    result = await tool._run(
+        title="Tag Test",
+        content="Testing tag normalization in save note tool.",
+        tags=[" Machine Learning ", "AI/ML", "#Deep__Learning!"],
+    )
+
+    assert result.success is True
+    saved_note = mock_db.save_knowledge_note.call_args[0][0]
+    assert saved_note.tags == ["machine-learning", "ai-ml", "deep-learning"]
+
