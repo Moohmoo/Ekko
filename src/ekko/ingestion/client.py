@@ -121,31 +121,64 @@ class ResilientHttpClient:
         last_modified: str | None = None,
         params: Mapping[str, HttpQueryParamValue] | None = None,
         headers: dict[str, str] | None = None,
+        max_redirects: int = 3,
     ) -> HttpResponseResult:
-        """Execute safe, rate-limited HTTP GET request with conditional caching."""
-        validated_url = self.ssrf_validator.validate_url(url)
-        host = urlparse(validated_url).hostname or ""
-        await self.rate_limiter.acquire(host)
+        """Execute safe, rate-limited HTTP GET request with conditional caching and safe redirect following."""
+        current_url = url
+        current_params = params
+        current_etag = etag
+        current_last_modified = last_modified
 
-        req_headers = self._prepare_headers(headers, etag, last_modified)
-        resp = await self._send_with_retry(validated_url, params, req_headers)
+        for redirect_hop in range(max_redirects + 1):
+            validated_url = await self.ssrf_validator.validate_url(current_url)
+            host = urlparse(validated_url).hostname or ""
+            await self.rate_limiter.acquire(host)
 
-        if resp.status_code == 304:
+            req_headers = self._prepare_headers(headers, current_etag, current_last_modified)
+            resp = await self._send_with_retry(validated_url, current_params, req_headers)
+
+            if resp.status_code == 304:
+                return HttpResponseResult(
+                    status_code=304,
+                    not_modified=True,
+                    text="",
+                    etag=resp.headers.get("etag") or current_etag,
+                    last_modified=resp.headers.get("last-modified") or current_last_modified,
+                    headers=dict(resp.headers),
+                )
+
+            # Handle safe redirects (301, 302, 307, 308)
+            if resp.status_code in {301, 302, 307, 308}:
+                location = resp.headers.get("location")
+                if not location:
+                    raise HttpFetchError(f"Redirect status {resp.status_code} received without Location header for '{current_url}'")
+
+                redirect_target = str(httpx.URL(validated_url).join(location))
+                logger.info(
+                    "Following safe redirect %d/%d from '%s' to '%s'",
+                    redirect_hop + 1,
+                    max_redirects,
+                    current_url,
+                    redirect_target,
+                )
+                if redirect_hop >= max_redirects:
+                    raise HttpFetchError(f"Too many redirects (exceeded maximum of {max_redirects}) for '{url}'")
+
+                current_url = redirect_target
+                # Drop params, etag, and last_modified on cross-redirect request
+                current_params = None
+                current_etag = None
+                current_last_modified = None
+                continue
+
+            resp.raise_for_status()
             return HttpResponseResult(
-                status_code=304,
-                not_modified=True,
-                text="",
-                etag=resp.headers.get("etag") or etag,
-                last_modified=resp.headers.get("last-modified") or last_modified,
+                status_code=resp.status_code,
+                not_modified=False,
+                text=resp.text,
+                etag=resp.headers.get("etag"),
+                last_modified=resp.headers.get("last-modified"),
                 headers=dict(resp.headers),
             )
 
-        resp.raise_for_status()
-        return HttpResponseResult(
-            status_code=resp.status_code,
-            not_modified=False,
-            text=resp.text,
-            etag=resp.headers.get("etag"),
-            last_modified=resp.headers.get("last-modified"),
-            headers=dict(resp.headers),
-        )
+        raise HttpFetchError(f"Too many redirects (exceeded maximum of {max_redirects}) for '{url}'")

@@ -5,21 +5,21 @@ import re
 
 TRUNCATION_NOTICE = "\n\n[... Content truncated to match token budget ...]"
 
-# Patterns identifying sections to prune
+# Precompiled patterns identifying sections to prune
 NOISY_SECTION_HEADERS = [
-    r"^#{1,6}\s*(?:references?|bibliograph(?:y|ie)|notes?|footnotes?|sources?)\b",
-    r"^#{1,6}\s*(?:see also|voir aussi|external links?|liens externes?)\b",
-    r"^#{1,6}\s*(?:about the authors?|à propos de l['’]auteur)\b",
+    re.compile(r"^#{1,6}\s*(?:references?|bibliograph(?:y|ie)|footnotes?|sources?)\b", re.IGNORECASE),
+    re.compile(r"^#{1,6}\s*(?:see also|voir aussi|external links?|liens externes?)\b", re.IGNORECASE),
+    re.compile(r"^#{1,6}\s*(?:about the authors?|à propos de l['’]auteur)\b", re.IGNORECASE),
 ]
 
-# Patterns identifying single-line UI / legal boilerplate
+# Precompiled patterns identifying single-line UI / legal boilerplate
 BOILERPLATE_PATTERNS = [
-    r"(?i)\bcookie\s+policy\b",
-    r"(?i)\bprivacy\s+policy\b",
-    r"(?i)\bterms\s+of\s+service\b",
-    r"(?i)\ball\s+rights\s+reserved\b",
-    r"(?i)^navigation\s*\|",
-    r"(?i)^\s*\|\s*home\s*\|",
+    re.compile(r"\bcookie\s+policy\b", re.IGNORECASE),
+    re.compile(r"\bprivacy\s+policy\b", re.IGNORECASE),
+    re.compile(r"\bterms\s+of\s+service\b", re.IGNORECASE),
+    re.compile(r"\ball\s+rights\s+reserved\b", re.IGNORECASE),
+    re.compile(r"^navigation\s*\|", re.IGNORECASE),
+    re.compile(r"^\s*\|\s*home\s*\|", re.IGNORECASE),
 ]
 
 
@@ -41,7 +41,7 @@ PROFILE_TOKEN_BUDGETS: dict[ModelProfile, int] = {
 def _is_boilerplate_line(line: str) -> bool:
     """Check if a line matches known noise or cookie/legal banners."""
     stripped = line.strip()
-    return any(re.search(pat, stripped) for pat in BOILERPLATE_PATTERNS)
+    return any(pat.search(stripped) for pat in BOILERPLATE_PATTERNS)
 
 
 def _split_into_paragraphs(text: str) -> list[str]:
@@ -69,8 +69,9 @@ class ContentCompressor:
         retained_lines: list[str] = []
 
         for line in lines:
+            stripped = line.strip()
             # Stop accumulating if we encounter reference/bibliography section header
-            if any(re.search(pat, line.strip(), re.IGNORECASE) for pat in NOISY_SECTION_HEADERS):
+            if any(pat.search(stripped) for pat in NOISY_SECTION_HEADERS):
                 break
             if not _is_boilerplate_line(line):
                 retained_lines.append(line)
@@ -113,8 +114,12 @@ class ContentCompressor:
             if current and (current_len + p_len + 2 > max_chunk_chars):
                 chunk_str = "\n\n".join(current).strip()
                 chunks.append(chunk_str)
-                # Keep tail paragraph for overlap if possible
-                overlap_p = current[-1] if len(current[-1]) <= overlap_chars else ""
+                # Keep tail paragraph or tail slice for overlap to guarantee context continuity
+                last_p = current[-1]
+                if len(last_p) <= overlap_chars:
+                    overlap_p = last_p
+                else:
+                    overlap_p = last_p[-overlap_chars:]
                 current = [overlap_p, p] if overlap_p else [p]
                 current_len = sum(len(x) + 2 for x in current)
             else:

@@ -52,7 +52,7 @@ def _read_local_file_sync(file_path: Path, max_chars: int) -> ToolResult:
 async def _fetch_web_resource(url: str, max_chars: int) -> ToolResult:
     """Fetch and extract web page content as Markdown with SSRF and error guards."""
     try:
-        safe_url = SSRFValidator().validate_url(url)
+        safe_url = await SSRFValidator().validate_url(url)
     except SSRFViolationError as err:
         logger.warning("SSRF violation blocked for URL '%s': %s", url, err)
         return ToolResult(content=f"SSRF error: {err}", success=False, error="SSRFViolationError")

@@ -71,6 +71,35 @@ Privacy Policy | Terms of Service | All rights reserved 2026.
     assert "Privacy Policy" not in cleaned
 
 
+def test_heuristic_pruning_preserves_legitimate_notes_section() -> None:
+    """Ensure heuristic pruning does not prematurely truncate on ## Notes section."""
+    compressor = ContentCompressor()
+
+    doc_with_notes = """
+# Engineering Specification
+
+## Architecture Overview
+System uses event streaming.
+
+## Notes
+These are critical implementation notes that must be preserved.
+
+## Notes techniques
+Additional technical details.
+
+## References
+[1] Some Citation.
+"""
+    cleaned = compressor.prune_heuristics(doc_with_notes)
+
+    assert "## Notes" in cleaned
+    assert "critical implementation notes that must be preserved" in cleaned
+    assert "## Notes techniques" in cleaned
+    assert "Additional technical details" in cleaned
+    assert "## References" not in cleaned
+    assert "[1] Some Citation" not in cleaned
+
+
 def test_truncate_to_budget_with_neutral_notice_and_custom_override() -> None:
     """Ensure content is truncated with neutral notice or custom notice/budget."""
     compressor = ContentCompressor()

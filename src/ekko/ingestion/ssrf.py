@@ -1,5 +1,6 @@
 """Strict SSRF validation guarding against local and private network probing."""
 
+import asyncio
 import ipaddress
 import socket
 from urllib.parse import urlparse
@@ -15,16 +16,12 @@ class SSRFValidator:
     """Validates URLs and resolved IP addresses against SSRF attacks."""
 
     ALLOWED_SCHEMES = {"http", "https"}
-    METADATA_IP = "169.254.169.254"
 
     def is_ip_safe(self, ip_str: str) -> bool:
         """Verify whether an IP address is a safe public address."""
         try:
             ip = ipaddress.ip_address(ip_str.strip())
         except ValueError:
-            return False
-
-        if ip_str.strip() == self.METADATA_IP:
             return False
 
         return not (
@@ -36,16 +33,17 @@ class SSRFValidator:
             or ip.is_unspecified
         )
 
-    def _resolve_host_ips(self, host: str) -> list[str]:
-        """Resolve host name to IP addresses using system DNS."""
+    async def _resolve_host_ips(self, host: str) -> list[str]:
+        """Resolve host name to IP addresses asynchronously using system DNS without blocking loop."""
+        loop = asyncio.get_running_loop()
         try:
-            addr_info = socket.getaddrinfo(host, None)
+            addr_info = await loop.getaddrinfo(host, None)
             return [str(sockaddr[0]) for _, _, _, _, sockaddr in addr_info]
         except socket.gaierror as exc:
             raise SSRFViolationError(f"DNS resolution failure for host '{host}': {exc}") from exc
 
-    def validate_url(self, url: str) -> str:
-        """Validate URL scheme and ensure resolved target IPs are public."""
+    async def validate_url(self, url: str) -> str:
+        """Validate URL scheme and ensure resolved target IPs are public (non-blocking)."""
         parsed = urlparse(url.strip())
         if parsed.scheme.lower() not in self.ALLOWED_SCHEMES:
             raise SSRFViolationError(
@@ -64,7 +62,7 @@ class SSRFValidator:
         except ValueError:
             pass
 
-        resolved_ips = self._resolve_host_ips(host)
+        resolved_ips = await self._resolve_host_ips(host)
         if not resolved_ips:
             raise SSRFViolationError(f"No IP addresses resolved for host '{host}'")
 

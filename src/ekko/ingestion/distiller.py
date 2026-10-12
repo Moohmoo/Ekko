@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -9,24 +10,29 @@ import re
 from ekko.core.errors import DistillationError
 from ekko.core.models import KnowledgeNote, Message, RawSignal
 from ekko.core.ports import EmbedderPort, HybridMemoryPort, LLMProviderPort, ResourceManagerPort
+from ekko.ingestion.compressor import ContentCompressor, ModelProfile
+from ekko.ingestion.extractors import extract_text_from_file
 from ekko.logger import get_logger
-from ekko.tools.save_note import (
-    _determine_unique_path,
-    _format_markdown_note,
-    _slugify,
-)
+from ekko.memory.formatters import determine_unique_path, format_markdown_note, slugify
 
 logger = get_logger("ingestion.distiller")
+_compressor = ContentCompressor()
 
 
 def _build_distill_prompt(signal: RawSignal) -> str:
-    """Build a concise, strict distillation prompt requesting JSON output."""
+    """Build a concise, strict distillation prompt with heuristic pruning and token budgeting."""
     content = signal.clean_content or signal.raw_content
+    pruned = _compressor.prune_heuristics(content)
+    budgeted = _compressor.truncate_to_budget(
+        pruned,
+        profile=ModelProfile.STANDARD,
+        custom_budget=1000,  # 1000 tokens ~ 4000 characters
+    )
     return (
         "You are Ekko's cognitive distillation engine. Extract insights from this signal:\n"
         f"Title: {signal.title}\n"
         f"Source: {signal.source_id}\n"
-        f"Content:\n{content[:4000]}\n\n"
+        f"Content:\n{budgeted}\n\n"
         "Return ONLY a JSON object with this exact structure:\n"
         "{\n"
         '  "title": "Refined and concise title",\n'
@@ -87,8 +93,8 @@ class SignalDistiller:
         if primary_file.exists():
             file_path = primary_file
         else:
-            file_path = _determine_unique_path(self.notes_dir, slug, date_str)
-        text = _format_markdown_note(note.title, note.content, note.tags, note.sources, date_str)
+            file_path = determine_unique_path(self.notes_dir, slug, date_str)
+        text = format_markdown_note(note.title, note.content, note.tags, note.sources, date_str)
         file_path.write_text(text, encoding="utf-8")
 
     async def _persist_note(
@@ -102,7 +108,7 @@ class SignalDistiller:
         """Save knowledge note in hybrid store and on disk, ensuring idempotence."""
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%Y-%m-%d")
-        slug = _slugify(title)
+        slug = slugify(title)
         sources = [signal.url] if signal.url else [signal.source_id]
 
         note = KnowledgeNote(
@@ -149,8 +155,9 @@ class SignalDistiller:
         cleaned = raw_content.strip()
         if not cleaned:
             raise DistillationError("Cannot distill empty content")
+        stable_hash = hashlib.sha256(cleaned.encode("utf-8")).hexdigest()[:12]
         signal = RawSignal(
-            id=f"text_{abs(hash(cleaned)) % 1000000}",
+            id=f"text_{stable_hash}",
             source_id=source_id,
             title=title,
             url=url,
@@ -161,30 +168,12 @@ class SignalDistiller:
 
     async def distill_file(self, file_path: Path | str) -> KnowledgeNote:
         """Extract text from physical file and distill into a knowledge note."""
-        path = Path(file_path)
-        if not path.exists():
-            raise DistillationError(f"File not found: {path}")
-
-        suffix = path.suffix.lower()
-        if suffix == ".pdf":
-            try:
-                import pypdf
-                reader = pypdf.PdfReader(str(path))
-                extracted_text = "".join(page.extract_text() or "" for page in reader.pages)
-            except Exception as exc:
-                raise DistillationError(f"Failed to extract PDF text from '{path}': {exc}") from exc
-        else:
-            try:
-                extracted_text = path.read_text(encoding="utf-8")
-            except Exception as exc:
-                raise DistillationError(f"Failed to read file '{path}': {exc}") from exc
-
-        title = path.stem.replace("_", " ").replace("-", " ").title()
+        extracted_text, title = extract_text_from_file(file_path)
         return await self.distill_raw_content(
             raw_content=extracted_text,
             title=title,
             source_id="local_file",
-            url=str(path),
+            url=str(file_path),
         )
 
     async def _distill_single_signal(self, signal: RawSignal) -> KnowledgeNote:

@@ -32,33 +32,35 @@ def test_ssrf_validator_blocks_private_and_loopback_ips() -> None:
     assert validator.is_ip_safe("142.250.190.46") is True
 
 
-def test_ssrf_validator_url_validation() -> None:
-    """Ensure validate_url rejects invalid schemes and resolved private addresses."""
+@pytest.mark.asyncio
+async def test_ssrf_validator_url_validation() -> None:
+    """Ensure validate_url rejects invalid schemes and resolved private addresses asynchronously."""
     validator = SSRFValidator()
 
     with pytest.raises(SSRFViolationError, match="Scheme"):
-        validator.validate_url("file:///etc/passwd")
+        await validator.validate_url("file:///etc/passwd")
 
     with pytest.raises(SSRFViolationError, match="Forbidden IP"):
-        validator.validate_url("http://127.0.0.1:8080/metrics")
+        await validator.validate_url("http://127.0.0.1:8080/metrics")
 
     with pytest.raises(SSRFViolationError, match="Forbidden IP"):
-        validator.validate_url("http://169.254.169.254/latest/meta-data/")
+        await validator.validate_url("http://169.254.169.254/latest/meta-data/")
 
-    # Mock DNS resolution for hostnames
-    with patch("socket.getaddrinfo") as mock_getaddrinfo:
+    # Mock non-blocking asyncio DNS resolution for hostnames
+    loop = asyncio.get_running_loop()
+    with patch.object(loop, "getaddrinfo", new_callable=AsyncMock) as mock_getaddrinfo:
         # Simulate local.test resolving to 192.168.1.50
         mock_getaddrinfo.return_value = [
             (2, 1, 6, "", ("192.168.1.50", 80))
         ]
         with pytest.raises(SSRFViolationError, match="Forbidden resolved IP"):
-            validator.validate_url("https://local.test/secret")
+            await validator.validate_url("https://local.test/secret")
 
         # Simulate api.public.com resolving to 93.184.216.34
         mock_getaddrinfo.return_value = [
             (2, 1, 6, "", ("93.184.216.34", 443))
         ]
-        safe_url = validator.validate_url("https://api.public.com/data")
+        safe_url = await validator.validate_url("https://api.public.com/data")
         assert safe_url == "https://api.public.com/data"
 
 
@@ -171,5 +173,53 @@ async def test_resilient_http_client_blocks_ssrf_before_request() -> None:
         with pytest.raises(SSRFViolationError):
             await client.get("http://127.0.0.1:9000/private")
         mock_get.assert_not_called()
+
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_resilient_http_client_follows_safe_redirects() -> None:
+    """Ensure client follows 301/302 redirects with SSRF validation at each hop."""
+    client = ResilientHttpClient()
+
+    redirect_resp = httpx.Response(
+        status_code=301,
+        headers={"Location": "https://api.example.com/v2/feed"},
+        request=httpx.Request("GET", "https://api.example.com/feed"),
+    )
+    final_resp = httpx.Response(
+        status_code=200,
+        text="Redirected Content",
+        request=httpx.Request("GET", "https://api.example.com/v2/feed"),
+    )
+
+    with patch.object(client.ssrf_validator, "validate_url", side_effect=lambda u: u) as mock_val:
+        with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.side_effect = [redirect_resp, final_resp]
+
+            result = await client.get("https://api.example.com/feed")
+            assert result.status_code == 200
+            assert result.text == "Redirected Content"
+            assert mock_get.call_count == 2
+            assert mock_val.call_count == 2
+
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_resilient_http_client_blocks_ssrf_on_redirect_target() -> None:
+    """Ensure client blocks redirect if Location header points to private network."""
+    client = ResilientHttpClient()
+
+    redirect_to_private = httpx.Response(
+        status_code=302,
+        headers={"Location": "http://127.0.0.1:8080/admin"},
+        request=httpx.Request("GET", "https://api.example.com/feed"),
+    )
+
+    with patch.object(client._client, "get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = redirect_to_private
+        with pytest.raises(SSRFViolationError):
+            await client.get("https://api.example.com/feed")
 
     await client.close()
