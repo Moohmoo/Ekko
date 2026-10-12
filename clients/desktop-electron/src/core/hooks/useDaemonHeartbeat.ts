@@ -15,14 +15,14 @@ export function useDaemonHeartbeat(): void {
   useEffect(() => {
     // Immediate first check and data retrieval
     checkHealth();
-    useEchoStore.getState().fetchNotes();
+    useEchoStore.getState().fetchNotes({ silent: true });
     useSignalStore.getState().fetchPendingSignals();
 
     // Heartbeat ticker
     const timer = setInterval(() => {
       checkHealth().then((online) => {
         if (online) {
-          useEchoStore.getState().fetchNotes();
+          useEchoStore.getState().fetchNotes({ silent: true });
           useSignalStore.getState().fetchPendingSignals();
         }
       });

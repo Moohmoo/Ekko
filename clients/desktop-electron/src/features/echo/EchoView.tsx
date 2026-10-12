@@ -17,7 +17,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export const EchoView: React.FC<EchoViewProps> = () => {
   const notes = useEchoStore((state) => state.notes);
-  const isLoading = useEchoStore((state) => state.isLoading);
+  const isManualRefreshing = useEchoStore((state) => state.isManualRefreshing);
   const isOffline = useEchoStore((state) => state.isOffline);
   const selectedTag = useEchoStore((state) => state.selectedTag);
   const searchNotes = useEchoStore((state) => state.searchNotes);
@@ -117,11 +117,11 @@ export const EchoView: React.FC<EchoViewProps> = () => {
               {/* Compact reload icon button */}
               <button
                 onClick={() => refresh()}
-                disabled={isLoading}
+                disabled={isManualRefreshing}
                 className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-400 hover:text-sky-300 disabled:opacity-40 transition-colors shrink-0"
                 title="Actualiser la liste (conserve la recherche en cours)"
               >
-                <RotateCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-sky-400' : ''}`} />
+                <RotateCw className={`w-3.5 h-3.5 ${isManualRefreshing ? 'animate-spin text-sky-400' : ''}`} />
               </button>
             </div>
 

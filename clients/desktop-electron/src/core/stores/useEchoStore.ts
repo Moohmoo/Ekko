@@ -10,13 +10,14 @@ interface EchoState {
   notes: NoteItem[];
   latestNote: NoteItem | null;
   isLoading: boolean;
+  isManualRefreshing: boolean;
   isOffline: boolean;
   searchQuery: string;
   selectedTag: string | null;
   searchSeq: number;
 
   // Actions
-  fetchNotes: () => Promise<void>;
+  fetchNotes: (options?: { silent?: boolean }) => Promise<void>;
   searchNotes: (query: string) => Promise<void>;
   filterByTag: (tag: string | null) => void;
   refresh: () => Promise<void>;
@@ -56,6 +57,7 @@ export const useEchoStore = create<EchoState>((set, get) => ({
   notes: [],
   latestNote: null,
   isLoading: false,
+  isManualRefreshing: false,
   isOffline: false,
   searchQuery: '',
   selectedTag: null,
@@ -72,7 +74,7 @@ export const useEchoStore = create<EchoState>((set, get) => ({
     set({ selectedTag: tag });
   },
 
-  fetchNotes: async () => {
+  fetchNotes: async (options?: { silent?: boolean }) => {
     if (!window.ekkoAPI) return;
 
     // Strict Heartbeat Isolation: NEVER overwrite results if any filter is active
@@ -81,7 +83,11 @@ export const useEchoStore = create<EchoState>((set, get) => ({
       return;
     }
 
-    set({ isLoading: true });
+    const isSilent = Boolean(options?.silent);
+    if (!isSilent) {
+      set({ isLoading: true });
+    }
+
     try {
       const raw = await window.ekkoAPI.getNotes();
       if (Array.isArray(raw)) {
@@ -89,17 +95,23 @@ export const useEchoStore = create<EchoState>((set, get) => ({
         set({
           notes: mapped,
           latestNote: mapped.length > 0 ? mapped[0] : null,
-          isLoading: false,
+          ...(isSilent ? {} : { isLoading: false }),
           isOffline: false,
         });
       } else {
         // Non-array response (unexpected IPC reply) -> retain existing cache
-        set({ isLoading: false, isOffline: true });
+        set({
+          ...(isSilent ? {} : { isLoading: false }),
+          isOffline: true,
+        });
       }
     } catch (e) {
       console.warn('[EchoStore] Erreur récupération notes (conservation du cache):', e);
       // Resilience contract: NEVER wipe existing notes on network/socket disconnect
-      set({ isLoading: false, isOffline: true });
+      set({
+        ...(isSilent ? {} : { isLoading: false }),
+        isOffline: true,
+      });
     }
   },
 
@@ -169,29 +181,34 @@ export const useEchoStore = create<EchoState>((set, get) => ({
 
   refresh: async () => {
     const { searchQuery } = get();
-    if (searchQuery.trim()) {
-      await get().searchNotes(searchQuery);
-    } else {
-      // Fetch latest notes from backend while keeping selectedTag intact
-      if (!window.ekkoAPI) return;
-      set({ isLoading: true });
-      try {
-        const raw = await window.ekkoAPI.getNotes();
-        if (Array.isArray(raw)) {
-          const mapped = (raw as Record<string, unknown>[]).map(mapRawNote);
-          set({
-            notes: mapped,
-            latestNote: mapped.length > 0 ? mapped[0] : null,
-            isLoading: false,
-            isOffline: false,
-          });
-        } else {
+    set({ isManualRefreshing: true });
+    try {
+      if (searchQuery.trim()) {
+        await get().searchNotes(searchQuery);
+      } else {
+        // Fetch latest notes from backend while keeping selectedTag intact
+        if (!window.ekkoAPI) return;
+        set({ isLoading: true });
+        try {
+          const raw = await window.ekkoAPI.getNotes();
+          if (Array.isArray(raw)) {
+            const mapped = (raw as Record<string, unknown>[]).map(mapRawNote);
+            set({
+              notes: mapped,
+              latestNote: mapped.length > 0 ? mapped[0] : null,
+              isLoading: false,
+              isOffline: false,
+            });
+          } else {
+            set({ isLoading: false, isOffline: true });
+          }
+        } catch (e) {
+          console.warn('[EchoStore] Erreur refresh:', e);
           set({ isLoading: false, isOffline: true });
         }
-      } catch (e) {
-        console.warn('[EchoStore] Erreur refresh:', e);
-        set({ isLoading: false, isOffline: true });
       }
+    } finally {
+      set({ isManualRefreshing: false });
     }
   },
 }));
