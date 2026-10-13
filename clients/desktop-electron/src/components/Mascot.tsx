@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import {
   COLORS,
   SPRING_BOUNCY,
@@ -14,6 +14,121 @@ interface MascotProps {
   pointerOffset?: { x: number; y: number } | null;
   isWokenByHover?: boolean;
 }
+
+const bodyVariants: Variants = {
+  idle: {
+    scale: [1, 1.015, 1],
+    scaleX: 1,
+    scaleY: 1,
+    rotate: 0,
+    x: 0,
+    y: [0, -2, 0],
+    transition: {
+      scale: { duration: 3.2, repeat: Infinity, ease: 'easeInOut' },
+      y: { duration: 3.2, repeat: Infinity, ease: 'easeInOut' },
+      scaleX: { type: 'spring', damping: 15, stiffness: 200 },
+      scaleY: { type: 'spring', damping: 15, stiffness: 200 },
+      rotate: { duration: 0.3 },
+      x: { duration: 0.3 },
+    },
+  },
+  welcome: {
+    scale: [1, 1.03, 1],
+    scaleX: 1,
+    scaleY: 1,
+    rotate: [-2, 2, -2],
+    x: 0,
+    y: [0, -5, 0],
+    transition: {
+      scale: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' },
+      y: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' },
+      rotate: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' },
+      scaleX: { type: 'spring', damping: 15, stiffness: 200 },
+      scaleY: { type: 'spring', damping: 15, stiffness: 200 },
+      x: { duration: 0.3 },
+    },
+  },
+  hover_drop: {
+    scale: [1, 1.04, 1],
+    scaleX: 1,
+    scaleY: 1,
+    rotate: 0,
+    x: 0,
+    y: [0, -3, 0],
+    transition: {
+      scale: { duration: 1.0, repeat: Infinity, ease: 'easeInOut' },
+      y: { duration: 1.0, repeat: Infinity, ease: 'easeInOut' },
+      scaleX: { type: 'spring', damping: 15, stiffness: 200 },
+      scaleY: { type: 'spring', damping: 15, stiffness: 200 },
+      rotate: { duration: 0.3 },
+      x: { duration: 0.3 },
+    },
+  },
+  ingesting: {
+    scale: 1,
+    scaleX: [1, 1.15, 0.85, 1.05, 1],
+    scaleY: [1, 0.75, 1.25, 0.95, 1],
+    rotate: 0,
+    x: 0,
+    y: [0, -3, 4, -2, 0],
+    transition: {
+      scaleX: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' },
+      scaleY: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' },
+      y: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' },
+      scale: { duration: 0.3 },
+      rotate: { duration: 0.3 },
+      x: { duration: 0.3 },
+    },
+  },
+  ready: {
+    scale: [1, 1.05, 1],
+    scaleX: 1,
+    scaleY: 1,
+    rotate: [0, -3, 3, 0],
+    x: 0,
+    y: [0, -4, 0],
+    transition: {
+      scale: { duration: 0.8, ease: 'easeInOut' },
+      y: { duration: 0.8, ease: 'easeInOut' },
+      rotate: { duration: 0.8, ease: 'easeInOut' },
+      scaleX: { type: 'spring', damping: 15, stiffness: 200 },
+      scaleY: { type: 'spring', damping: 15, stiffness: 200 },
+      x: { duration: 0.3 },
+    },
+  },
+  alert: {
+    scale: [1.06, 1.02, 1.04, 1.02],
+    scaleX: 1,
+    scaleY: 1,
+    rotate: 0,
+    x: 0,
+    y: [-4, 0, -3, 0],
+    transition: {
+      scale: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+      y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+      scaleX: { type: 'spring', damping: 15, stiffness: 200 },
+      scaleY: { type: 'spring', damping: 15, stiffness: 200 },
+      rotate: { duration: 0.3 },
+      x: { duration: 0.3 },
+    },
+  },
+  error: {
+    scale: 1,
+    scaleX: 1,
+    scaleY: 1,
+    rotate: 0,
+    x: [0, -6, 6, -4, 4, 0],
+    y: 0,
+    transition: {
+      x: { duration: 0.35, ease: 'easeInOut' },
+      scaleX: { type: 'spring', damping: 15, stiffness: 200 },
+      scaleY: { type: 'spring', damping: 15, stiffness: 200 },
+      scale: { duration: 0.3 },
+      y: { duration: 0.3 },
+      rotate: { duration: 0.3 },
+    },
+  },
+};
 
 export const Mascot: React.FC<MascotProps> = ({
   emotion = 'idle',
@@ -88,50 +203,11 @@ export const Mascot: React.FC<MascotProps> = ({
         className="absolute w-24 h-24 rounded-full blur-xl pointer-events-none transition-colors duration-500"
       />
 
-      {/* Main Body Animation (Calibrated ~88px height for pure breathing Coucou minimalism) */}
+      {/* Main Body Animation with guaranteed geometric reset */}
       <motion.div
-        animate={
-          emotion === 'welcome'
-            ? {
-                y: [0, -5, 0],
-                rotate: [-2, 2, -2],
-                scale: [1, 1.03, 1],
-              }
-            : emotion === 'ingesting'
-            ? {
-                y: [0, -3, 4, -2, 0],
-                scaleY: [1, 0.75, 1.25, 0.95, 1],
-                scaleX: [1, 1.15, 0.85, 1.05, 1],
-              }
-            : emotion === 'error'
-            ? {
-                x: [0, -6, 6, -4, 4, 0],
-                y: 0,
-                scale: 1,
-              }
-            : emotion === 'alert'
-            ? {
-                // Initial awaken jolt + attentive presence
-                y: [-4, 0, -3, 0],
-                scale: [1.06, 1.02, 1.04, 1.02],
-              }
-            : {
-                // Sleepy slow organic breathing
-                y: [0, -2, 0],
-                scale: [1, 1.015, 1],
-              }
-        }
-        transition={
-          emotion === 'welcome'
-            ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' }
-            : emotion === 'ingesting'
-            ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }
-            : emotion === 'error'
-            ? { duration: 0.35, ease: 'easeInOut' }
-            : emotion === 'alert'
-            ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
-            : { duration: 3.2, repeat: Infinity, ease: 'easeInOut' }
-        }
+        id="mascot-body"
+        variants={bodyVariants}
+        animate={emotion}
         className="relative z-10 w-[74px] h-[88px] flex items-center justify-center"
       >
         {/* Floating Sleep 'z' particle when idle (only if not woken by hover) */}
