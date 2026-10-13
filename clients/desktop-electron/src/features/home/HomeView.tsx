@@ -225,48 +225,48 @@ export const HomeView: React.FC = () => {
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mascotContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const handlePointerEnter = () => {
-    if (sleepTimerRef.current) {
-      clearTimeout(sleepTimerRef.current);
-      sleepTimerRef.current = null;
-    }
-    setIsHoverWoken(true);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (sleepTimerRef.current) {
-      clearTimeout(sleepTimerRef.current);
-      sleepTimerRef.current = null;
-    }
-    if (!isHoverWoken) {
-      setIsHoverWoken(true);
-    }
-
-    if (mascotContainerRef.current) {
-      const rect = mascotContainerRef.current.getBoundingClientRect();
-      const mascotCenterX = rect.left + rect.width / 2;
-      const mascotCenterY = rect.top + rect.height / 2;
-      setPointerPos({
-        x: e.clientX - mascotCenterX,
-        y: e.clientY - mascotCenterY,
-      });
-    }
-  };
-
-  const handlePointerLeave = () => {
-    setPointerPos(null);
-    if (sleepTimerRef.current) {
-      clearTimeout(sleepTimerRef.current);
-    }
-    // Soft delay of 1.2s before going back to sleep
-    sleepTimerRef.current = setTimeout(() => {
-      setIsHoverWoken(false);
-      sleepTimerRef.current = null;
-    }, 1200);
-  };
-
+  // Global viewport pointer tracking: seamlessly covers PodHeader, Stage, dropzone and cards
   useEffect(() => {
+    const handleGlobalPointerMove = (e: PointerEvent) => {
+      // 1. Cancel any pending sleep timer
+      if (sleepTimerRef.current) {
+        clearTimeout(sleepTimerRef.current);
+        sleepTimerRef.current = null;
+      }
+
+      // 2. Wake up mascot if sleeping
+      setIsHoverWoken(true);
+
+      // 3. Compute delta relative to mascot center
+      if (mascotContainerRef.current) {
+        const rect = mascotContainerRef.current.getBoundingClientRect();
+        const mascotCenterX = rect.left + rect.width / 2;
+        const mascotCenterY = rect.top + rect.height / 2;
+        setPointerPos({
+          x: e.clientX - mascotCenterX,
+          y: e.clientY - mascotCenterY,
+        });
+      }
+    };
+
+    const handleGlobalMouseLeave = () => {
+      setPointerPos(null);
+      if (sleepTimerRef.current) {
+        clearTimeout(sleepTimerRef.current);
+      }
+      // Soft delay of 1.2s before going back to sleep (‿ ‿)
+      sleepTimerRef.current = setTimeout(() => {
+        setIsHoverWoken(false);
+        sleepTimerRef.current = null;
+      }, 1200);
+    };
+
+    window.addEventListener('pointermove', handleGlobalPointerMove, { passive: true });
+    document.addEventListener('mouseleave', handleGlobalMouseLeave);
+
     return () => {
+      window.removeEventListener('pointermove', handleGlobalPointerMove);
+      document.removeEventListener('mouseleave', handleGlobalMouseLeave);
       if (sleepTimerRef.current) {
         clearTimeout(sleepTimerRef.current);
       }
@@ -275,14 +275,10 @@ export const HomeView: React.FC = () => {
 
   return (
     <div
-      onPointerEnter={handlePointerEnter}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-      className="w-full h-full flex gap-4 p-2.5 select-none overflow-hidden relative pointer-events-auto cursor-default"
+      className="w-full h-full flex gap-4 p-2.5 select-none overflow-hidden relative cursor-default"
     >
       <input
         ref={fileInputRef}

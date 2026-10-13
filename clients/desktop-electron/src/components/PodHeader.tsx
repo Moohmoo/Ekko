@@ -38,7 +38,10 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
   };
 
   return (
-    <div className="h-8 px-1 flex items-center justify-between select-none shrink-0">
+    <div
+      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      className="h-8 px-1 flex items-center justify-between select-none shrink-0"
+    >
       {/* Navigation Tabs (Left) */}
       <div className="flex items-center gap-1">
         <button
