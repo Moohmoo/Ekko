@@ -306,6 +306,27 @@ ipcMain.handle('daemon:submit_prompt', async (event, prompt: string, sessionId?:
   });
 });
 
+ipcMain.handle('chat:send_message', async (event, { prompt }: { prompt: string; history?: unknown[] }) => {
+  return await new Promise((resolve, reject) => {
+    streamPrompt(
+      prompt,
+      (chunk) => {
+        event.sender.send('chat:token', chunk);
+      },
+      (full) => {
+        event.sender.send('chat:done');
+        resolve(full);
+      },
+      (err) => {
+        event.sender.send('chat:error', err);
+        reject(new Error(err));
+      },
+      undefined,
+      'desktop_chat'
+    );
+  });
+});
+
 ipcMain.handle('daemon:get_system_settings', async () => {
   return await sendJsonRpc('get_system_settings');
 });

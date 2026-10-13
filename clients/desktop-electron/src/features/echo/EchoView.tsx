@@ -13,7 +13,7 @@ interface EchoViewProps {
   isLoading?: boolean;
 }
 
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 150;
 
 export const EchoView: React.FC<EchoViewProps> = () => {
   const notes = useEchoStore((state) => state.notes);
@@ -23,12 +23,18 @@ export const EchoView: React.FC<EchoViewProps> = () => {
   const searchNotes = useEchoStore((state) => state.searchNotes);
   const filterByTag = useEchoStore((state) => state.filterByTag);
   const refresh = useEchoStore((state) => state.refresh);
+  const fetchNotes = useEchoStore((state) => state.fetchNotes);
 
   const [searchInput, setSearchInput] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedNote, setSelectedNote] = useState<NoteItem | null>(null);
 
-  // Debounce search effect (300 ms)
+  // Trigger fetchNotes on mount
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
+
+  // Debounce search effect (150 ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       searchNotes(searchInput);
@@ -48,7 +54,8 @@ export const EchoView: React.FC<EchoViewProps> = () => {
 
   const handleCopy = (e: React.MouseEvent, note: NoteItem) => {
     e.stopPropagation();
-    const md = `# ${note.title}\n\n${note.content || note.summary}\n\nSource: ${note.source}\n`;
+    // Obsidian standard format: ## [[Titre]]\n...
+    const md = `## [[${note.title}]]\n\n${note.summary || note.content || ''}\n\n**Source:** ${note.source}\n`;
     navigator.clipboard?.writeText(md);
     setCopiedId(note.id);
     setTimeout(() => setCopiedId(null), 1500);

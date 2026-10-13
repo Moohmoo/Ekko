@@ -212,3 +212,13 @@ export const useEchoStore = create<EchoState>((set, get) => ({
     }
   },
 }));
+
+// Auto-register onNoteCreated push listener to prepend distilled notes in real-time
+if (typeof window !== 'undefined' && window.ekkoAPI?.onNoteCreated) {
+  window.ekkoAPI.onNoteCreated((rawNote) => {
+    if (rawNote) {
+      const note = mapRawNote(rawNote as unknown as Record<string, unknown>);
+      useEchoStore.getState().setLatestNote(note);
+    }
+  });
+}

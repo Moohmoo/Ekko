@@ -52,33 +52,59 @@ export const useChatStore = create<ChatState>((set, get) => ({
       errorMessage: null,
     }));
 
-    // Attach IPC chunk listener
-    const cleanupChunk = window.ekkoAPI.onPromptChunk((chunk) => {
-      get().appendChunk(chunk);
-    });
+    // Attach IPC chunk / token listeners
+    const cleanupChunk = window.ekkoAPI.onPromptChunk
+      ? window.ekkoAPI.onPromptChunk((chunk) => {
+          get().appendChunk(chunk);
+        })
+      : () => {};
+
+    const cleanupChatToken = window.ekkoAPI.onChatToken
+      ? window.ekkoAPI.onChatToken((token) => {
+          get().appendChunk(token);
+        })
+      : () => {};
+
+    const cleanupChatDone = window.ekkoAPI.onChatDone
+      ? window.ekkoAPI.onChatDone(() => {
+          get().completeTurn();
+        })
+      : () => {};
 
     // Attach IPC tool event listener
-    const cleanupTool = window.ekkoAPI.onToolEvent((event) => {
-      if (!event) return;
-      const step: ToolCallStep = {
-        id: String(event.tool_call_id || Date.now()),
-        tool: String(event.tool_name || 'outil'),
-        input: (event.arguments as Record<string, unknown>) || undefined,
-        output: event.summary,
-        status: event.type === 'tool_call_completed' ? (event.success === false ? 'error' : 'completed') : 'running',
-        duration_ms: typeof event.duration_ms === 'number' ? event.duration_ms : undefined,
-      };
-      get().updateToolCall(step);
-    });
+    const cleanupTool = window.ekkoAPI.onToolEvent
+      ? window.ekkoAPI.onToolEvent((event) => {
+          if (!event) return;
+          const step: ToolCallStep = {
+            id: String(event.tool_call_id || Date.now()),
+            tool: String(event.tool_name || 'outil'),
+            input: (event.arguments as Record<string, unknown>) || undefined,
+            output: event.summary,
+            status: event.type === 'tool_call_completed' ? (event.success === false ? 'error' : 'completed') : 'running',
+            duration_ms: typeof event.duration_ms === 'number' ? event.duration_ms : undefined,
+          };
+          get().updateToolCall(step);
+        })
+      : () => {};
+
+    const cleanupAll = () => {
+      cleanupChunk();
+      cleanupChatToken();
+      cleanupChatDone();
+      cleanupTool();
+    };
 
     try {
-      const fullResponse = await window.ekkoAPI.submitPrompt(trimmed, get().sessionId);
-      cleanupChunk();
-      cleanupTool();
+      let fullResponse: string;
+      if (window.ekkoAPI.sendChatMessage) {
+        fullResponse = await window.ekkoAPI.sendChatMessage(trimmed, get().messages);
+      } else {
+        fullResponse = await window.ekkoAPI.submitPrompt(trimmed, get().sessionId);
+      }
+      cleanupAll();
       get().completeTurn(fullResponse);
     } catch (err: unknown) {
-      cleanupChunk();
-      cleanupTool();
+      cleanupAll();
       const message = (err as Error)?.message || 'Erreur lors de la réponse.';
       set((state) => {
         const msgs = [...state.messages];
