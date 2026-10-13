@@ -31,7 +31,7 @@ export const SourcesTab: React.FC<SourcesTabProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-3 text-xs select-none">
+    <div className="flex flex-col gap-2.5 text-xs select-none">
       {/* Formulaire d'ajout rapide de flux RSS */}
       <form onSubmit={handleAdd} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2">
         <div className="flex items-center gap-2 text-slate-200 font-semibold">

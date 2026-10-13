@@ -9,6 +9,21 @@ import { SystemTab } from './tabs/SystemTab';
 
 type SettingsTab = 'models' | 'sources' | 'profile' | 'system';
 
+const formatErrorMessage = (rawError: string | null): string => {
+  if (!rawError) return '';
+  const lower = rawError.toLowerCase();
+  if (
+    lower.includes('daemon_offline') ||
+    lower.includes('econnrefused') ||
+    lower.includes('enoent') ||
+    lower.includes('socket') ||
+    lower.includes('offline')
+  ) {
+    return "Le daemon Ekko est arrêté. Lancez 'uv run ekko daemon' pour rétablir la liaison IPC.";
+  }
+  return rawError;
+};
+
 export const SettingsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('models');
 
@@ -42,10 +57,12 @@ export const SettingsView: React.FC = () => {
     { id: 'system', label: 'Système', icon: Server },
   ];
 
+  const userFacingError = formatErrorMessage(error);
+
   return (
     <div className="flex-1 p-3 flex flex-col h-full overflow-hidden select-none">
       {/* Barre de navigation supérieure (Segmented Control) */}
-      <div className="p-1 bg-white/[0.04] rounded-lg border border-white/[0.06] flex gap-1 mb-3 text-xs shrink-0">
+      <div className="p-1 bg-white/[0.04] rounded-lg border border-white/[0.06] flex gap-1 mb-2.5 text-xs shrink-0">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -67,11 +84,11 @@ export const SettingsView: React.FC = () => {
         })}
       </div>
 
-      {/* Bandeau d'erreur */}
-      {error && (
+      {/* Bandeau d'erreur normalisé */}
+      {userFacingError && (
         <div className="mb-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center gap-2 shrink-0">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate flex-1">{error}</span>
+          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+          <span className="truncate flex-1">{userFacingError}</span>
         </div>
       )}
 

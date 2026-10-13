@@ -19,7 +19,7 @@ export const SystemTab: React.FC<SystemTabProps> = ({
   const socketPath = system?.ipc_socket_path || '/tmp/ekko.sock';
 
   return (
-    <div className="flex flex-col gap-3 text-xs select-none">
+    <div className="flex flex-col gap-2.5 text-xs select-none">
       {/* Liaison Daemon & Socket UNIX */}
       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2">
         <div className="flex items-center justify-between">
