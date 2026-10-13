@@ -12,12 +12,14 @@ interface MascotProps {
   emotion?: MascotEmotion;
   className?: string;
   pointerOffset?: { x: number; y: number } | null;
+  isWokenByHover?: boolean;
 }
 
 export const Mascot: React.FC<MascotProps> = ({
   emotion = 'idle',
   className = '',
   pointerOffset = null,
+  isWokenByHover = false,
 }) => {
   // Halo Glow variation based on emotion
   const haloScale =
@@ -43,9 +45,9 @@ export const Mascot: React.FC<MascotProps> = ({
       ? COLORS.emeraldOnline
       : COLORS.cyanGlow;
 
-  // Eye tracking calculation (strictly bounded to R = 3.5px)
-  const isEyeTrackingActive =
-    emotion !== 'idle' && emotion !== 'error' && emotion !== 'ingesting';
+  // Eye tracking & awake calculation (strictly bounded to R = 3.5px)
+  const isAwake = emotion !== 'idle' || isWokenByHover;
+  const isEyeTrackingActive = isAwake && emotion !== 'error' && emotion !== 'ingesting';
 
   let eyeDx = 0;
   let eyeDy = 0;
@@ -132,8 +134,8 @@ export const Mascot: React.FC<MascotProps> = ({
         }
         className="relative z-10 w-[74px] h-[88px] flex items-center justify-center"
       >
-        {/* Floating Sleep 'z' particle when idle */}
-        {emotion === 'idle' && (
+        {/* Floating Sleep 'z' particle when idle (only if not woken by hover) */}
+        {emotion === 'idle' && !isWokenByHover && (
           <motion.div
             initial={{ opacity: 0, y: 0, x: 0, scale: 0.8 }}
             animate={{
@@ -150,6 +152,30 @@ export const Mascot: React.FC<MascotProps> = ({
             className="absolute -top-1 right-2 text-[10px] font-bold text-sky-300/70 select-none pointer-events-none"
           >
             z
+          </motion.div>
+        )}
+
+        {/* Floating Neon Alert Badge "!" over right shoulder */}
+        {emotion === 'alert' && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0, y: 4 }}
+            animate={{
+              scale: [1, 1.1, 1],
+              opacity: [0.95, 1, 0.95],
+              y: [0, -2, 0],
+            }}
+            transition={{
+              scale: { ...SPRING_BOUNCY, duration: 0.4 },
+              y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+              opacity: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            className="absolute -top-2 right-1 z-30 pointer-events-none"
+          >
+            <div className="w-[18px] h-[18px] rounded-full bg-amber-500/20 border border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.6)] flex items-center justify-center backdrop-blur-sm">
+              <span className="text-[11px] font-black leading-none text-amber-300 drop-shadow-[0_0_4px_rgba(245,158,11,0.8)]">
+                !
+              </span>
+            </div>
           </motion.div>
         )}
 
@@ -188,8 +214,6 @@ export const Mascot: React.FC<MascotProps> = ({
                 stopColor={
                   emotion === 'error'
                     ? COLORS.coralGradientTop
-                    : emotion === 'alert'
-                    ? COLORS.amberAccent
                     : emotion === 'ready'
                     ? COLORS.emeraldLight
                     : COLORS.cyanGlow
@@ -200,8 +224,6 @@ export const Mascot: React.FC<MascotProps> = ({
                 stopColor={
                   emotion === 'error'
                     ? COLORS.coralGradientMid
-                    : emotion === 'alert'
-                    ? COLORS.cyanAccent
                     : emotion === 'ready'
                     ? COLORS.emeraldOnline
                     : COLORS.cyanAccent
@@ -222,7 +244,7 @@ export const Mascot: React.FC<MascotProps> = ({
             </linearGradient>
           </defs>
 
-          {/* Organic Continuous Pear Droplet Contour */}
+          {/* Organic Continuous Pear Droplet Contour — Always pure native blue/cyan on alert */}
           <path
             d="M 50 10 
                C 70 32, 92 64, 92 86 
@@ -233,8 +255,6 @@ export const Mascot: React.FC<MascotProps> = ({
             stroke={
               emotion === 'error'
                 ? COLORS.coralAccent
-                : emotion === 'alert'
-                ? COLORS.amberAccent
                 : emotion === 'ready'
                 ? COLORS.emeraldLight
                 : COLORS.cyanAccent
@@ -251,7 +271,7 @@ export const Mascot: React.FC<MascotProps> = ({
           )}
 
           {/* Eyes rendering according to emotion with smooth gaze offset */}
-          {emotion === 'idle' ? (
+          {!isAwake ? (
             /* Sleepy closed eyes curves (‿ ‿) */
             <g stroke={COLORS.eyeDark} strokeWidth="2.2" strokeLinecap="round" fill="none">
               <path d="M 35 63 Q 40 68 45 63" />

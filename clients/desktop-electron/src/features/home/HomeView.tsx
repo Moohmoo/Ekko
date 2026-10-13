@@ -221,8 +221,25 @@ export const HomeView: React.FC = () => {
   };
 
   const [pointerPos, setPointerPos] = React.useState<{ x: number; y: number } | null>(null);
+  const [isHoverWoken, setIsHoverWoken] = React.useState<boolean>(false);
+  const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handlePointerEnter = () => {
+    if (sleepTimerRef.current) {
+      clearTimeout(sleepTimerRef.current);
+      sleepTimerRef.current = null;
+    }
+    setIsHoverWoken(true);
+  };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (sleepTimerRef.current) {
+      clearTimeout(sleepTimerRef.current);
+      sleepTimerRef.current = null;
+    }
+    if (!isHoverWoken) {
+      setIsHoverWoken(true);
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     setPointerPos({
       x: e.clientX - rect.left - rect.width / 2,
@@ -232,7 +249,23 @@ export const HomeView: React.FC = () => {
 
   const handlePointerLeave = () => {
     setPointerPos(null);
+    if (sleepTimerRef.current) {
+      clearTimeout(sleepTimerRef.current);
+    }
+    // Soft delay of 1.2s before going back to sleep
+    sleepTimerRef.current = setTimeout(() => {
+      setIsHoverWoken(false);
+      sleepTimerRef.current = null;
+    }, 1200);
   };
+
+  useEffect(() => {
+    return () => {
+      if (sleepTimerRef.current) {
+        clearTimeout(sleepTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div
@@ -249,16 +282,22 @@ export const HomeView: React.FC = () => {
         className="hidden"
       />
 
-      {/* Volet Gauche (~36 % / ~215 px) — Mascotte vectorielle purement centrée avec capture de regard */}
+      {/* Volet Gauche (~36 % / ~215 px) — Mascotte vectorielle purement centrée avec capture de regard et éveil interactif */}
       <div
+        onPointerEnter={handlePointerEnter}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
-        className="w-[36%] h-full flex items-center justify-center relative shrink-0 cursor-default"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        className="w-[36%] h-full flex items-center justify-center relative shrink-0 cursor-default pointer-events-auto"
       >
         {/* Soft radial shine */}
         <div className="absolute inset-0 bg-radial from-sky-400/[0.04] via-transparent to-transparent pointer-events-none" />
 
-        <Mascot emotion={displayEmotion} pointerOffset={pointerPos} />
+        <Mascot
+          emotion={displayEmotion}
+          pointerOffset={pointerPos}
+          isWokenByHover={isHoverWoken}
+        />
       </div>
 
       {/* Volet Droit — Espace réactif métamorphe */}
