@@ -231,4 +231,85 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
     const renderDelta = finalMetrics.renderCount - initialRenderCount;
     expect(renderDelta).toBeLessThanOrEqual(1);
   });
+
+  test('6. Stress Test de Clics Rapides (Anti-Race Condition Géométrique)', async () => {
+    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
+    const chatTabButton = page.locator('button[title="Assistant & Chat"]');
+
+    // Alterner 15 clics rapides consécutifs avec un intervalle de 60ms
+    for (let i = 0; i < 15; i++) {
+      if (i % 2 === 0) {
+        await chatTabButton.click();
+      } else {
+        await homeTabButton.click();
+      }
+      await page.waitForTimeout(60);
+    }
+
+    // Le dernier clic cible obligatoirement l'onglet Accueil (230px)
+    await homeTabButton.click();
+
+    // Attendre 400ms après le dernier clic
+    await page.waitForTimeout(400);
+
+    // Assertion stricte : la hauteur native de la fenêtre est redescendue strictement à 230px
+    const bounds = await app.evaluate(async ({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      return win ? win.getBounds() : null;
+    });
+
+    expect(bounds).not.toBeNull();
+    expect(bounds!.height).toBe(230);
+  });
+
+  test('7. Soak Test & Détection de Fuites Mémoire (Stabilité du Heap JS)', async () => {
+    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
+    const chatTabButton = page.locator('button[title="Assistant & Chat"]');
+
+    await homeTabButton.click();
+    await page.waitForTimeout(300);
+
+    // Mesurer la mémoire initiale du renderer
+    const initialHeapBytes = await page.evaluate(() => {
+      return (performance as any).memory?.usedJSHeapSize || 0;
+    });
+
+    // Exécuter une boucle de 25 cycles complets
+    for (let cycle = 0; cycle < 25; cycle++) {
+      // 1. Forçage émotion 'ingesting' puis reset nominal
+      await page.evaluate(() => window.ekkoAPI?.testMascotEmotion('ingesting'));
+      await page.waitForTimeout(20);
+      await page.evaluate(() => window.ekkoAPI?.testMascotEmotion(null));
+
+      // 2. Bascule vers Chat (460px) puis retour à Home (230px)
+      await chatTabButton.click();
+      await page.waitForTimeout(30);
+      await homeTabButton.click();
+      await page.waitForTimeout(30);
+
+      // 3. Masquage puis réaffichage de la fenêtre native
+      await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        if (win) win.hide();
+      });
+      await page.waitForTimeout(20);
+      await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        if (win) win.show();
+      });
+    }
+
+    // Attendre 500ms de stabilisation et mesurer le heap final
+    await page.waitForTimeout(500);
+
+    const finalHeapBytes = await page.evaluate(() => {
+      return (performance as any).memory?.usedJSHeapSize || 0;
+    });
+
+    // Assertion : Le delta de heap mémoire doit rester borné (< 15 Mo de croissance)
+    const deltaBytes = finalHeapBytes - initialHeapBytes;
+    const deltaMB = deltaBytes / (1024 * 1024);
+
+    expect(deltaMB).toBeLessThan(15);
+  });
 });
