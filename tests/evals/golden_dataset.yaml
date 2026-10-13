@@ -7,7 +7,7 @@
 # ------------------------------------------------------------------------------
 - id: pkm_sqlite_wal_architecture
   history: []
-  prompt: "Comment on gère les écritures concurrentes avec SQLite ?"
+  prompt: "Quel mode de concurrence SQLite est utilisé dans notre architecture ?"
   expected_tool: "query_knowledge"
   required_terms: ["wal", "sqlite"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -21,7 +21,7 @@
 
 - id: pkm_zerocopy_memory_buffers
   history: []
-  prompt: "Comment fonctionne le mécanisme zero-copy avec mémoire partagée ?"
+  prompt: "Comment est architecturé notre échange zero-copy en mémoire partagée ?"
   expected_tool: "query_knowledge"
   required_terms: ["shm", "mmap"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -42,9 +42,9 @@
 
 - id: pkm_lora_finetuning_matrices
   history: []
-  prompt: "Comment LoRA réduit le nombre de paramètres pendant le fine-tuning ?"
+  prompt: "Quelle approche LoRA a été retenue dans nos benchmarks ?"
   expected_tool: "query_knowledge"
-  required_terms: ["lora", "rang"]
+  required_terms: ["lora", "rang", "paramètre"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
 
 - id: pkm_rag_vs_graphrag_distinction
@@ -160,7 +160,7 @@
       content: "Je m'intéresse à la persistance SQLite dans Ekko."
     - role: "assistant"
       content: "Ekko utilise SQLite pour stocker les notes et signaux."
-  prompt: "C'était quoi la valeur du timeout configuré ?"
+  prompt: "Et pour SQLite, quelle valeur de timeout on a configurée ?"
   expected_tool: "query_knowledge"
   required_terms: ["10000", "busy_timeout", "timeout"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -171,7 +171,7 @@
       content: "Nous avons abordé le fine-tuning récemment."
     - role: "assistant"
       content: "Oui, plusieurs techniques de fine-tuning existent pour les modèles."
-  prompt: "Et ça réduisait les paramètres entraînables de combien de pourcent ?"
+  prompt: "Et pour LoRA, ça réduisait les paramètres de combien de pourcent ?"
   expected_tool: "query_knowledge"
   required_terms: ["99%"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -182,7 +182,7 @@
       content: "Parle-moi du monitoring Linux."
     - role: "assistant"
       content: "Le monitoring peut se faire au niveau utilisateur ou noyau."
-  prompt: "Et niveau overhead système, ça donne quoi exactement ?"
+  prompt: "Et pour eBPF, niveau overhead système, ça donne quoi exactement ?"
   expected_tool: "query_knowledge"
   required_terms: ["1%"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -193,7 +193,7 @@
       content: "Je cherche des infos sur la validation de schémas en Python."
     - role: "assistant"
       content: "Pydantic est la bibliothèque de référence pour la modélisation."
-  prompt: "Et le gain de vitesse avec le moteur Rust, il est de combien ?"
+  prompt: "Et pour Pydantic v2, le gain de vitesse avec le moteur Rust est de combien ?"
   expected_tool: "query_knowledge"
   required_terms: ["5", "15"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -204,7 +204,7 @@
       content: "Comment fonctionnent les embeddings dans notre système ?"
     - role: "assistant"
       content: "Le système produit des vecteurs denses pour la recherche hybride."
-  prompt: "Et la dimension des vecteurs générés, c'est combien exactement ?"
+  prompt: "Et pour FastEmbed, la dimension des vecteurs générés est de combien exactement ?"
   expected_tool: "query_knowledge"
   required_terms: ["384"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -215,7 +215,7 @@
       content: "Peux-tu me rappeler les benchmarks réseau de l'application ?"
     - role: "assistant"
       content: "L'application teste différentes méthodes d'échange inter-processus."
-  prompt: "Et le débit mémoire mesuré pour les sockets Unix, c'était combien ?"
+  prompt: "Et pour ces sockets Unix, quel débit mémoire on avait mesuré ?"
   expected_tool: "query_knowledge"
   required_terms: ["450"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -226,7 +226,7 @@
       content: "Quelle est la taille des modèles 7B après compression ?"
     - role: "assistant"
       content: "La quantification permet de réduire la taille des poids en mémoire."
-  prompt: "Et en 4-bit, ça prend combien de VRAM pour un 7B ?"
+  prompt: "Et pour notre modèle 7B quantifié en 4-bit, ça prend combien de VRAM ?"
   expected_tool: "query_knowledge"
   required_terms: ["4.5"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -237,7 +237,7 @@
       content: "Comment fonctionne le moteur de recherche hybride ?"
     - role: "assistant"
       content: "Le moteur combine recherche textuelle et similarité dense."
-  prompt: "Et la valeur de la constante k pour la fusion RRF, c'est quoi ?"
+  prompt: "Et pour la fusion RRF, la valeur de la constante k c'est quoi ?"
   expected_tool: "query_knowledge"
   required_terms: ["60"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -247,28 +247,28 @@
 # ------------------------------------------------------------------------------
 - id: signal_check_mistral_details
   history: []
-  prompt: "Qu'est-ce qu'on a sur la sortie de Mistral Large 4 dans la veille ?"
+  prompt: "Qu'est-ce qui est tombé dans le flux de veille sur Mistral Large 4 ?"
   expected_tool: "scan_inbox"
   required_terms: ["mistral", "88.5"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
 
 - id: signal_check_deepseek_details
   history: []
-  prompt: "Donne-moi les détails de la dépêche sur DeepSeek-V3."
+  prompt: "On a une dépêche récente sur DeepSeek-V3 dans la boîte de veille ?"
   expected_tool: "scan_inbox"
   required_terms: ["deepseek", "671"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
 
 - id: signal_check_linux_kernel_status
   history: []
-  prompt: "On a reçu des trucs sur le noyau Linux récemment ?"
+  prompt: "Y a des nouvelles récentes sur le noyau Linux dans les flux ?"
   expected_tool: "scan_inbox"
   required_terms: ["linux", "6.12"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
 
 - id: signal_check_qwen_coder_bench
   history: []
-  prompt: "On a quoi comme résultats sur le benchmark de Qwen Coder ?"
+  prompt: "On a reçu des résultats récents sur le benchmark de Qwen Coder dans la veille ?"
   expected_tool: "scan_inbox"
   required_terms: ["qwen", "humaneval"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]

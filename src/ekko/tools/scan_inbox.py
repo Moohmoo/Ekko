@@ -58,8 +58,8 @@ class ScanInboxTool(BaseTool):
 
     name: str = "scan_inbox"
     description: str = (
-        "Consulte la boîte de réception des signaux de veille bruts (raw_signals) "
-        "capturés par les connecteurs d'ingestion en arrière-plan."
+        "Inspect and review raw incoming intelligence, recent external RSS feeds, "
+        "and news triage awaiting processing in the inbox."
     )
     args_schema: type[BaseModel] = ScanInboxInput
 

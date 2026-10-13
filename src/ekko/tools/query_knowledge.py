@@ -64,8 +64,8 @@ class QueryKnowledgeTool(BaseTool):
 
     name: str = "query_knowledge"
     description: str = (
-        "Recherche dans la base de connaissances et les notes PKM locales d'Ekko "
-        "en utilisant la recherche hybride (mots-clés BM25 et similarité sémantique vectorielle)."
+        "Search permanent PKM notes, architecture decisions, and distilled project knowledge "
+        "stored in the vault using hybrid text and vector search."
     )
     args_schema: type[BaseModel] = QueryKnowledgeInput
 

@@ -96,7 +96,11 @@ class SystemInfoTool(BaseTool):
     """Tool inspecting hardware resources, operating system, and GPU/VRAM."""
 
     name: str = "system_info"
-    description: str = "Inspect system hardware resources: OS, CPU, RAM, disk space, and GPU/VRAM."
+    description: str = (
+        "Inspect the LIVE host hardware resources (current CPU %, available RAM, disk space, GPU/VRAM) "
+        "of the local machine running Ekko. Do NOT use this tool for project architecture, software benchmarks, "
+        "or documented performance metrics in notes."
+    )
     args_schema: type[BaseModel] = SystemInfoArgs
 
     async def _run(self, include_gpu: bool = True) -> ToolResult:
