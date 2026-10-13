@@ -44,10 +44,10 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
   const handleSave = async () => {
     const success = await onSave({
-      user_name: userName.trim() || undefined,
+      user_name: userName.trim() || null,
       preferred_language: language,
       preferences,
-      custom_instructions: customInstructions.trim() || undefined,
+      custom_instructions: customInstructions.trim() || null,
     });
     if (success) {
       setJustSaved(true);

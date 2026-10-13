@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Cpu, ShieldCheck, Key, Server, CheckCircle2 } from 'lucide-react';
 import type { SystemMetadata } from '../../../core/types';
 
@@ -7,8 +7,6 @@ interface ModelsTabProps {
 }
 
 export const ModelsTab: React.FC<ModelsTabProps> = ({ system }) => {
-  const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434');
-
   const provider = system?.llm_provider || 'LiteLLM';
   const activeModel = system?.active_model || 'Non configuré';
 
@@ -54,20 +52,23 @@ export const ModelsTab: React.FC<ModelsTabProps> = ({ system }) => {
         </div>
       </div>
 
-      {/* Endpoint Local Ollama */}
+      {/* Endpoint Local Ollama - Statut en Lecture Seule */}
       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <Server className="w-4 h-4 text-emerald-400" />
-          <span className="font-semibold text-slate-200">Endpoint Local (Ollama)</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Server className="w-4 h-4 text-emerald-400" />
+            <span className="font-semibold text-slate-200">Endpoint Local (Ollama)</span>
+          </div>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-950/40 text-emerald-300 border border-emerald-500/30">
+            Port standard
+          </span>
         </div>
-        <div className="pt-1 border-t border-white/[0.04]">
-          <input
-            type="text"
-            value={localEndpoint}
-            onChange={(e) => setLocalEndpoint(e.target.value)}
-            placeholder="http://localhost:11434"
-            className="w-full bg-black/30 border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-slate-300 focus:outline-none focus:border-sky-500/40"
-          />
+
+        <div className="flex items-center justify-between pt-1 border-t border-white/[0.04]">
+          <span className="text-slate-400 text-[11px]">URL du runtime :</span>
+          <span className="font-mono text-slate-200 text-[11px] bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.04]">
+            http://localhost:11434
+          </span>
         </div>
       </div>
 
