@@ -59,7 +59,7 @@ Hauteur fixe de `32px` (`h-8`) assurant la navigation rapide et le contrôle de 
 
 ---
 
-## 3. Mascotte Vectorielle Ekko & Matrice des 5 Micro-Émotions
+## 3. Mascotte Vectorielle Ekko & Matrice des 7 Micro-Émotions
 
 La mascotte incarne le tampon cognitif sous la forme d'une goutte d'eau fluide en poire :
 1. **Silhouette principale :**
@@ -68,13 +68,17 @@ La mascotte incarne le tampon cognitif sous la forme d'une goutte d'eau fluide e
 2. **Mains satellites détachées :**
    - Deux disques de `14px` de diamètre flottant à `8px` de distance de part et d'autre du corps.
    - Micro-animations de flottaison en opposition de phase.
-3. **Matrice des 6 Micro-Émotions Réactives :**
-   - `welcome` : petit coucou avec la main satellite droite et regard joyeux (déclenchée pendant les 1,8 s d'amorce).
-   - `idle` : respiration lente, yeux mi-clos apaisés, halo cyan doux en régime nominal.
-   - `hover_drop` : yeux grands ouverts fixés sur le fichier, halo cyan intensifié dès le survol de la zone de glisser-déposer.
-   - `ingesting` : absorption en cours (déglutition, pulsations vives et flux vers le bas).
-   - `ready` : sourire bienveillant avec halo émeraude à la fin d'une opération.
-   - `error` : secousse de tête rapide (head shake), yeux plissés, moue contrariée et halo corail feutré (`rgba(244, 63, 94, 0.25)`). Rétablissement automatique à l'état `idle` après 2,5 s.
+3. **Matrice des 7 Micro-Émotions Réactives :**
+   - `idle` : repos et veille nominale, yeux fermés en courbes douces vers le haut (`‿ ‿`), respiration lente ($T = 3.2\text{s}$) et micro-particule de sommeil « z » flottante.
+   - `welcome` : réveil bienveillant, coucou avec la main satellite droite et regard pétillant (déclenchée pendant les 1,8 s d'amorce).
+   - `hover_drop` : réveil attentif, yeux écarquillés suivant la trajectoire du fichier, halo cyan intensifié ($0.35 \leftrightarrow 0.50$).
+   - `ingesting` : déformation élastique squash & stretch ($T = 0.9\text{s}$), bouche en « O » absorbant un micro-document néon qui descend et se dissout dans l'orifice.
+   - `ready` : sourire bienveillant avec halo émeraude `COLORS.emeraldOnline` validant l'arrivée de la note dans la base locale (persiste 2 s).
+   - `alert` : réveil soudain avec micro-sursaut vertical ($y \in [0, -4, 0]$ sur 200 ms), regard naturellement orienté vers la droite (+3 px sur X) vers la carte de veille, sourcils interrogateurs et halo ambré chaleureux `COLORS.amberGlow`.
+   - `error` : secousse de tête latérale vive (*head shake*, $x \in [0, -6, 6, -4, 4, 0]$ sur 350 ms), yeux plissés, moue contrariée et halo corail feutré (`rgba(244, 63, 94, 0.25)`). Rétablissement automatique à l'état `idle` après 2,5 s.
+4. **Regard Interactif & Suivi Oculaire :**
+   - En état `idle`, les paupières restent closes et le suivi est désactivé.
+   - Lorsque la mascotte est éveillée (`hover_drop`, `ready`, ou survol du volet gauche), les pupilles suivent doucement les coordonnées du curseur utilisateur, avec un déplacement fluide borné dans un cercle de rayon $R = 3.5\text{px}$ (`dx, dy = clamp(delta * factor, -3.5, 3.5)`).
 
 ---
 

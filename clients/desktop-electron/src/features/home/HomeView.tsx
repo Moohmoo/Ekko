@@ -220,6 +220,20 @@ export const HomeView: React.FC = () => {
     }
   };
 
+  const [pointerPos, setPointerPos] = React.useState<{ x: number; y: number } | null>(null);
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPointerPos({
+      x: e.clientX - rect.left - rect.width / 2,
+      y: e.clientY - rect.top - rect.height / 2,
+    });
+  };
+
+  const handlePointerLeave = () => {
+    setPointerPos(null);
+  };
+
   return (
     <div
       onDragOver={handleDragOver}
@@ -235,12 +249,16 @@ export const HomeView: React.FC = () => {
         className="hidden"
       />
 
-      {/* Volet Gauche (~36 % / ~215 px) — Mascotte vectorielle purement centrée & sans badge textuel */}
-      <div className="w-[36%] h-full flex items-center justify-center relative shrink-0">
+      {/* Volet Gauche (~36 % / ~215 px) — Mascotte vectorielle purement centrée avec capture de regard */}
+      <div
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+        className="w-[36%] h-full flex items-center justify-center relative shrink-0 cursor-default"
+      >
         {/* Soft radial shine */}
         <div className="absolute inset-0 bg-radial from-sky-400/[0.04] via-transparent to-transparent pointer-events-none" />
 
-        <Mascot emotion={displayEmotion} />
+        <Mascot emotion={displayEmotion} pointerOffset={pointerPos} />
       </div>
 
       {/* Volet Droit — Espace réactif métamorphe */}
