@@ -37,12 +37,23 @@ var api = {
     ingestUrl: function (url) { return ipcRenderer.invoke('daemon:ingest_url', url); },
     getDroppedFilePath: function (file) {
         try {
-            return webUtils.getPathForFile(file);
+            var p = webUtils.getPathForFile(file);
+            if (p)
+                return p;
         }
-        catch (err) {
-            console.error('[Preload] Échec webUtils.getPathForFile:', err);
-            return '';
+        catch (_a) {
+            // ignore webUtils error
         }
+        try {
+            var legacy = file.path;
+            if (typeof legacy === 'string' && legacy) {
+                return legacy;
+            }
+        }
+        catch (_b) {
+            // ignore legacy error
+        }
+        return '';
     },
     openExternal: function (url) { return ipcRenderer.invoke('shell:open_external', url); },
     closeWindow: function () { return ipcRenderer.invoke('window:close'); },

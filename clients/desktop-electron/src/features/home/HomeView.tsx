@@ -40,6 +40,24 @@ function truncateMiddle(str: string, maxLength: number = 20): string {
   return str.slice(0, frontChars) + '...' + str.slice(str.length - backChars);
 }
 
+/**
+ * Universal file:// URI decoder adhering to RFC 8089 across Linux, macOS and Windows.
+ */
+function parseFileUriToPath(uri: string): string {
+  try {
+    const url = new URL(uri);
+    if (url.protocol !== 'file:') return '';
+    let pathname = decodeURIComponent(url.pathname);
+    // On Windows, /C:/path -> C:/path
+    if (/^\/[a-zA-Z]:/.test(pathname)) {
+      pathname = pathname.slice(1);
+    }
+    return pathname;
+  } catch {
+    return '';
+  }
+}
+
 export const HomeView: React.FC = () => {
   const setViewMode = useViewStore((state) => state.setViewMode);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -149,22 +167,19 @@ export const HomeView: React.FC = () => {
 
     setIsIngesting(true);
     try {
-      // Cas A : Présence d'au moins un fichier local
+      let resolvedPath = '';
+
+      // Priorité 1 : Fichier DOM via webUtils / legacy File.path
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const file = e.dataTransfer.files[0];
-        const realPath = window.ekkoAPI?.getDroppedFilePath
+        resolvedPath = window.ekkoAPI?.getDroppedFilePath
           ? window.ekkoAPI.getDroppedFilePath(file)
           : '';
 
-        console.log('[Drop:Event] Chemin absolu extrait via webUtils :', realPath);
-
-        if (realPath) {
-          await ingestFileInPlace(realPath);
-          return;
-        }
+        console.log('[Drop:Event] Chemin extrait via getDroppedFilePath :', resolvedPath);
       }
 
-      // Cas B : Dépôt de texte / lien web (text/uri-list, text/plain ou URL)
+      // Priorité 2 : URI drop (text/uri-list, text/plain ou URL)
       const rawUri =
         e.dataTransfer.getData('text/uri-list') ||
         e.dataTransfer.getData('text/plain') ||
@@ -176,6 +191,18 @@ export const HomeView: React.FC = () => {
         .map((l) => l.trim())
         .find((l) => l.length > 0 && !l.startsWith('#'));
 
+      // Fallback universel multi-OS si webUtils a renvoyé vide (ex: premier drop Linux Nautilus sans focus préalable)
+      if (!resolvedPath && cleanedUri && cleanedUri.startsWith('file://')) {
+        resolvedPath = parseFileUriToPath(cleanedUri);
+        console.log('[Drop:Event] Chemin résolu via fallback file:// URI :', resolvedPath);
+      }
+
+      if (resolvedPath) {
+        await ingestFileInPlace(resolvedPath);
+        return;
+      }
+
+      // Priorité 3 : URL web distante (http:// ou https://)
       if (cleanedUri && (cleanedUri.startsWith('http://') || cleanedUri.startsWith('https://'))) {
         console.log('[Drop:Event] URL extraite via drag-and-drop :', cleanedUri);
         await ingestUrlInPlace(cleanedUri);

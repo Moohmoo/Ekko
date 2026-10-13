@@ -69,11 +69,20 @@ const api: EkkoAPI = {
   ingestUrl: (url: string) => ipcRenderer.invoke('daemon:ingest_url', url),
   getDroppedFilePath: (file: File) => {
     try {
-      return webUtils.getPathForFile(file);
-    } catch (err) {
-      console.error('[Preload] Échec webUtils.getPathForFile:', err);
-      return '';
+      const p = webUtils.getPathForFile(file);
+      if (p) return p;
+    } catch {
+      // ignore webUtils error
     }
+    try {
+      const legacy = (file as unknown as { path?: string }).path;
+      if (typeof legacy === 'string' && legacy) {
+        return legacy;
+      }
+    } catch {
+      // ignore legacy error
+    }
+    return '';
   },
   openExternal: (url: string) => ipcRenderer.invoke('shell:open_external', url),
   closeWindow: () => ipcRenderer.invoke('window:close'),
