@@ -270,6 +270,30 @@ ipcMain.handle('daemon:submit_prompt', function (event, prompt, sessionId) { ret
         }
     });
 }); });
+ipcMain.handle('daemon:get_system_settings', function () { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, sendJsonRpc('get_system_settings')];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); });
+ipcMain.handle('daemon:update_user_context', function (_event, context) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, sendJsonRpc('update_user_context', context)];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); });
+ipcMain.handle('daemon:update_sources', function (_event, sources) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, sendJsonRpc('update_sources', { sources: sources })];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); });
 ipcMain.handle('window:close', function () {
     if (win) {
         win.close();

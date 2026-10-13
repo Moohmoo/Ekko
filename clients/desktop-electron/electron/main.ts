@@ -232,6 +232,18 @@ ipcMain.handle('daemon:submit_prompt', async (event, prompt: string, sessionId?:
   });
 });
 
+ipcMain.handle('daemon:get_system_settings', async () => {
+  return await sendJsonRpc('get_system_settings');
+});
+
+ipcMain.handle('daemon:update_user_context', async (_event, context: Record<string, unknown>) => {
+  return await sendJsonRpc('update_user_context', context);
+});
+
+ipcMain.handle('daemon:update_sources', async (_event, sources: unknown[]) => {
+  return await sendJsonRpc('update_sources', { sources });
+});
+
 ipcMain.handle('window:close', () => {
   if (win) {
     win.close();

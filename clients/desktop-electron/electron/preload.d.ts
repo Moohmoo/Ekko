@@ -47,7 +47,10 @@ export interface EkkoAPI {
         action?: string;
         count?: number;
     }>;
-    submitPrompt: (prompt: string) => Promise<string>;
+    submitPrompt: (prompt: string, sessionId?: string) => Promise<string>;
+    getSystemSettings: () => Promise<unknown>;
+    updateUserContext: (context: unknown) => Promise<unknown>;
+    updateSources: (sources: unknown[]) => Promise<unknown>;
     ingestFile: (filePath: string) => Promise<IngestResult>;
     ingestUrl: (url: string) => Promise<IngestResult>;
     getDroppedFilePath: (file: File) => string;

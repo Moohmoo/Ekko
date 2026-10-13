@@ -26,6 +26,13 @@ var api = {
     submitPrompt: function (prompt, sessionId) {
         return ipcRenderer.invoke('daemon:submit_prompt', prompt, sessionId);
     },
+    getSystemSettings: function () { return ipcRenderer.invoke('daemon:get_system_settings'); },
+    updateUserContext: function (context) {
+        return ipcRenderer.invoke('daemon:update_user_context', context);
+    },
+    updateSources: function (sources) {
+        return ipcRenderer.invoke('daemon:update_sources', sources);
+    },
     ingestFile: function (filePath) { return ipcRenderer.invoke('daemon:ingest_file', filePath); },
     ingestUrl: function (url) { return ipcRenderer.invoke('daemon:ingest_url', url); },
     getDroppedFilePath: function (file) {

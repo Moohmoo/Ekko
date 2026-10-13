@@ -32,7 +32,10 @@ export interface EkkoAPI {
   getPendingSignals: () => Promise<SignalsResult | Signal[]>;
   resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{ status: string; signal_id?: string; action?: string }>;
   resolveAllPendingSignals: (action: 'archive' | 'discard') => Promise<{ status: string; action?: string; count?: number }>;
-  submitPrompt: (prompt: string) => Promise<string>;
+  submitPrompt: (prompt: string, sessionId?: string) => Promise<string>;
+  getSystemSettings: () => Promise<unknown>;
+  updateUserContext: (context: unknown) => Promise<unknown>;
+  updateSources: (sources: unknown[]) => Promise<unknown>;
   ingestFile: (filePath: string) => Promise<IngestResult>;
   ingestUrl: (url: string) => Promise<IngestResult>;
   getDroppedFilePath: (file: File) => string;
@@ -55,6 +58,11 @@ const api: EkkoAPI = {
     ipcRenderer.invoke('daemon:resolve_all_pending_signals', { action }),
   submitPrompt: (prompt: string, sessionId?: string) =>
     ipcRenderer.invoke('daemon:submit_prompt', prompt, sessionId),
+  getSystemSettings: () => ipcRenderer.invoke('daemon:get_system_settings'),
+  updateUserContext: (context: unknown) =>
+    ipcRenderer.invoke('daemon:update_user_context', context),
+  updateSources: (sources: unknown[]) =>
+    ipcRenderer.invoke('daemon:update_sources', sources),
   ingestFile: (filePath: string) => ipcRenderer.invoke('daemon:ingest_file', filePath),
   ingestUrl: (url: string) => ipcRenderer.invoke('daemon:ingest_url', url),
   getDroppedFilePath: (file: File) => {

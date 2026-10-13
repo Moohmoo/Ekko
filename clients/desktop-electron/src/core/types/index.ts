@@ -67,6 +67,42 @@ export interface SearchNotesParams {
   limit?: number;
 }
 
+export interface UserContextConfig {
+  user_name?: string | null;
+  preferred_language: 'fr' | 'en' | string;
+  preferences: string[];
+  custom_instructions?: string | null;
+}
+
+export interface SourceItem {
+  id: string;
+  type: string;
+  url?: string | null;
+  path?: string | null;
+  interval?: string;
+  max_items?: number;
+  params?: Record<string, unknown>;
+  headers?: Record<string, string>;
+  json_items_path?: string | null;
+  field_mapping?: Record<string, string>;
+  enabled?: boolean;
+}
+
+export interface SystemMetadata {
+  llm_provider: string;
+  active_model: string;
+  sqlite_db_path: string;
+  ipc_socket_path: string;
+  status: string;
+}
+
+export interface SystemSettings {
+  status?: string;
+  user_context: UserContextConfig;
+  sources: { sources: SourceItem[] };
+  system: SystemMetadata;
+}
+
 export interface EkkoAPI {
   ping: () => Promise<PingResult | null>;
   getNotes: () => Promise<unknown[]>;
@@ -75,6 +111,9 @@ export interface EkkoAPI {
   resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{ status: string; signal_id?: string; action?: string }>;
   resolveAllPendingSignals: (action: 'archive' | 'discard') => Promise<{ status: string; action?: string; count?: number }>;
   submitPrompt: (prompt: string, sessionId?: string) => Promise<string>;
+  getSystemSettings: () => Promise<SystemSettings>;
+  updateUserContext: (context: Partial<UserContextConfig>) => Promise<{ status: string; user_context: UserContextConfig }>;
+  updateSources: (sources: SourceItem[]) => Promise<{ status: string; sources: { sources: SourceItem[] } }>;
   ingestFile: (filePath: string) => Promise<IngestResult>;
   ingestUrl: (url: string) => Promise<IngestResult>;
   getDroppedFilePath: (file: File) => string;
