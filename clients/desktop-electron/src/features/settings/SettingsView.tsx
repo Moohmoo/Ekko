@@ -19,7 +19,7 @@ const formatErrorMessage = (rawError: string | null): string => {
     lower.includes('socket') ||
     lower.includes('offline')
   ) {
-    return "Le daemon Ekko est arrêté. Lancez 'uv run ekko daemon' pour rétablir la liaison IPC.";
+    return "Service d'arrière-plan indisponible. Vérifiez que le moteur Ekko est bien lancé.";
   }
   return rawError;
 };

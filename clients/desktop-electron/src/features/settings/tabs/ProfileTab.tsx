@@ -62,7 +62,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2">
           <div className="flex items-center gap-2 text-slate-200 font-semibold">
             <User className="w-4 h-4 text-sky-400" />
-            <span>Identité & Langue de Synthèse</span>
+            <span>Profil & Langue</span>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 pt-1 border-t border-white/[0.04]">
@@ -126,7 +126,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               type="text"
               value={newDirective}
               onChange={(e) => setNewDirective(e.target.value)}
-              placeholder="Ex: Architectures de modèles de fondation et raisonnement..."
+              placeholder="Ex: Intelligence artificielle, actualités tech, dev..."
               className="flex-1 bg-black/30 border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/40"
             />
             <button
@@ -169,16 +169,16 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           </div>
         </div>
 
-        {/* Instructions personnalisées (Prompt Système) */}
+        {/* Instructions personnalisées */}
         <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-1.5">
           <label className="text-slate-200 font-semibold text-[11px]">
-            Instructions Personnalisées de l'Agent
+            Consignes personnalisées pour l'assistant
           </label>
           <textarea
             rows={2}
             value={customInstructions}
             onChange={(e) => setCustomInstructions(e.target.value)}
-            placeholder="Ex: Sois concis et technique, privilégie les sources primaires..."
+            placeholder="Ex: Sois concis, privilégie les listes à puces et évite le jargon inutile..."
             className="w-full bg-black/30 border border-white/[0.06] rounded-lg p-2 text-[10px] text-slate-200 placeholder:text-slate-500 resize-none focus:outline-none focus:border-sky-500/40"
           />
         </div>
