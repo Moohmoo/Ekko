@@ -25,6 +25,18 @@ export const App: React.FC = () => {
     window.ekkoAPI?.closeWindow();
   };
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        window.ekkoAPI?.closeWindow();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const isCompact = viewMode === 'welcome' || viewMode === 'home';
   const targetHeight = isCompact ? LAYOUT.podHeightCompact : LAYOUT.podHeightExtended;
 

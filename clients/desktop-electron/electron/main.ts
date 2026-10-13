@@ -164,8 +164,8 @@ function createWindow() {
     }
   });
 
-  // Automatically open detached DevTools in dev mode
-  if (process.env.NODE_ENV !== 'production' || !app.isPackaged) {
+  // Automatically open detached DevTools in dev mode (except in automated E2E tests)
+  if (!process.env.E2E_TEST && (process.env.NODE_ENV !== 'production' || !app.isPackaged)) {
     win.webContents.openDevTools({ mode: 'detach' });
   }
 

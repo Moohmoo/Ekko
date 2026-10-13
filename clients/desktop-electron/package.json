@@ -8,6 +8,7 @@
     "dev": "vite",
     "start": "electron --no-sandbox .",
     "build": "tsc && vite build && tsc -p tsconfig.node.json",
+    "test:e2e": "playwright test",
     "test:mascot": "echo 'Pour tester les 7 micro-émotions, ouvrez la console DevTools (Ctrl+Shift+I) et lancez : window.ekkoAPI.cycleAllEmotions() ou window.ekkoAPI.testMascotEmotion(\"ingesting\")'"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
