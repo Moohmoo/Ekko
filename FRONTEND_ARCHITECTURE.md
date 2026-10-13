@@ -1,4 +1,4 @@
-# Architecture Frontend Desktop Ekko (Electron + React 19)
+# Architecture Frontend Desktop Ekko (Beta v0.1.0 — Electron + React 19)
 
 Ce document établit les principes d'ingénierie logicielle, l'organisation par couches et la gouvernance de l'état pour les clients graphiques d'Ekko conformes au Design System Coucou.
 

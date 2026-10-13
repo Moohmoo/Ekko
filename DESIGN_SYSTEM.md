@@ -1,4 +1,4 @@
-# Design System Ekko (Coucou / OLED Dark Mode)
+# Design System Ekko (Beta v0.1.0 — Coucou / OLED Dark Mode)
 
 Ce document formalise les tokens visuels, la géométrie adaptative, les conventions graphiques et la physique d'animation du Desktop Pod d'Ekko selon les standards du Design System Coucou.
 
