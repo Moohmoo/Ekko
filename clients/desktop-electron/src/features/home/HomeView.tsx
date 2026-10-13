@@ -67,6 +67,7 @@ export const HomeView: React.FC = () => {
     dropStatus,
     fileName,
     mascotEmotion,
+    forcedEmotion,
     errorMessage,
     setHover,
     setError,
@@ -83,9 +84,11 @@ export const HomeView: React.FC = () => {
 
   const cleanSummary = currentSignal?.summary && !isJsonPayload(currentSignal.summary) ? currentSignal.summary : null;
 
-  // Derived mascot emotion prioritizing active drag/ingestion/error, then blindspot alert, then idle
+  // Derived mascot emotion prioritizing dev test forcedEmotion, then active drag/ingestion/error, then blindspot alert, then idle
   const displayEmotion =
-    dropStatus === 'hover'
+    forcedEmotion !== null
+      ? forcedEmotion
+      : dropStatus === 'hover'
       ? 'hover_drop'
       : dropStatus === 'processing' || isIngesting
       ? 'ingesting'

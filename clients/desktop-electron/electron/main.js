@@ -383,6 +383,11 @@ ipcMain.handle('window:resize', function (_event_1, _a) { return __awaiter(void 
         return [2 /*return*/];
     });
 }); });
+ipcMain.on('dev:test_mascot_emotion', function (_event, emotion) {
+    if (win && !win.isDestroyed()) {
+        win.webContents.send('dev:set_mascot_emotion', emotion);
+    }
+});
 app.on('before-quit', function () {
     isQuitting = true;
 });

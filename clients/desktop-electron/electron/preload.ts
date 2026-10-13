@@ -46,6 +46,9 @@ export interface EkkoAPI {
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
   onNoteCreated: (callback: (note: any) => void) => () => void;
+  testMascotEmotion: (emotion: string | null) => void;
+  cycleAllEmotions: () => Promise<void>;
+  onTestMascotEmotion: (callback: (emotion: string | null) => void) => () => void;
 }
 
 const api: EkkoAPI = {
@@ -107,6 +110,27 @@ const api: EkkoAPI = {
     ipcRenderer.on('daemon:note_created', handler);
     return () => {
       ipcRenderer.removeListener('daemon:note_created', handler);
+    };
+  },
+  testMascotEmotion: (emotion: string | null) => {
+    ipcRenderer.send('dev:test_mascot_emotion', emotion);
+  },
+  cycleAllEmotions: async () => {
+    const emotions = ['welcome', 'idle', 'hover_drop', 'ingesting', 'ready', 'alert', 'error'];
+    console.log('%c[Ekko Test Bench] Début du cycle des 7 micro-émotions de la mascotte...', 'color: #38bdf8; font-weight: bold;');
+    for (const em of emotions) {
+      console.log(`%c[Ekko Test Bench] Emotion en test : %c${em}%c (2.5s)`, 'color: #94a3b8;', 'color: #22c55e; font-weight: bold;', 'color: #94a3b8;');
+      ipcRenderer.send('dev:test_mascot_emotion', em);
+      await new Promise((res) => setTimeout(res, 2500));
+    }
+    console.log('%c[Ekko Test Bench] Fin du cycle. Retour au mode nominal automatique.', 'color: #38bdf8; font-weight: bold;');
+    ipcRenderer.send('dev:test_mascot_emotion', null);
+  },
+  onTestMascotEmotion: (callback: (emotion: string | null) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, emotion: string | null) => callback(emotion);
+    ipcRenderer.on('dev:set_mascot_emotion', handler);
+    return () => {
+      ipcRenderer.removeListener('dev:set_mascot_emotion', handler);
     };
   },
 };

@@ -11,6 +11,7 @@ interface DropState {
   dropStatus: DropStatus;
   fileName: string | null;
   mascotEmotion: MascotEmotion;
+  forcedEmotion: MascotEmotion | null;
   statusMessage: string;
   errorMessage: string | null;
   pendingFilePath: string | null;
@@ -22,6 +23,7 @@ interface DropState {
   ingestFileInPlace: (filePath: string) => Promise<boolean>;
   ingestUrlInPlace: (url: string) => Promise<boolean>;
   onDistillationComplete: (note: NoteItem) => void;
+  forceMascotEmotion: (emotion: MascotEmotion | null) => void;
   reset: () => void;
 }
 
@@ -31,11 +33,16 @@ export const useDropStore = create<DropState>((set, get) => ({
   dropStatus: 'idle',
   fileName: null,
   mascotEmotion: 'idle',
+  forcedEmotion: null,
   statusMessage: 'Tampon actif',
   errorMessage: null,
   pendingFilePath: null,
   baselineNoteId: null,
   baselineNotesCount: 0,
+
+  forceMascotEmotion: (emotion: MascotEmotion | null) => {
+    set({ forcedEmotion: emotion });
+  },
 
   setHover: (isHovering: boolean) => {
     if (get().dropStatus === 'processing') return;
@@ -319,6 +326,7 @@ export const useDropStore = create<DropState>((set, get) => ({
       pendingFilePath: null,
       baselineNoteId: null,
       baselineNotesCount: 0,
+      forcedEmotion: null,
     });
   },
 }));
@@ -365,5 +373,12 @@ if (typeof window !== 'undefined' && window.ekkoAPI?.onNoteCreated) {
       useEchoStore.getState().setLatestNote(completedNote);
       dropState.onDistillationComplete(completedNote);
     }
+  });
+}
+
+// Dev test bench listener: allows external control of mascot emotions
+if (typeof window !== 'undefined' && window.ekkoAPI?.onTestMascotEmotion) {
+  window.ekkoAPI.onTestMascotEmotion((emotion) => {
+    useDropStore.getState().forceMascotEmotion(emotion as MascotEmotion | null);
   });
 }

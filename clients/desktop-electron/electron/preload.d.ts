@@ -61,4 +61,7 @@ export interface EkkoAPI {
     onPromptChunk: (callback: (chunk: string) => void) => () => void;
     onToolEvent: (callback: (event: any) => void) => () => void;
     onNoteCreated: (callback: (note: any) => void) => () => void;
+    testMascotEmotion: (emotion: string | null) => void;
+    cycleAllEmotions: () => Promise<void>;
+    onTestMascotEmotion: (callback: (emotion: string | null) => void) => () => void;
 }

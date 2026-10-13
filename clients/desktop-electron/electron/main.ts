@@ -331,6 +331,12 @@ ipcMain.handle('window:resize', async (_event, { width, height }: { width: numbe
   }
 });
 
+ipcMain.on('dev:test_mascot_emotion', (_event, emotion: string | null) => {
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('dev:set_mascot_emotion', emotion);
+  }
+});
+
 app.on('before-quit', () => {
   isQuitting = true;
 });
