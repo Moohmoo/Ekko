@@ -38,6 +38,7 @@ import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, shell, Tray 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt, subscribeDaemonEvents } from './transport/socket-client';
+import { ensureDaemonRunning, stopDaemonIfManaged } from './daemon-manager';
 import fs from 'node:fs';
 var __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.DIST = path.join(__dirname, '../dist');
@@ -410,9 +411,28 @@ ipcMain.on('dev:test_mascot_emotion', function (_event, emotion) {
         win.webContents.send('dev:set_mascot_emotion', emotion);
     }
 });
-app.on('before-quit', function () {
-    isQuitting = true;
-});
+app.on('before-quit', function (event) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                if (isQuitting)
+                    return [2 /*return*/];
+                isQuitting = true;
+                event.preventDefault();
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, , 3, 4]);
+                return [4 /*yield*/, stopDaemonIfManaged()];
+            case 2:
+                _a.sent();
+                return [3 /*break*/, 4];
+            case 3:
+                app.quit();
+                return [7 /*endfinally*/];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
 app.on('will-quit', function () {
     globalShortcut.unregisterAll();
 });
@@ -431,28 +451,44 @@ app.on('activate', function () {
         win.focus();
     }
 });
-app.whenReady().then(function () {
-    createWindow();
-    createTray();
-    // Subscribe to daemon push notifications (e.g. instant note completion)
-    subscribeDaemonEvents(function (method, params) {
-        if (win && !win.isDestroyed()) {
-            win.webContents.send(method, params);
+app.whenReady().then(function () { return __awaiter(void 0, void 0, void 0, function () {
+    var err_2, shortcutRegistered;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, ensureDaemonRunning()];
+            case 1:
+                _a.sent();
+                return [3 /*break*/, 3];
+            case 2:
+                err_2 = _a.sent();
+                console.error('[Main:ERR] Erreur lors de l\'initialisation du daemon:', err_2);
+                return [3 /*break*/, 3];
+            case 3:
+                createWindow();
+                createTray();
+                // Subscribe to daemon push notifications (e.g. instant note completion)
+                subscribeDaemonEvents(function (method, params) {
+                    if (win && !win.isDestroyed()) {
+                        win.webContents.send(method, params);
+                    }
+                });
+                shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', function () {
+                    toggleWindow();
+                });
+                if (!shortcutRegistered) {
+                    console.warn('[Main:WARN] Global shortcut CommandOrControl+Shift+Space registration failed.');
+                }
+                // Recalculate notch position if display resolution or work area changes
+                screen.on('display-metrics-changed', function () {
+                    if (win && !win.isDestroyed()) {
+                        var _a = win.getSize(), width = _a[0], height = _a[1];
+                        var bounds = getCenteredTopBounds(width, height);
+                        win.setPosition(bounds.x, bounds.y);
+                    }
+                });
+                return [2 /*return*/];
         }
     });
-    // Register global shortcut to toggle window
-    var shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', function () {
-        toggleWindow();
-    });
-    if (!shortcutRegistered) {
-        console.warn('[Main:WARN] Global shortcut CommandOrControl+Shift+Space registration failed.');
-    }
-    // Recalculate notch position if display resolution or work area changes
-    screen.on('display-metrics-changed', function () {
-        if (win && !win.isDestroyed()) {
-            var _a = win.getSize(), width = _a[0], height = _a[1];
-            var bounds = getCenteredTopBounds(width, height);
-            win.setPosition(bounds.x, bounds.y);
-        }
-    });
-});
+}); });

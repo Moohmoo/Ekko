@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, shell, Tray 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt, subscribeDaemonEvents } from './transport/socket-client';
+import { ensureDaemonRunning, stopDaemonIfManaged } from './daemon-manager';
 
 import fs from 'node:fs';
 
@@ -362,8 +363,15 @@ ipcMain.on('dev:test_mascot_emotion', (_event, emotion: string | null) => {
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', async (event) => {
+  if (isQuitting) return;
   isQuitting = true;
+  event.preventDefault();
+  try {
+    await stopDaemonIfManaged();
+  } finally {
+    app.quit();
+  }
 });
 
 app.on('will-quit', () => {
@@ -386,7 +394,14 @@ app.on('activate', () => {
   }
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Ensure the Python daemon is running (auto-supervises or adopts external instance)
+  try {
+    await ensureDaemonRunning();
+  } catch (err) {
+    console.error('[Main:ERR] Erreur lors de l\'initialisation du daemon:', err);
+  }
+
   createWindow();
   createTray();
 
