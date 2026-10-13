@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Check, X, ChevronDown, ChevronRight, Terminal } from 'lucide-react';
+import { Loader2, Check, X, ChevronDown, ChevronRight } from 'lucide-react';
 import type { ToolCallStep } from '../core/types';
 
 interface ToolExecutionStepperProps {
@@ -47,13 +47,13 @@ export const ToolExecutionStepper: React.FC<ToolExecutionStepperProps> = ({
     setExpandedStepId((prev) => (prev === id ? null : id));
   };
 
-  // Dynamic header label
+  // Dynamic header label without redundant prefixes
   const toolCount = toolCalls.length;
   const headerLabel = anyRunning
     ? 'Exécution des outils en cours...'
     : toolCount === 1
-    ? `>_ [${toolCalls[0].tool}]`
-    : `>_ ${toolCount} outils exécutés`;
+    ? `[${toolCalls[0].tool}]`
+    : `${toolCount} outils exécutés`;
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-2.5 mb-2.5 select-none text-xs transition-all overflow-hidden">
@@ -72,10 +72,9 @@ export const ToolExecutionStepper: React.FC<ToolExecutionStepperProps> = ({
               <ChevronRight className="w-3.5 h-3.5" />
             )}
           </div>
-          <div className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-300 truncate">
-            <Terminal className="w-3 h-3 text-sky-400 shrink-0" />
-            <span className="truncate">{headerLabel}</span>
-          </div>
+          <span className="font-mono text-[11px] text-zinc-300 truncate">
+            {headerLabel}
+          </span>
         </button>
 
         {/* Global Status Pill */}
