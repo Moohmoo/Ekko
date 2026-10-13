@@ -65,9 +65,31 @@ function toggleWindow() {
   }
 }
 
-function createTray() {
+function getTrayIconPath(state: 'idle' | 'ingesting' | 'alert' | 'error' | 'offline'): string {
   const publicDir = process.env.VITE_PUBLIC || path.join(__dirname, '../public');
-  const iconPath = path.join(publicDir, 'assets/tray.png');
+  switch (state) {
+    case 'ingesting':
+      return path.join(publicDir, 'assets/tray-ingest.png');
+    case 'alert':
+      return path.join(publicDir, 'assets/tray-alert.png');
+    case 'offline':
+      return path.join(publicDir, 'assets/tray-offline.png');
+    case 'idle':
+    default:
+      return path.join(publicDir, 'assets/tray-idle.png');
+  }
+}
+
+function updateTrayIcon(state: 'idle' | 'ingesting' | 'alert' | 'error' | 'offline') {
+  if (!tray || tray.isDestroyed()) return;
+  const iconPath = getTrayIconPath(state);
+  if (fs.existsSync(iconPath)) {
+    tray.setImage(iconPath);
+  }
+}
+
+function createTray() {
+  const iconPath = getTrayIconPath('idle');
   tray = new Tray(iconPath);
   tray.setToolTip('Ekko - Ambient Cognitive Buffer');
 
@@ -290,6 +312,10 @@ ipcMain.handle('daemon:update_user_context', async (_event, context: Record<stri
 
 ipcMain.handle('daemon:update_sources', async (_event, sources: unknown[]) => {
   return await sendJsonRpc('update_sources', { sources });
+});
+
+ipcMain.handle('tray:set_state', async (_event, state: 'idle' | 'ingesting' | 'alert' | 'error') => {
+  updateTrayIcon(state);
 });
 
 ipcMain.handle('window:close', () => {

@@ -66,38 +66,61 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
               }
             : emotion === 'ingesting'
             ? {
-                y: [0, -2, 3, 0],
-                scale: [1, 0.98, 1.03, 1],
+                y: [0, -3, 4, -2, 0],
+                scaleY: [1, 0.75, 1.25, 0.95, 1],
+                scaleX: [1, 1.15, 0.85, 1.05, 1],
               }
             : emotion === 'error'
             ? {
-                x: [0, -5, 5, -3, 3, 0],
+                x: [0, -6, 6, -4, 4, 0],
                 y: 0,
                 scale: 1,
               }
             : emotion === 'alert'
             ? {
                 y: [0, -4, 0],
-                scale: [1, 1.03, 1],
+                scale: [1, 1.04, 1],
               }
             : {
-                y: [0, -3, 0],
-                scale: [1, 1.02, 1],
+                // Sleepy slow organic breathing
+                y: [0, -2, 0],
+                scale: [1, 1.015, 1],
               }
         }
         transition={
           emotion === 'welcome'
             ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' }
             : emotion === 'ingesting'
-            ? { duration: 1.0, repeat: Infinity, ease: 'easeInOut' }
+            ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' }
             : emotion === 'error'
-            ? { duration: 0.3, ease: 'easeInOut' }
+            ? { duration: 0.35, ease: 'easeInOut' }
             : emotion === 'alert'
-            ? { duration: 2.0, repeat: Infinity, ease: 'easeInOut' }
-            : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
+            ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
+            : { duration: 3.2, repeat: Infinity, ease: 'easeInOut' }
         }
         className="relative z-10 w-[74px] h-[88px] flex items-center justify-center"
       >
+        {/* Floating Sleep 'z' particle when idle */}
+        {emotion === 'idle' && (
+          <motion.div
+            initial={{ opacity: 0, y: 0, x: 0, scale: 0.8 }}
+            animate={{
+              opacity: [0, 0.65, 0],
+              y: [-2, -18],
+              x: [0, 6],
+              scale: [0.8, 1.15],
+            }}
+            transition={{
+              duration: 2.4,
+              repeat: Infinity,
+              ease: 'easeOut',
+            }}
+            className="absolute -top-1 right-2 text-[10px] font-bold text-sky-300/70 select-none pointer-events-none"
+          >
+            z
+          </motion.div>
+        )}
+
         <svg
           viewBox="0 0 100 120"
           className="w-full h-full drop-shadow-[0_6px_14px_rgba(0,242,254,0.18)]"
@@ -165,44 +188,53 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
 
           {/* Attentive Eyebrows for Alert emotion */}
           {emotion === 'alert' && (
-            <g stroke={COLORS.eyeDark} strokeWidth="1.3" strokeLinecap="round" fill="none">
-              <path d="M 36 53 Q 40 49 44 52" />
-              <path d="M 56 52 Q 60 49 64 53" />
+            <g stroke={COLORS.eyeDark} strokeWidth="1.4" strokeLinecap="round" fill="none">
+              <path d="M 35 52 Q 40 48 45 51" />
+              <path d="M 55 51 Q 60 48 65 52" />
             </g>
           )}
 
-          {/* Expressive Eyes */}
-          <g fill={COLORS.eyeDark}>
-            <ellipse
-              cx="40"
-              cy="62"
-              rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
-              ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
-            />
-            {emotion !== 'error' && (
-              <circle
-                cx="39"
-                cy="60"
-                r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
-                fill={COLORS.white}
+          {/* Eyes rendering according to emotion */}
+          {emotion === 'idle' ? (
+            /* Sleepy closed eyes curves (‿ ‿) */
+            <g stroke={COLORS.eyeDark} strokeWidth="2.2" strokeLinecap="round" fill="none">
+              <path d="M 35 63 Q 40 68 45 63" />
+              <path d="M 55 63 Q 60 68 65 63" />
+            </g>
+          ) : (
+            /* Expressive open eyes */
+            <g fill={COLORS.eyeDark}>
+              <ellipse
+                cx="40"
+                cy="62"
+                rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
+                ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
               />
-            )}
+              {emotion !== 'error' && (
+                <circle
+                  cx="39"
+                  cy="60"
+                  r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
+                  fill={COLORS.white}
+                />
+              )}
 
-            <ellipse
-              cx="60"
-              cy="62"
-              rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
-              ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
-            />
-            {emotion !== 'error' && (
-              <circle
-                cx="59"
-                cy="60"
-                r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
-                fill={COLORS.white}
+              <ellipse
+                cx="60"
+                cy="62"
+                rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
+                ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
               />
-            )}
-          </g>
+              {emotion !== 'error' && (
+                <circle
+                  cx="59"
+                  cy="60"
+                  r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
+                  fill={COLORS.white}
+                />
+              )}
+            </g>
+          )}
 
           {/* Welcoming or Ready Smile */}
           {(emotion === 'welcome' || emotion === 'ready') && (
@@ -212,6 +244,17 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
               stroke={COLORS.eyeDark}
               strokeWidth="1.5"
               strokeLinecap="round"
+            />
+          )}
+
+          {/* Ingesting Swallowing Mouth (O-shaped intake) */}
+          {emotion === 'ingesting' && (
+            <ellipse
+              cx="50"
+              cy="74"
+              rx="4.5"
+              ry="5.5"
+              fill={COLORS.eyeDark}
             />
           )}
 
@@ -241,10 +284,10 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
         {/* Detached Left Satellite Hand */}
         <motion.div
           animate={{
-            y: emotion === 'error' ? 0 : [-2, 2, -2],
+            y: emotion === 'error' ? 0 : emotion === 'ingesting' ? [-3, 3, -3] : [-2, 2, -2],
           }}
           transition={{
-            duration: 2,
+            duration: emotion === 'ingesting' ? 0.9 : 2,
             repeat: emotion === 'error' ? 0 : Infinity,
             ease: 'easeInOut',
           }}
@@ -269,6 +312,13 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                   rotate: [15, -25, 15],
                   scale: [1, 1.15, 1],
                 }
+              : emotion === 'ingesting'
+              ? {
+                  y: [3, -3, 3],
+                  x: 0,
+                  rotate: 0,
+                  scale: 1,
+                }
               : emotion === 'error'
               ? {
                   y: 0,
@@ -292,7 +342,7 @@ export const Mascot: React.FC<MascotProps> = ({ emotion = 'idle', className = ''
                   ...SPRING_BOUNCY,
                 }
               : {
-                  duration: 2,
+                  duration: emotion === 'ingesting' ? 0.9 : 2,
                   repeat: Infinity,
                   ease: 'easeInOut',
                 }

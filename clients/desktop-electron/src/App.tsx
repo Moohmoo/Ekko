@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDaemonHeartbeat } from './core/hooks/useDaemonHeartbeat';
+import { useTraySync } from './core/hooks/useTraySync';
 import { useEchoStore } from './core/stores/useEchoStore';
 import { useViewStore } from './core/stores/useViewStore';
 import { PodHeader } from './components/PodHeader';
@@ -14,6 +15,8 @@ import { SPRING_SNAPPY, SPRING_BOUNCY, LAYOUT, COLORS, SURFACES } from './design
 export const App: React.FC = () => {
   // Mount 2s polling heartbeat from Zustand store
   useDaemonHeartbeat();
+  // Synchronize OS System Tray icon with reactive states
+  useTraySync();
 
   const { viewMode, setViewMode } = useViewStore();
   const { notes, isLoading: isLoadingNotes, fetchNotes } = useEchoStore();

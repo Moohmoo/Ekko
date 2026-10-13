@@ -291,9 +291,9 @@ export const HomeView: React.FC = () => {
           </div>
         ) : currentSignal ? (
           /* État Veilleur : Alerte Proactive d'Angle Mort (UC-1) */
-          <div className={`w-full h-full rounded-xl ${SURFACES.alertCard} flex flex-col justify-between p-3 select-none relative overflow-hidden transition-all shadow-[0_4px_20px_rgba(245,158,11,0.06)]`}>
-            {/* Header: Badge ambre + source + compteur */}
-            <div className="flex items-center justify-between gap-2">
+          <div className={`w-full h-full rounded-xl ${SURFACES.alertCard} flex flex-col justify-between p-3 select-none relative overflow-hidden transition-all shadow-[0_4px_20px_rgba(245,158,11,0.06)] min-h-0`}>
+            {/* Header: Badge ambre + source + compteur (Fixe) */}
+            <div className="flex items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300">
                 <Zap className="w-3 h-3 text-amber-400" />
                 <span className="text-[10px] font-semibold tracking-wide uppercase">
@@ -305,20 +305,20 @@ export const HomeView: React.FC = () => {
               </span>
             </div>
 
-            {/* Content: Titre éclatant + synthèse */}
-            <div className="flex flex-col gap-1 my-0.5">
-              <h3 className="text-sm font-medium text-white line-clamp-2 leading-snug">
+            {/* Content: Titre éclatant + synthèse (Flexible et scroll-safe) */}
+            <div className="flex flex-col gap-1 my-auto min-h-0 overflow-hidden">
+              <h3 className="text-xs font-semibold text-white line-clamp-2 leading-tight">
                 {currentSignal.title}
               </h3>
               {cleanSummary && (
-                <p className="text-xs text-white/60 line-clamp-2 leading-relaxed">
+                <p className="text-[11px] text-zinc-400 line-clamp-2 mt-1 leading-snug">
                   {cleanSummary}
                 </p>
               )}
             </div>
 
-            {/* Actions: Tout écarter (si > 10) | Écarter (secondaire) & Archiver (primaire) */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/[0.04]">
+            {/* Actions: Tout écarter (si > 10) | Écarter & Archiver (Fixe en bas) */}
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06] shrink-0">
               {totalCount > 10 ? (
                 <button
                   onClick={() => resolveAll('discard')}

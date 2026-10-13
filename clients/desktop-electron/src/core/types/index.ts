@@ -120,6 +120,7 @@ export interface EkkoAPI {
   openExternal: (url: string) => Promise<void>;
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;
+  setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
 }

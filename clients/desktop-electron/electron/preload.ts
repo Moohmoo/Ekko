@@ -42,6 +42,7 @@ export interface EkkoAPI {
   openExternal: (url: string) => Promise<void>;
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;
+  setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
 }
@@ -76,6 +77,7 @@ const api: EkkoAPI = {
   openExternal: (url: string) => ipcRenderer.invoke('shell:open_external', url),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   resizeWindow: (width: number, height: number) => ipcRenderer.invoke('window:resize', { width, height }),
+  setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => ipcRenderer.invoke('tray:set_state', state),
   onPromptChunk: (callback: (chunk: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, chunk: string) => callback(chunk);
     ipcRenderer.on('daemon:prompt_chunk', handler);
