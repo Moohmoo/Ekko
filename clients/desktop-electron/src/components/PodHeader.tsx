@@ -1,10 +1,9 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { startTransition } from 'react';
 import type { ViewMode } from '../core/types';
 import { useDaemonStore } from '../core/stores/useDaemonStore';
 import { useSoundStore } from '../core/audio/useSoundStore';
 import { Droplet, MessageSquare, Zap, Settings, Volume2, VolumeX, X } from 'lucide-react';
-import { SPRING_SNAPPY } from '../design-system/tokens';
+import { SURFACES } from '../design-system/tokens';
 
 interface PodHeaderProps {
   activeTab: ViewMode;
@@ -20,6 +19,12 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
   const isOnline = useDaemonStore((state) => state.isOnline);
   const isMuted = useSoundStore((state) => state.isMuted);
   const toggleMute = useSoundStore((state) => state.toggleMute);
+
+  const handleTabClick = (tab: ViewMode) => {
+    startTransition(() => {
+      onSelectTab(tab);
+    });
+  };
 
   const handleClose = () => {
     if (window.ekkoAPI?.closeWindow) {
@@ -37,66 +42,39 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
       {/* Navigation Tabs (Left) */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => onSelectTab('home')}
-          className={`relative w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          onClick={() => handleTabClick('home')}
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'home'
-              ? 'text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+              ? SURFACES.headerTabActive
+              : SURFACES.headerTabInactive
           }`}
           title="Accueil (Bento)"
         >
-          {activeTab === 'home' && (
-            <motion.div
-              layoutId="activeTabPill"
-              transition={SPRING_SNAPPY}
-              className="absolute inset-0 rounded-lg bg-white/[0.08]"
-            />
-          )}
-          <span className="relative z-10 flex items-center justify-center">
-            <Droplet size={15} />
-          </span>
+          <Droplet size={15} />
         </button>
 
         <button
-          onClick={() => onSelectTab('chat')}
-          className={`relative w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          onClick={() => handleTabClick('chat')}
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'chat'
-              ? 'text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+              ? SURFACES.headerTabActive
+              : SURFACES.headerTabInactive
           }`}
           title="Assistant & Chat"
         >
-          {activeTab === 'chat' && (
-            <motion.div
-              layoutId="activeTabPill"
-              transition={SPRING_SNAPPY}
-              className="absolute inset-0 rounded-lg bg-white/[0.08]"
-            />
-          )}
-          <span className="relative z-10 flex items-center justify-center">
-            <MessageSquare size={15} />
-          </span>
+          <MessageSquare size={15} />
         </button>
 
         <button
-          onClick={() => onSelectTab('echo')}
-          className={`relative w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          onClick={() => handleTabClick('echo')}
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'echo'
-              ? 'text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+              ? SURFACES.headerTabActive
+              : SURFACES.headerTabInactive
           }`}
           title="Écho (Fiches PKM)"
         >
-          {activeTab === 'echo' && (
-            <motion.div
-              layoutId="activeTabPill"
-              transition={SPRING_SNAPPY}
-              className="absolute inset-0 rounded-lg bg-white/[0.08]"
-            />
-          )}
-          <span className="relative z-10 flex items-center justify-center">
-            <Zap size={15} />
-          </span>
+          <Zap size={15} />
         </button>
       </div>
 
@@ -114,24 +92,15 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
 
         {/* 2. Settings Button */}
         <button
-          onClick={() => onSelectTab('settings')}
-          className={`relative w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          onClick={() => handleTabClick('settings')}
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'settings'
-              ? 'text-sky-400'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+              ? SURFACES.headerTabActive
+              : SURFACES.headerTabInactive
           }`}
           title="Réglages & Télémétrie"
         >
-          {activeTab === 'settings' && (
-            <motion.div
-              layoutId="activeTabPill"
-              transition={SPRING_SNAPPY}
-              className="absolute inset-0 rounded-lg bg-white/[0.08]"
-            />
-          )}
-          <span className="relative z-10 flex items-center justify-center">
-            <Settings size={15} />
-          </span>
+          <Settings size={15} />
         </button>
 
         {/* 3. Sound Toggle Button */}
