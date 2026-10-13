@@ -110,3 +110,31 @@ def load_sources_config(config_dir: Path | str) -> SourcesCatalogConfig:
     _ensure_example_template(dir_path / "sources.yaml.example", EXAMPLE_SOURCES_YAML)
     return SourcesCatalogConfig()
 
+
+def _atomic_write_yaml(target_file: Path, data: dict[str, Any]) -> None:
+    """Atomically write YAML data via a temporary sibling file."""
+    target_file.parent.mkdir(parents=True, exist_ok=True)
+    temp_file = target_file.with_name(f".{target_file.name}.tmp")
+    content = yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
+    temp_file.write_text(content, encoding="utf-8")
+    temp_file.replace(target_file)
+
+
+def save_user_context(data: UserContextConfig, config_dir: Path | str = "config") -> Path:
+    """Persist validated user context atomically into user_context.yaml."""
+    dir_path = Path(config_dir)
+    target_file = dir_path / "user_context.yaml"
+    _atomic_write_yaml(target_file, data.model_dump(mode="json"))
+    logger.info("Saved user context configuration to %s", target_file)
+    return target_file
+
+
+def save_sources_config(data: SourcesCatalogConfig, config_dir: Path | str = "config") -> Path:
+    """Persist validated sources catalog atomically into sources.yaml."""
+    dir_path = Path(config_dir)
+    target_file = dir_path / "sources.yaml"
+    _atomic_write_yaml(target_file, data.model_dump(mode="json"))
+    logger.info("Saved sources catalog configuration to %s", target_file)
+    return target_file
+
+

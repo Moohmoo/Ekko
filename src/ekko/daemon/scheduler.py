@@ -62,6 +62,11 @@ class IngestionCoordinator:
         self._lock = asyncio.Lock()
         self._loop_task: asyncio.Task[None] | None = None
 
+    def update_catalog(self, catalog: SourcesCatalogConfig) -> None:
+        """Hot-reload the active sources catalog for subsequent polling ticks."""
+        self.catalog = catalog
+        logger.info("IngestionCoordinator catalog updated with %d source(s).", len(catalog.sources))
+
     def _get_connector(self, source_type: str) -> BaseConnector | None:
         """Map source type string to instantiated connector."""
         if source_type == "rss":

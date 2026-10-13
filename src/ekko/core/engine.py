@@ -107,6 +107,11 @@ class EkkoEngine:
         self.window_size = window_size
         self.history_limit = window_size
 
+    def update_system_prompt(self, new_prompt: str) -> None:
+        """Hot-reload the system prompt in-memory for subsequent turns."""
+        self.system_prompt = new_prompt
+        logger.info("EkkoEngine system prompt updated dynamically.")
+
     async def _run_tool_steps(
         self,
         session_id: str,

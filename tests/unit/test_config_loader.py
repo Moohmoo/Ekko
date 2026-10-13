@@ -91,3 +91,41 @@ def test_load_plugins_config_missing_generates_example(tmp_path: Path) -> None:
     example_file = tmp_path / "plugins.yaml.example"
     assert example_file.exists()
     assert "enabled_tools" in example_file.read_text(encoding="utf-8")
+
+
+def test_save_user_context_atomic(tmp_path: Path) -> None:
+    """Ensure save_user_context writes atomically and can be read back cleanly."""
+    from ekko.config.loader import save_user_context, load_user_context
+
+    ctx = UserContextConfig(
+        user_name="Bob",
+        preferred_language="en",
+        preferences=["Testing atomic save"],
+    )
+    saved_path = save_user_context(ctx, config_dir=tmp_path)
+    assert saved_path.exists()
+
+    reloaded = load_user_context(tmp_path)
+    assert reloaded.user_name == "Bob"
+    assert reloaded.preferred_language == "en"
+    assert reloaded.preferences == ["Testing atomic save"]
+
+
+def test_save_sources_config_atomic(tmp_path: Path) -> None:
+    """Ensure save_sources_config writes atomically and can be read back cleanly."""
+    from ekko.config.loader import save_sources_config, load_sources_config
+    from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
+
+    catalog = SourcesCatalogConfig(
+        sources=[
+            SourceConfig(id="test_feed", type="rss", url="https://example.com/rss", interval="1h"),
+        ]
+    )
+    saved_path = save_sources_config(catalog, config_dir=tmp_path)
+    assert saved_path.exists()
+
+    reloaded = load_sources_config(tmp_path)
+    assert len(reloaded.sources) == 1
+    assert reloaded.sources[0].id == "test_feed"
+    assert reloaded.sources[0].interval == "1h"
+

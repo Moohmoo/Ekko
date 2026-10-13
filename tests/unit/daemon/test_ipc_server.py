@@ -362,3 +362,98 @@ async def test_ipc_server_ingest_url(socket_path: Path) -> None:
 
     await server.stop()
 
+
+@pytest.mark.asyncio
+async def test_ipc_server_get_system_settings(socket_path: Path, tmp_path: Path) -> None:
+    """Ensure get_system_settings returns user_context, sources and system info."""
+    from ekko.settings import Settings
+
+    settings = Settings(config_dir=str(tmp_path), sqlite_db_path="data/test.db")
+    server = IPCServer(socket_path=socket_path, settings=settings)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        res = await client.call("get_system_settings")
+        assert res["status"] == "ok"
+        assert "user_context" in res
+        assert "sources" in res
+        assert "system" in res
+        assert res["system"]["status"] == "online"
+        assert res["system"]["llm_provider"] == settings.llm_provider
+
+    await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_ipc_server_update_user_context(socket_path: Path, tmp_path: Path) -> None:
+    """Ensure update_user_context persists YAML, updates engine prompt, and handles validation errors."""
+    from ekko.settings import Settings
+
+    mock_engine = MagicMock()
+    settings = Settings(config_dir=str(tmp_path))
+    server = IPCServer(socket_path=socket_path, engine=mock_engine, settings=settings)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        # 1. Valid update
+        payload = {
+            "user_name": "Charlie",
+            "preferred_language": "en",
+            "preferences": ["Fast responses"],
+        }
+        res = await client.call("update_user_context", payload)
+        assert res["status"] == "ok"
+        assert res["user_context"]["user_name"] == "Charlie"
+        assert res["user_context"]["preferred_language"] == "en"
+        mock_engine.update_system_prompt.assert_called_once()
+
+        # Check persisted file
+        assert (tmp_path / "user_context.yaml").exists()
+
+        # 2. Validation error (e.g. invalid type for preferences)
+        with pytest.raises(Exception) as exc_info:
+            await client.call("update_user_context", {"preferences": "not-a-list"})
+        assert "Validation error" in str(exc_info.value)
+
+    await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_ipc_server_update_sources(socket_path: Path, tmp_path: Path) -> None:
+    """Ensure update_sources persists YAML, notifies coordinator, and handles validation errors."""
+    from ekko.settings import Settings
+
+    mock_coordinator = MagicMock()
+    settings = Settings(config_dir=str(tmp_path))
+    server = IPCServer(socket_path=socket_path, coordinator=mock_coordinator, settings=settings)
+    await server.start()
+
+    async with IPCClient(socket_path=socket_path) as client:
+        # 1. Valid update
+        payload = {
+            "sources": [
+                {
+                    "id": "new_source",
+                    "type": "rss",
+                    "url": "https://example.com/feed.xml",
+                    "interval": "15m",
+                }
+            ]
+        }
+        res = await client.call("update_sources", payload)
+        assert res["status"] == "ok"
+        assert len(res["sources"]["sources"]) == 1
+        assert res["sources"]["sources"][0]["id"] == "new_source"
+        mock_coordinator.update_catalog.assert_called_once()
+
+        # Check persisted file
+        assert (tmp_path / "sources.yaml").exists()
+
+        # 2. Validation error (missing required id or type)
+        with pytest.raises(Exception) as exc_info:
+            await client.call("update_sources", {"sources": [{"url": "https://example.com"}]})
+        assert "Validation error" in str(exc_info.value)
+
+    await server.stop()
+
+

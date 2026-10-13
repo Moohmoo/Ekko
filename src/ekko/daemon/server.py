@@ -9,13 +9,25 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 
+from pydantic import ValidationError
+
+from ekko.config.loader import (
+    load_core_prompt,
+    load_sources_config,
+    load_user_context,
+    save_sources_config,
+    save_user_context,
+)
+from ekko.config.schemas import SourcesCatalogConfig, UserContextConfig
 from ekko.core.engine import EkkoEngine
+from ekko.core.models import RawSignal, SignalStatus
 from ekko.core.ports import EmbedderPort
+from ekko.core.prompt import build_system_prompt
+from ekko.daemon.scheduler import IngestionCoordinator
 from ekko.ingestion.distiller import SignalDistiller
+from ekko.logger import get_logger
 from ekko.memory.embedder import TextEmbedder
 from ekko.memory.hybrid_store import HybridStore
-from ekko.core.models import RawSignal, SignalStatus
-from ekko.logger import get_logger
 from ekko.settings import Settings
 from ekko.tools.read_resource import _fetch_web_resource
 
@@ -83,12 +95,16 @@ class IPCServer:
         distiller: SignalDistiller | None = None,
         distillation_semaphore: asyncio.Semaphore | None = None,
         embedder: EmbedderPort | None = None,
+        coordinator: IngestionCoordinator | None = None,
+        settings: Settings | None = None,
     ) -> None:
         self.socket_path = Path(socket_path)
         self.db_manager = db_manager or HybridStore()
         self.engine = engine
         self.distiller = distiller
         self.embedder = embedder
+        self.coordinator = coordinator
+        self.settings = settings or Settings()
         self._server: asyncio.Server | None = None
         self._background_tasks: set[asyncio.Task[object]] = set()
         self._active_writers: set[asyncio.StreamWriter] = set()
@@ -211,6 +227,12 @@ class IPCServer:
             await self._handle_resolve_all_pending_signals(req_id, params, writer)
         elif method == "submit_prompt":
             await self._handle_submit_prompt(req_id, params, writer)
+        elif method == "get_system_settings":
+            await self._handle_get_system_settings(req_id, writer)
+        elif method == "update_user_context":
+            await self._handle_update_user_context(req_id, params, writer)
+        elif method == "update_sources":
+            await self._handle_update_sources(req_id, params, writer)
         else:
             writer.write(_rpc_error(req_id, -32601, f"Method not found: '{method}'").encode("utf-8"))
             await writer.drain()
@@ -530,6 +552,95 @@ class IPCServer:
             line = json.dumps(event.model_dump(mode="json")) + "\n"
             writer.write(line.encode("utf-8"))
             await writer.drain()
+
+    async def _handle_get_system_settings(
+        self,
+        req_id: str | int | None,
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Return unified system settings, active sources, and user profile."""
+        config_dir = self.settings.config_dir
+        user_ctx = load_user_context(config_dir)
+        sources_cfg = load_sources_config(config_dir)
+
+        reply = {
+            "status": "ok",
+            "user_context": user_ctx.model_dump(mode="json"),
+            "sources": sources_cfg.model_dump(mode="json"),
+            "system": {
+                "llm_provider": self.settings.llm_provider,
+                "active_model": self.settings.active_model,
+                "sqlite_db_path": str(self.settings.sqlite_db_path),
+                "ipc_socket_path": str(self.socket_path),
+                "status": "online",
+            },
+        }
+        writer.write(_rpc_result(req_id, reply).encode("utf-8"))
+        await writer.drain()
+
+    async def _handle_update_user_context(
+        self,
+        req_id: str | int | None,
+        params: dict[str, object],
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Validate, persist user context to YAML atomically, and hot-reload engine system prompt."""
+        try:
+            new_ctx = UserContextConfig.model_validate(params)
+        except ValidationError as err:
+            err_msg = "; ".join(f"{'.'.join(str(loc) for loc in e['loc'])}: {e['msg']}" for e in err.errors())
+            logger.warning("Validation failed on update_user_context: %s", err_msg)
+            writer.write(_rpc_error(req_id, -32602, f"Validation error: {err_msg}").encode("utf-8"))
+            await writer.drain()
+            return
+
+        config_dir = self.settings.config_dir
+        save_user_context(new_ctx, config_dir=config_dir)
+
+        # Hot-reload system prompt in-memory if engine is running
+        if self.engine:
+            core_prompt = load_core_prompt(config_dir)
+            new_prompt = build_system_prompt(core_prompt, new_ctx)
+            self.engine.update_system_prompt(new_prompt)
+
+        reply = {
+            "status": "ok",
+            "message": "User context successfully updated and reloaded",
+            "user_context": new_ctx.model_dump(mode="json"),
+        }
+        writer.write(_rpc_result(req_id, reply).encode("utf-8"))
+        await writer.drain()
+
+    async def _handle_update_sources(
+        self,
+        req_id: str | int | None,
+        params: dict[str, object],
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Validate, persist sources to YAML atomically, and notify ingestion coordinator."""
+        try:
+            new_catalog = SourcesCatalogConfig.model_validate(params)
+        except ValidationError as err:
+            err_msg = "; ".join(f"{'.'.join(str(loc) for loc in e['loc'])}: {e['msg']}" for e in err.errors())
+            logger.warning("Validation failed on update_sources: %s", err_msg)
+            writer.write(_rpc_error(req_id, -32602, f"Validation error: {err_msg}").encode("utf-8"))
+            await writer.drain()
+            return
+
+        config_dir = self.settings.config_dir
+        save_sources_config(new_catalog, config_dir=config_dir)
+
+        # Notify active coordinator if available
+        if self.coordinator:
+            self.coordinator.update_catalog(new_catalog)
+
+        reply = {
+            "status": "ok",
+            "message": "Sources catalog successfully updated and reloaded",
+            "sources": new_catalog.model_dump(mode="json"),
+        }
+        writer.write(_rpc_result(req_id, reply).encode("utf-8"))
+        await writer.drain()
 
     async def _handle_get_pending_signals(
         self,
