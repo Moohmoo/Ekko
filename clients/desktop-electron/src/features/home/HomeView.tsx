@@ -223,6 +223,7 @@ export const HomeView: React.FC = () => {
   const [pointerPos, setPointerPos] = React.useState<{ x: number; y: number } | null>(null);
   const [isHoverWoken, setIsHoverWoken] = React.useState<boolean>(false);
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const mascotContainerRef = useRef<HTMLDivElement | null>(null);
 
   const handlePointerEnter = () => {
     if (sleepTimerRef.current) {
@@ -240,11 +241,16 @@ export const HomeView: React.FC = () => {
     if (!isHoverWoken) {
       setIsHoverWoken(true);
     }
-    const rect = e.currentTarget.getBoundingClientRect();
-    setPointerPos({
-      x: e.clientX - rect.left - rect.width / 2,
-      y: e.clientY - rect.top - rect.height / 2,
-    });
+
+    if (mascotContainerRef.current) {
+      const rect = mascotContainerRef.current.getBoundingClientRect();
+      const mascotCenterX = rect.left + rect.width / 2;
+      const mascotCenterY = rect.top + rect.height / 2;
+      setPointerPos({
+        x: e.clientX - mascotCenterX,
+        y: e.clientY - mascotCenterY,
+      });
+    }
   };
 
   const handlePointerLeave = () => {
@@ -269,10 +275,14 @@ export const HomeView: React.FC = () => {
 
   return (
     <div
+      onPointerEnter={handlePointerEnter}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="w-full h-full flex gap-4 p-2.5 select-none overflow-hidden relative"
+      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      className="w-full h-full flex gap-4 p-2.5 select-none overflow-hidden relative pointer-events-auto cursor-default"
     >
       <input
         ref={fileInputRef}
@@ -282,13 +292,10 @@ export const HomeView: React.FC = () => {
         className="hidden"
       />
 
-      {/* Volet Gauche (~36 % / ~215 px) — Mascotte vectorielle purement centrée avec capture de regard et éveil interactif */}
+      {/* Volet Gauche (~36 % / ~215 px) — Mascotte vectorielle purement centrée */}
       <div
-        onPointerEnter={handlePointerEnter}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        className="w-[36%] h-full flex items-center justify-center relative shrink-0 cursor-default pointer-events-auto"
+        ref={mascotContainerRef}
+        className="w-[36%] h-full flex items-center justify-center relative shrink-0 cursor-default pointer-events-none"
       >
         {/* Soft radial shine */}
         <div className="absolute inset-0 bg-radial from-sky-400/[0.04] via-transparent to-transparent pointer-events-none" />

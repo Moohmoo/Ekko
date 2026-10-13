@@ -57,17 +57,17 @@ export const Mascot: React.FC<MascotProps> = ({
     eyeDx = 3.0;
     eyeDy = 0.5;
   } else if (isEyeTrackingActive && pointerOffset) {
-    const factor = 0.04;
-    const rawDx = pointerOffset.x * factor;
-    const rawDy = pointerOffset.y * factor;
-    const dist = Math.sqrt(rawDx * rawDx + rawDy * rawDy);
-    const maxR = 3.5;
-    if (dist > maxR) {
-      eyeDx = (rawDx / dist) * maxR;
-      eyeDy = (rawDy / dist) * maxR;
-    } else {
-      eyeDx = rawDx;
-      eyeDy = rawDy;
+    const deltaX = pointerOffset.x;
+    const deltaY = pointerOffset.y;
+    const rawHypot = Math.hypot(deltaX, deltaY);
+
+    if (rawHypot > 0.1) {
+      const angle = Math.atan2(deltaY, deltaX);
+      // Sensitivity: reaches full 3.5px displacement when cursor is ~120px away from mascot center
+      const sensitivity = 34.0;
+      const distance = Math.min(rawHypot / sensitivity, 3.5);
+      eyeDx = Math.cos(angle) * distance;
+      eyeDy = Math.sin(angle) * distance;
     }
   }
 
