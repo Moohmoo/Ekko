@@ -4,7 +4,7 @@
  */
 
 export const COLORS = {
-  bgOled: '#0c0c0e',
+  bgOled: '#000000',
   surfaceCard: '#141824',
   surfaceSubtle: '#161a24',
   borderDefault: 'rgba(255, 255, 255, 0.08)',
@@ -69,7 +69,7 @@ export const BORDER_SUBTLE = 'border-white/[0.08]';
 export const ACCENT_CYAN = 'text-sky-400';
 
 export const SURFACES = {
-  shell: 'bg-background border-x border-b border-t-0 border-white/[0.08] shadow-2xl',
+  shell: 'bg-gradient-to-b from-[#000000] via-[#000000] to-[#090d16] border-x border-b border-t-0 border-white/[0.08] shadow-2xl',
   stage: 'bg-surface border border-white/[0.08] shadow-inner',
   card: SURFACE_CARD,
   cardHover: SURFACE_CARD_HOVER,

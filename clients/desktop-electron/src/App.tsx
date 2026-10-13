@@ -82,7 +82,8 @@ export const App: React.FC = () => {
           opacity: SPRING_BOUNCY,
           height: SPRING_SNAPPY,
         }}
-        className={`w-full ${SURFACES.shell} rounded-b-[22px] rounded-t-none flex flex-col p-2.5 text-slate-100 overflow-hidden`}
+        className={`w-full ${SURFACES.shell} rounded-b-[22px] rounded-t-none border-t-0 flex flex-col p-2.5 text-slate-100 overflow-hidden`}
+        style={{ borderTop: 'none' }}
       >
         <PodHeader
           activeTab={viewMode}
