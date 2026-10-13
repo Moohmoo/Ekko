@@ -13,7 +13,16 @@ export interface JSONRPCResponse<T = unknown> {
  * Accumulates buffer until newline and logs operations with [IPC:REQ], [IPC:RES], [IPC:ERR].
  */
 export declare function sendJsonRpc<T = unknown>(method: string, params?: Record<string, unknown>, socketPath?: string): Promise<T>;
+export interface ToolEventPayload {
+    type: 'tool_call_started' | 'tool_call_completed';
+    tool_call_id: string;
+    tool_name: string;
+    arguments?: Record<string, unknown>;
+    success?: boolean;
+    summary?: string;
+    duration_ms?: number;
+}
 /**
  * Stream prompt execution over UNIX domain socket line-by-line (NDJSON EngineEvents).
  */
-export declare function streamPrompt(prompt: string, onChunk: (chunk: string) => void, onComplete: (fullText: string) => void, onError: (error: string) => void, socketPath?: string): void;
+export declare function streamPrompt(prompt: string, onChunk: (chunk: string) => void, onComplete: (fullText: string) => void, onError: (error: string) => void, onToolEvent?: (event: ToolEventPayload) => void, sessionId?: string, socketPath?: string): void;

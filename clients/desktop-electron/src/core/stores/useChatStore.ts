@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { ChatMessage, ToolCallStep } from '../types';
 
 interface ChatState {
+  sessionId: string;
   messages: ChatMessage[];
   isStreaming: boolean;
   errorMessage: string | null;
@@ -15,6 +16,7 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
+  sessionId: `desktop-${Date.now()}`,
   messages: [],
   isStreaming: false,
   errorMessage: null,
@@ -70,7 +72,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     try {
-      const fullResponse = await window.ekkoAPI.submitPrompt(trimmed);
+      const fullResponse = await window.ekkoAPI.submitPrompt(trimmed, get().sessionId);
       cleanupChunk();
       cleanupTool();
       get().completeTurn(fullResponse);
@@ -158,6 +160,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   clearSession: () => {
     set({
+      sessionId: `desktop-${Date.now()}`,
       messages: [],
       isStreaming: false,
       errorMessage: null,

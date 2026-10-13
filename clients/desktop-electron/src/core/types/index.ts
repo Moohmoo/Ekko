@@ -74,7 +74,7 @@ export interface EkkoAPI {
   getPendingSignals: () => Promise<SignalsResult | Signal[]>;
   resolveSignal: (signalId: string, action: 'archive' | 'discard') => Promise<{ status: string; signal_id?: string; action?: string }>;
   resolveAllPendingSignals: (action: 'archive' | 'discard') => Promise<{ status: string; action?: string; count?: number }>;
-  submitPrompt: (prompt: string) => Promise<string>;
+  submitPrompt: (prompt: string, sessionId?: string) => Promise<string>;
   ingestFile: (filePath: string) => Promise<IngestResult>;
   ingestUrl: (url: string) => Promise<IngestResult>;
   getDroppedFilePath: (file: File) => string;

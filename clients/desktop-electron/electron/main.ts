@@ -211,7 +211,7 @@ ipcMain.handle(
   }
 );
 
-ipcMain.handle('daemon:submit_prompt', async (event, prompt: string) => {
+ipcMain.handle('daemon:submit_prompt', async (event, prompt: string, sessionId?: string) => {
   return await new Promise((resolve, reject) => {
     streamPrompt(
       prompt,
@@ -226,7 +226,8 @@ ipcMain.handle('daemon:submit_prompt', async (event, prompt: string) => {
       },
       (toolEvent) => {
         event.sender.send('daemon:tool_event', toolEvent);
-      }
+      },
+      sessionId || 'desktop_electron'
     );
   });
 });

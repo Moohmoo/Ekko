@@ -252,7 +252,7 @@ ipcMain.handle('daemon:resolve_all_pending_signals', function (_event_1, _a) { r
         }
     });
 }); });
-ipcMain.handle('daemon:submit_prompt', function (event, prompt) { return __awaiter(void 0, void 0, void 0, function () {
+ipcMain.handle('daemon:submit_prompt', function (event, prompt, sessionId) { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, new Promise(function (resolve, reject) {
@@ -262,7 +262,9 @@ ipcMain.handle('daemon:submit_prompt', function (event, prompt) { return __await
                         resolve(full);
                     }, function (err) {
                         reject(new Error(err));
-                    });
+                    }, function (toolEvent) {
+                        event.sender.send('daemon:tool_event', toolEvent);
+                    }, sessionId || 'desktop_electron');
                 })];
             case 1: return [2 /*return*/, _a.sent()];
         }

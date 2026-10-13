@@ -23,7 +23,9 @@ var api = {
     resolveAllPendingSignals: function (action) {
         return ipcRenderer.invoke('daemon:resolve_all_pending_signals', { action: action });
     },
-    submitPrompt: function (prompt) { return ipcRenderer.invoke('daemon:submit_prompt', prompt); },
+    submitPrompt: function (prompt, sessionId) {
+        return ipcRenderer.invoke('daemon:submit_prompt', prompt, sessionId);
+    },
     ingestFile: function (filePath) { return ipcRenderer.invoke('daemon:ingest_file', filePath); },
     ingestUrl: function (url) { return ipcRenderer.invoke('daemon:ingest_url', url); },
     getDroppedFilePath: function (file) {
@@ -43,6 +45,13 @@ var api = {
         ipcRenderer.on('daemon:prompt_chunk', handler);
         return function () {
             ipcRenderer.removeListener('daemon:prompt_chunk', handler);
+        };
+    },
+    onToolEvent: function (callback) {
+        var handler = function (_event, eventData) { return callback(eventData); };
+        ipcRenderer.on('daemon:tool_event', handler);
+        return function () {
+            ipcRenderer.removeListener('daemon:tool_event', handler);
         };
     },
 };

@@ -2,84 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDaemonStore } from '../../core/stores/useDaemonStore';
 import { useChatStore } from '../../core/stores/useChatStore';
 import { MarkdownRenderer } from '../echo/MarkdownRenderer';
-import { Send, AlertCircle, Trash2, Loader2, CheckCircle2, ChevronRight, ChevronDown, Sparkles } from 'lucide-react';
-import type { ToolCallStep } from '../../core/types';
-
-function formatToolTitle(tool: string): string {
-  switch (tool) {
-    case 'query_knowledge':
-      return 'Recherche dans le coffre';
-    case 'get_recent_notes':
-      return 'Consultation des derniers échos';
-    case 'read_resource':
-      return 'Lecture de ressource';
-    case 'save_note':
-      return 'Enregistrement de note';
-    case 'scan_inbox':
-      return 'Consultation des signaux';
-    case 'system_info':
-      return 'Diagnostic système';
-    default:
-      return `Outil : ${tool}`;
-  }
-}
-
-interface ToolBadgeProps {
-  toolCall: ToolCallStep;
-}
-
-const ToolBadge: React.FC<ToolBadgeProps> = ({ toolCall }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const isRunning = toolCall.status === 'running';
-  const isError = toolCall.status === 'error';
-
-  return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden text-[11px] my-1 transition-colors">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-white/[0.04] text-slate-300 transition-colors gap-2 text-left"
-      >
-        <div className="flex items-center gap-1.5 min-w-0">
-          {isRunning ? (
-            <Loader2 className="w-3 h-3 text-sky-400 animate-spin shrink-0" />
-          ) : isError ? (
-            <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-          )}
-          <span className="font-medium text-slate-200 truncate">
-            {formatToolTitle(toolCall.tool)}
-          </span>
-        </div>
-        <div className="text-slate-400 shrink-0">
-          {isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-        </div>
-      </button>
-
-      {isOpen && (
-        <div className="p-2 border-t border-white/[0.04] bg-black/20 text-[10px] font-mono text-slate-400 space-y-1">
-          {toolCall.input && Object.keys(toolCall.input).length > 0 && (
-            <div>
-              <span className="text-slate-400 uppercase font-sans text-[9px] font-semibold">Paramètres:</span>
-              <pre className="whitespace-pre-wrap text-slate-300 mt-0.5 max-h-24 overflow-y-auto">
-                {JSON.stringify(toolCall.input, null, 2)}
-              </pre>
-            </div>
-          )}
-          {toolCall.output && (
-            <div>
-              <span className="text-slate-400 uppercase font-sans text-[9px] font-semibold">Résultat:</span>
-              <pre className="whitespace-pre-wrap text-emerald-300/90 mt-0.5 max-h-24 overflow-y-auto">
-                {toolCall.output}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+import { ToolExecutionStepper } from '../../components/ToolExecutionStepper';
+import { Send, AlertCircle, Trash2, Loader2, Sparkles } from 'lucide-react';
 
 export const ChatView: React.FC = () => {
   const isOnline = useDaemonStore((state) => state.isOnline);
@@ -187,13 +111,13 @@ export const ChatView: React.FC = () => {
                   : 'bg-white/[0.03] text-slate-100 border border-white/[0.06] rounded-tl-sm shadow-sm w-full'
               }`}
             >
-              {/* Tool calls badges above assistant content */}
+              {/* ReAct Stepper execution block above assistant content */}
               {msg.toolCalls && msg.toolCalls.length > 0 && (
-                <div className="mb-2 space-y-1">
-                  {msg.toolCalls.map((tc) => (
-                    <ToolBadge key={tc.id} toolCall={tc} />
-                  ))}
-                </div>
+                <ToolExecutionStepper
+                  toolCalls={msg.toolCalls}
+                  isStreaming={msg.status === 'streaming'}
+                  maxSteps={5}
+                />
               )}
 
               {/* Message content */}

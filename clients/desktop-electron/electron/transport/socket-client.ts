@@ -105,9 +105,10 @@ export function streamPrompt(
   onComplete: (fullText: string) => void,
   onError: (error: string) => void,
   onToolEvent?: (event: ToolEventPayload) => void,
+  sessionId: string = 'desktop_electron',
   socketPath: string = DEFAULT_SOCKET_PATH
 ): void {
-  console.log(`[IPC:REQ] streamPrompt started on ${socketPath}`);
+  console.log(`[IPC:REQ] streamPrompt started on ${socketPath} (session: ${sessionId})`);
   const client = net.createConnection(socketPath);
   let fullText = '';
   let buffer = '';
@@ -118,7 +119,7 @@ export function streamPrompt(
   const payload = JSON.stringify({
     jsonrpc: '2.0',
     method: 'submit_prompt',
-    params: { prompt, session_id: 'desktop_electron' },
+    params: { prompt, session_id: sessionId || 'desktop_electron' },
     id: Date.now(),
   }) + '\n';
 

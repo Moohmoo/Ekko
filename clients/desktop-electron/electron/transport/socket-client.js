@@ -69,9 +69,10 @@ export function sendJsonRpc(method, params, socketPath) {
 /**
  * Stream prompt execution over UNIX domain socket line-by-line (NDJSON EngineEvents).
  */
-export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
+export function streamPrompt(prompt, onChunk, onComplete, onError, onToolEvent, sessionId, socketPath) {
+    if (sessionId === void 0) { sessionId = 'desktop_electron'; }
     if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
-    console.log("[IPC:REQ] streamPrompt started on ".concat(socketPath));
+    console.log("[IPC:REQ] streamPrompt started on ".concat(socketPath, " (session: ").concat(sessionId, ")"));
     var client = net.createConnection(socketPath);
     var fullText = '';
     var buffer = '';
@@ -80,7 +81,7 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
     var payload = JSON.stringify({
         jsonrpc: '2.0',
         method: 'submit_prompt',
-        params: { prompt: prompt, session_id: 'desktop_electron' },
+        params: { prompt: prompt, session_id: sessionId || 'desktop_electron' },
         id: Date.now(),
     }) + '\n';
     client.on('connect', function () {
@@ -107,6 +108,24 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, socketPath) {
                 if (type === 'token_chunk') {
                     fullText += evt.delta || '';
                     onChunk(evt.delta || '');
+                }
+                else if (type === 'tool_call_started' || type === 'ToolCallStarted') {
+                    onToolEvent === null || onToolEvent === void 0 ? void 0 : onToolEvent({
+                        type: 'tool_call_started',
+                        tool_call_id: evt.tool_call_id,
+                        tool_name: evt.tool_name,
+                        arguments: evt.arguments,
+                    });
+                }
+                else if (type === 'tool_call_completed' || type === 'ToolCallCompleted') {
+                    onToolEvent === null || onToolEvent === void 0 ? void 0 : onToolEvent({
+                        type: 'tool_call_completed',
+                        tool_call_id: evt.tool_call_id,
+                        tool_name: evt.tool_name,
+                        success: evt.success,
+                        summary: evt.summary,
+                        duration_ms: evt.duration_ms,
+                    });
                 }
                 else if (type === 'turn_completed' || type === 'TurnCompleted') {
                     var finalAns = evt.response || fullText;

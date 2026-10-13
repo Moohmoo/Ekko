@@ -53,7 +53,8 @@ const api: EkkoAPI = {
     ipcRenderer.invoke('daemon:resolve_signal', { signalId, action }),
   resolveAllPendingSignals: (action: 'archive' | 'discard') =>
     ipcRenderer.invoke('daemon:resolve_all_pending_signals', { action }),
-  submitPrompt: (prompt: string) => ipcRenderer.invoke('daemon:submit_prompt', prompt),
+  submitPrompt: (prompt: string, sessionId?: string) =>
+    ipcRenderer.invoke('daemon:submit_prompt', prompt, sessionId),
   ingestFile: (filePath: string) => ipcRenderer.invoke('daemon:ingest_file', filePath),
   ingestUrl: (url: string) => ipcRenderer.invoke('daemon:ingest_url', url),
   getDroppedFilePath: (file: File) => {
