@@ -34,11 +34,13 @@ export const COLORS = {
 export type MascotEmotion = 'idle' | 'welcome' | 'hover_drop' | 'ingesting' | 'ready' | 'error' | 'alert';
 
 export const LAYOUT = {
-  podWidth: 620,
+  windowWidth: 660, // Transparent window width (620px notch + 2x20px fillets)
+  podWidth: 620,    // Core notch container width
+  filletRadius: 20, // Radius of outer concave fillets
   podHeightCompact: 230,
   podHeightExtended: 460,
   headerHeight: 32,
-  borderRadius: 26,
+  borderRadius: 22,
 } as const;
 
 export const WELCOME_DURATION_MS = 1800;
@@ -67,7 +69,7 @@ export const BORDER_SUBTLE = 'border-white/[0.08]';
 export const ACCENT_CYAN = 'text-sky-400';
 
 export const SURFACES = {
-  shell: 'bg-background border-x border-b border-white/[0.08] border-t-0 shadow-2xl',
+  shell: 'bg-background border-x border-b border-t-0 border-white/[0.08] shadow-2xl',
   stage: 'bg-surface border border-white/[0.08] shadow-inner',
   card: SURFACE_CARD,
   cardHover: SURFACE_CARD_HOVER,

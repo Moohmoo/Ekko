@@ -13,11 +13,9 @@ export const useViewStore = create<ViewState>((set) => ({
     set({ viewMode: mode });
 
     if (typeof window !== 'undefined' && window.ekkoAPI?.resizeWindow) {
-      if (mode === 'welcome' || mode === 'home') {
-        window.ekkoAPI.resizeWindow(LAYOUT.podWidth, LAYOUT.podHeightCompact);
-      } else {
-        window.ekkoAPI.resizeWindow(LAYOUT.podWidth, LAYOUT.podHeightExtended);
-      }
+      const isCompact = mode === 'welcome' || mode === 'home';
+      const targetHeight = isCompact ? LAYOUT.podHeightCompact : LAYOUT.podHeightExtended;
+      window.ekkoAPI.resizeWindow(LAYOUT.windowWidth, targetHeight);
     }
   },
 }));

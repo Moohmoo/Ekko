@@ -32,3 +32,10 @@
     scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
   }
 }
+
+@layer utilities {
+  .border-t-0 {
+    border-top: none !important;
+    border-top-width: 0 !important;
+  }
+}

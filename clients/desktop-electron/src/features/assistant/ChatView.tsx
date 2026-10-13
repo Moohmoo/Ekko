@@ -16,9 +16,14 @@ export const ChatView: React.FC = () => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isInitialMount = useRef(true);
 
-  // Auto-scroll when messages or streaming content update
+  // Auto-scroll strictly when new messages arrive or during streaming, skipping initial mount
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
 

@@ -1,9 +1,10 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import type { ViewMode } from '../core/types';
 import { useDaemonStore } from '../core/stores/useDaemonStore';
 import { useSoundStore } from '../core/audio/useSoundStore';
 import { Droplet, MessageSquare, Zap, Settings, Volume2, VolumeX, X } from 'lucide-react';
-import { SURFACES } from '../design-system/tokens';
+import { SPRING_SNAPPY } from '../design-system/tokens';
 
 interface PodHeaderProps {
   activeTab: ViewMode;
@@ -37,38 +38,65 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
       <div className="flex items-center gap-1">
         <button
           onClick={() => onSelectTab('home')}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          className={`relative w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'home'
-              ? SURFACES.headerTabActive
-              : SURFACES.headerTabInactive
+              ? 'text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
           title="Accueil (Bento)"
         >
-          <Droplet size={15} />
+          {activeTab === 'home' && (
+            <motion.div
+              layoutId="activeTabPill"
+              transition={SPRING_SNAPPY}
+              className="absolute inset-0 rounded-lg bg-white/[0.08]"
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center">
+            <Droplet size={15} />
+          </span>
         </button>
 
         <button
           onClick={() => onSelectTab('chat')}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          className={`relative w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'chat'
-              ? SURFACES.headerTabActive
-              : SURFACES.headerTabInactive
+              ? 'text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
           title="Assistant & Chat"
         >
-          <MessageSquare size={15} />
+          {activeTab === 'chat' && (
+            <motion.div
+              layoutId="activeTabPill"
+              transition={SPRING_SNAPPY}
+              className="absolute inset-0 rounded-lg bg-white/[0.08]"
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center">
+            <MessageSquare size={15} />
+          </span>
         </button>
 
         <button
           onClick={() => onSelectTab('echo')}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          className={`relative w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'echo'
-              ? SURFACES.headerTabActive
-              : SURFACES.headerTabInactive
+              ? 'text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
           title="Écho (Fiches PKM)"
         >
-          <Zap size={15} />
+          {activeTab === 'echo' && (
+            <motion.div
+              layoutId="activeTabPill"
+              transition={SPRING_SNAPPY}
+              className="absolute inset-0 rounded-lg bg-white/[0.08]"
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center">
+            <Zap size={15} />
+          </span>
         </button>
       </div>
 
@@ -87,14 +115,23 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
         {/* 2. Settings Button */}
         <button
           onClick={() => onSelectTab('settings')}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+          className={`relative w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             activeTab === 'settings'
-              ? SURFACES.headerTabActive
-              : SURFACES.headerTabInactive
+              ? 'text-sky-400'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
           }`}
           title="Réglages & Télémétrie"
         >
-          <Settings size={15} />
+          {activeTab === 'settings' && (
+            <motion.div
+              layoutId="activeTabPill"
+              transition={SPRING_SNAPPY}
+              className="absolute inset-0 rounded-lg bg-white/[0.08]"
+            />
+          )}
+          <span className="relative z-10 flex items-center justify-center">
+            <Settings size={15} />
+          </span>
         </button>
 
         {/* 3. Sound Toggle Button */}

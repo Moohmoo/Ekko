@@ -75,9 +75,9 @@ function getCenteredTopBounds(width, height) {
     };
 }
 function createWindow() {
-    var podWidth = 620;
+    var windowWidth = 660; // 620px notch core + 2x20px transparent side margin for fillets
     var podHeight = 230;
-    var initialBounds = getCenteredTopBounds(podWidth, podHeight);
+    var initialBounds = getCenteredTopBounds(windowWidth, podHeight);
     var preloadPath = getPreloadPath();
     win = new BrowserWindow({
         width: initialBounds.width,
@@ -300,15 +300,10 @@ ipcMain.handle('window:close', function () {
     }
 });
 ipcMain.handle('window:resize', function (_event_1, _a) { return __awaiter(void 0, [_event_1, _a], void 0, function (_event, _b) {
-    var display, _c, workX, workY, workWidth, newX, newY;
     var width = _b.width, height = _b.height;
-    return __generator(this, function (_d) {
+    return __generator(this, function (_c) {
         if (win && !win.isDestroyed()) {
-            display = screen.getDisplayMatching(win.getBounds());
-            _c = display.workArea, workX = _c.x, workY = _c.y, workWidth = _c.width;
-            newX = Math.round(workX + (workWidth - width) / 2);
-            newY = workY;
-            win.setBounds({ x: newX, y: newY, width: width, height: height }, true);
+            win.setSize(width, height);
         }
         return [2 /*return*/];
     });

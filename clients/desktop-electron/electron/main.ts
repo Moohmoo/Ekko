@@ -49,9 +49,9 @@ function getCenteredTopBounds(width: number, height: number) {
 }
 
 function createWindow() {
-  const podWidth = 620;
+  const windowWidth = 660; // 620px notch core + 2x20px transparent side margin for fillets
   const podHeight = 230;
-  const initialBounds = getCenteredTopBounds(podWidth, podHeight);
+  const initialBounds = getCenteredTopBounds(windowWidth, podHeight);
 
   const preloadPath = getPreloadPath();
 
@@ -252,12 +252,7 @@ ipcMain.handle('window:close', () => {
 
 ipcMain.handle('window:resize', async (_event, { width, height }: { width: number; height: number }) => {
   if (win && !win.isDestroyed()) {
-    const display = screen.getDisplayMatching(win.getBounds());
-    const { x: workX, y: workY, width: workWidth } = display.workArea;
-    const newX = Math.round(workX + (workWidth - width) / 2);
-    const newY = workY;
-
-    win.setBounds({ x: newX, y: newY, width, height }, true);
+    win.setSize(width, height);
   }
 });
 
