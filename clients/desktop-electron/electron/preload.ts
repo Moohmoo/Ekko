@@ -45,6 +45,7 @@ export interface EkkoAPI {
   setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
+  onNoteCreated: (callback: (note: any) => void) => () => void;
 }
 
 const api: EkkoAPI = {
@@ -90,6 +91,13 @@ const api: EkkoAPI = {
     ipcRenderer.on('daemon:tool_event', handler);
     return () => {
       ipcRenderer.removeListener('daemon:tool_event', handler);
+    };
+  },
+  onNoteCreated: (callback: (note: any) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, noteData: any) => callback(noteData);
+    ipcRenderer.on('daemon:note_created', handler);
+    return () => {
+      ipcRenderer.removeListener('daemon:note_created', handler);
     };
   },
 };

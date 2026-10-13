@@ -20,10 +20,14 @@ class ResourceManager:
             logger.warning("Could not adjust process niceness (%s). Proceeding with normal priority.", exc)
             return 0
 
-    def inject_unload_vram(self, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Inject keep_alive: 0 parameter to instruct Ollama/LiteLLM to unload VRAM immediately."""
+    def inject_unload_vram(
+        self,
+        params: dict[str, Any] | None = None,
+        keep_alive: str | int = "5m",
+    ) -> dict[str, Any]:
+        """Inject keep_alive parameter (default '5m') to instruct Ollama/LiteLLM to retain VRAM for a realistic TTL."""
         merged = dict(params or {})
         extra = dict(merged.get("extra_body") or {})
-        extra["keep_alive"] = 0
+        extra["keep_alive"] = keep_alive
         merged["extra_body"] = extra
         return merged

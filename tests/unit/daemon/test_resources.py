@@ -25,15 +25,15 @@ def test_apply_process_niceness_handles_permission_error() -> None:
 
 
 def test_inject_unload_vram_parameters() -> None:
-    """Ensure keep_alive: 0 is injected into LLM extra parameters to unload GPU VRAM."""
+    """Ensure keep_alive: '5m' is injected into LLM extra parameters to manage GPU VRAM TTL."""
     mgr = ResourceManager()
 
     # Empty kwargs
     params = mgr.inject_unload_vram({})
-    assert params["extra_body"]["keep_alive"] == 0
+    assert params["extra_body"]["keep_alive"] == "5m"
 
     # Pre-existing extra_body
     existing = {"extra_body": {"custom_param": "foo"}}
     updated = mgr.inject_unload_vram(existing)
-    assert updated["extra_body"]["keep_alive"] == 0
+    assert updated["extra_body"]["keep_alive"] == "5m"
     assert updated["extra_body"]["custom_param"] == "foo"

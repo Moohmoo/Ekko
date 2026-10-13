@@ -345,3 +345,25 @@ useEchoStore.subscribe((echoState) => {
     dropState.onDistillationComplete(newLatest);
   }
 });
+
+// Push IPC listener: instant reactive trigger at t=0ms when daemon completes note persistence
+if (typeof window !== 'undefined' && window.ekkoAPI?.onNoteCreated) {
+  window.ekkoAPI.onNoteCreated((data) => {
+    // 1. Immediate background fetch to refresh Echo store without waiting for heartbeat
+    useEchoStore.getState().fetchNotes({ silent: true });
+
+    // 2. Complete pending drop instantly at t=0ms
+    const dropState = useDropStore.getState();
+    if (dropState.dropStatus === 'processing') {
+      const completedNote: NoteItem = {
+        id: data.note_id || data.slug || String(Date.now()),
+        title: data.title,
+        summary: data.summary || '',
+        source: data.source || dropState.fileName || 'ekko',
+        tags: ['ingested'],
+      };
+      useEchoStore.getState().setLatestNote(completedNote);
+      dropState.onDistillationComplete(completedNote);
+    }
+  });
+}

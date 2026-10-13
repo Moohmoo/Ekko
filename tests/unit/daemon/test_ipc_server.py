@@ -457,3 +457,37 @@ async def test_ipc_server_update_sources(socket_path: Path, tmp_path: Path) -> N
     await server.stop()
 
 
+@pytest.mark.asyncio
+async def test_ipc_server_broadcast_note_created(socket_path: Path, tmp_path: Path) -> None:
+    """Ensure broadcast_notification sends daemon:note_created notification to connected clients."""
+    server = IPCServer(socket_path=socket_path)
+    await server.start()
+
+    reader, writer = await asyncio.open_unix_connection(str(socket_path))
+    # Allow server connection handler to register writer in active_writers
+    await asyncio.sleep(0.05)
+
+    # Trigger broadcast
+    note_payload = {
+        "note_id": "note_123",
+        "title": "Test Title",
+        "slug": "test_title",
+        "summary": "Short summary",
+        "source": "test.pdf",
+    }
+    await server.broadcast_notification("daemon:note_created", note_payload)
+
+    # Read notification line from client socket
+    line = await asyncio.wait_for(reader.readline(), timeout=2.0)
+    data = json.loads(line.decode("utf-8"))
+
+    assert data["jsonrpc"] == "2.0"
+    assert data["method"] == "daemon:note_created"
+    assert data["params"]["note_id"] == "note_123"
+    assert data["params"]["title"] == "Test Title"
+
+    writer.close()
+    await writer.wait_closed()
+    await server.stop()
+
+

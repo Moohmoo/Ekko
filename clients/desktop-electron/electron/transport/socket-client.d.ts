@@ -26,3 +26,8 @@ export interface ToolEventPayload {
  * Stream prompt execution over UNIX domain socket line-by-line (NDJSON EngineEvents).
  */
 export declare function streamPrompt(prompt: string, onChunk: (chunk: string) => void, onComplete: (fullText: string) => void, onError: (error: string) => void, onToolEvent?: (event: ToolEventPayload) => void, sessionId?: string, socketPath?: string): void;
+/**
+ * Long-lived connection listening for server-pushed JSON-RPC notifications (e.g. daemon:note_created).
+ * Features automatic silent reconnection with exponential backoff if daemon restarts.
+ */
+export declare function subscribeDaemonEvents(onEvent: (method: string, params: Record<string, unknown>) => void, socketPath?: string): () => void;

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, shell, Tray } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sendJsonRpc, streamPrompt } from './transport/socket-client';
+import { sendJsonRpc, streamPrompt, subscribeDaemonEvents } from './transport/socket-client';
 
 import fs from 'node:fs';
 
@@ -358,6 +358,13 @@ app.on('activate', () => {
 app.whenReady().then(() => {
   createWindow();
   createTray();
+
+  // Subscribe to daemon push notifications (e.g. instant note completion)
+  subscribeDaemonEvents((method, params) => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send(method, params);
+    }
+  });
 
   // Register global shortcut to toggle window
   const shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', () => {

@@ -122,6 +122,21 @@ class IPCServer:
         task.add_done_callback(self._background_tasks.discard)
         return task
 
+    async def broadcast_notification(self, method: str, params: dict[str, object]) -> None:
+        """Broadcast a JSON-RPC 2.0 notification to all active client connections."""
+        payload = {"jsonrpc": "2.0", "method": method, "params": params}
+        raw = (json.dumps(payload) + "\n").encode("utf-8")
+        stale_writers: list[asyncio.StreamWriter] = []
+        for writer in list(self._active_writers):
+            try:
+                writer.write(raw)
+                await writer.drain()
+            except Exception as exc:
+                logger.warning("Failed to broadcast notification '%s' to client: %s", method, exc)
+                stale_writers.append(writer)
+        for w in stale_writers:
+            self._active_writers.discard(w)
+
     async def start(self) -> None:
         """Start listening on UNIX socket, cleaning up stale socket files."""
         if self.socket_path.exists():
@@ -362,6 +377,16 @@ class IPCServer:
             else:
                 note = await self.distiller.distill_file(target_path)
             logger.info("File %s successfully distilled in background into note %s", target_path, note.slug)
+            await self.broadcast_notification(
+                "daemon:note_created",
+                {
+                    "note_id": note.id,
+                    "title": note.title,
+                    "slug": note.slug,
+                    "summary": note.summary,
+                    "source": str(target_path),
+                },
+            )
         except Exception as exc:
             logger.error("Background distillation failed for file %s: %s", target_path, exc)
 
@@ -455,6 +480,16 @@ class IPCServer:
                     url=url,
                 )
             logger.info("URL %s successfully distilled in background into note %s", url, note.slug)
+            await self.broadcast_notification(
+                "daemon:note_created",
+                {
+                    "note_id": note.id,
+                    "title": note.title,
+                    "slug": note.slug,
+                    "summary": note.summary,
+                    "source": url,
+                },
+            )
         except Exception as exc:
             logger.error("Background distillation failed for URL %s: %s", url, exc)
 

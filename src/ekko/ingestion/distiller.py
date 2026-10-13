@@ -165,8 +165,7 @@ class SignalDistiller:
         if self.resource_manager is not None and hasattr(self.resource_manager, "inject_unload_vram"):
             call_kwargs = self.resource_manager.inject_unload_vram()
         else:
-
-            call_kwargs = {"extra_body": {"keep_alive": 0}}
+            call_kwargs = {"extra_body": {"keep_alive": "5m"}}
 
         try:
             response = await self.llm_provider.generate(messages, **call_kwargs)

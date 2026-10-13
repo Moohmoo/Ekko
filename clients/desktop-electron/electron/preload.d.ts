@@ -60,4 +60,5 @@ export interface EkkoAPI {
     setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => Promise<void>;
     onPromptChunk: (callback: (chunk: string) => void) => () => void;
     onToolEvent: (callback: (event: any) => void) => () => void;
+    onNoteCreated: (callback: (note: any) => void) => () => void;
 }

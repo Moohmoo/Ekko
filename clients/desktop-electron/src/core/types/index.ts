@@ -103,6 +103,14 @@ export interface SystemSettings {
   system: SystemMetadata;
 }
 
+export interface NoteCreatedEvent {
+  note_id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  source: string;
+}
+
 export interface EkkoAPI {
   ping: () => Promise<PingResult | null>;
   getNotes: () => Promise<unknown[]>;
@@ -123,6 +131,7 @@ export interface EkkoAPI {
   setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => Promise<void>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
+  onNoteCreated: (callback: (note: NoteCreatedEvent) => void) => () => void;
 }
 
 declare global {

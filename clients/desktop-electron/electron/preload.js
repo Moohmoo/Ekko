@@ -62,5 +62,12 @@ var api = {
             ipcRenderer.removeListener('daemon:tool_event', handler);
         };
     },
+    onNoteCreated: function (callback) {
+        var handler = function (_event, noteData) { return callback(noteData); };
+        ipcRenderer.on('daemon:note_created', handler);
+        return function () {
+            ipcRenderer.removeListener('daemon:note_created', handler);
+        };
+    },
 };
 contextBridge.exposeInMainWorld('ekkoAPI', api);

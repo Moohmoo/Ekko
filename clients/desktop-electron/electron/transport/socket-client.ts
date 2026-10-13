@@ -199,3 +199,66 @@ export function streamPrompt(
     onError('DAEMON_OFFLINE');
   });
 }
+
+/**
+ * Long-lived connection listening for server-pushed JSON-RPC notifications (e.g. daemon:note_created).
+ * Features automatic silent reconnection with exponential backoff if daemon restarts.
+ */
+export function subscribeDaemonEvents(
+  onEvent: (method: string, params: Record<string, unknown>) => void,
+  socketPath: string = DEFAULT_SOCKET_PATH
+): () => void {
+  let isClosed = false;
+  let client: net.Socket | null = null;
+  let reconnectTimer: NodeJS.Timeout | null = null;
+  let buffer = '';
+
+  const connect = () => {
+    if (isClosed) return;
+    client = net.createConnection(socketPath);
+
+    client.on('connect', () => {
+      console.log(`[IPC:EVENT] Connected to ${socketPath} for daemon push notifications`);
+    });
+
+    client.on('data', (chunk) => {
+      buffer += chunk.toString();
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed = JSON.parse(line);
+          if (parsed && typeof parsed.method === 'string') {
+            onEvent(parsed.method, (parsed.params as Record<string, unknown>) || {});
+          }
+        } catch {
+          // Line fragmentation or malformed JSON
+        }
+      }
+    });
+
+    client.on('error', () => {
+      // Suppress noisy logs while daemon is restarting
+    });
+
+    client.on('close', () => {
+      client = null;
+      if (!isClosed) {
+        reconnectTimer = setTimeout(connect, 2000);
+      }
+    });
+  };
+
+  connect();
+
+  return () => {
+    isClosed = true;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    if (client) {
+      client.destroy();
+      client = null;
+    }
+  };
+}

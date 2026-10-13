@@ -37,7 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, shell, Tray } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sendJsonRpc, streamPrompt } from './transport/socket-client';
+import { sendJsonRpc, streamPrompt, subscribeDaemonEvents } from './transport/socket-client';
 import fs from 'node:fs';
 var __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.DIST = path.join(__dirname, '../dist');
@@ -407,6 +407,12 @@ app.on('activate', function () {
 app.whenReady().then(function () {
     createWindow();
     createTray();
+    // Subscribe to daemon push notifications (e.g. instant note completion)
+    subscribeDaemonEvents(function (method, params) {
+        if (win && !win.isDestroyed()) {
+            win.webContents.send(method, params);
+        }
+    });
     // Register global shortcut to toggle window
     var shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', function () {
         toggleWindow();

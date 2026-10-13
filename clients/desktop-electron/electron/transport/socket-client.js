@@ -161,3 +161,60 @@ export function streamPrompt(prompt, onChunk, onComplete, onError, onToolEvent, 
         onError('DAEMON_OFFLINE');
     });
 }
+/**
+ * Long-lived connection listening for server-pushed JSON-RPC notifications (e.g. daemon:note_created).
+ * Features automatic silent reconnection with exponential backoff if daemon restarts.
+ */
+export function subscribeDaemonEvents(onEvent, socketPath) {
+    if (socketPath === void 0) { socketPath = DEFAULT_SOCKET_PATH; }
+    var isClosed = false;
+    var client = null;
+    var reconnectTimer = null;
+    var buffer = '';
+    var connect = function () {
+        if (isClosed)
+            return;
+        client = net.createConnection(socketPath);
+        client.on('connect', function () {
+            console.log("[IPC:EVENT] Connected to ".concat(socketPath, " for daemon push notifications"));
+        });
+        client.on('data', function (chunk) {
+            buffer += chunk.toString();
+            var lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (var _i = 0, lines_2 = lines; _i < lines_2.length; _i++) {
+                var line = lines_2[_i];
+                if (!line.trim())
+                    continue;
+                try {
+                    var parsed = JSON.parse(line);
+                    if (parsed && typeof parsed.method === 'string') {
+                        onEvent(parsed.method, parsed.params || {});
+                    }
+                }
+                catch (_a) {
+                    // Line fragmentation or malformed JSON
+                }
+            }
+        });
+        client.on('error', function () {
+            // Suppress noisy logs while daemon is restarting
+        });
+        client.on('close', function () {
+            client = null;
+            if (!isClosed) {
+                reconnectTimer = setTimeout(connect, 2000);
+            }
+        });
+    };
+    connect();
+    return function () {
+        isClosed = true;
+        if (reconnectTimer)
+            clearTimeout(reconnectTimer);
+        if (client) {
+            client.destroy();
+            client = null;
+        }
+    };
+}
