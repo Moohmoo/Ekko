@@ -11,7 +11,6 @@ export type { MascotEmotion };
 interface MascotProps {
   emotion?: MascotEmotion;
   className?: string;
-  pointerOffset?: { x: number; y: number } | null;
   isWokenByHover?: boolean;
 }
 
@@ -130,12 +129,16 @@ const bodyVariants: Variants = {
   },
 };
 
-export const Mascot: React.FC<MascotProps> = ({
+export const Mascot: React.FC<MascotProps> = React.memo(({
   emotion = 'idle',
   className = '',
-  pointerOffset = null,
   isWokenByHover = false,
 }) => {
+  // Track render count on window for automated zero-rerender verification in E2E tests
+  if (typeof window !== 'undefined') {
+    (window as any).__mascotRenderCount = ((window as any).__mascotRenderCount || 0) + 1;
+  }
+
   // Halo Glow variation based on emotion
   const haloScale =
     emotion === 'hover_drop'
@@ -160,31 +163,8 @@ export const Mascot: React.FC<MascotProps> = ({
       ? COLORS.emeraldOnline
       : COLORS.cyanGlow;
 
-  // Eye tracking & awake calculation (strictly bounded to R = 3.5px)
+  // Awake calculation
   const isAwake = emotion !== 'idle' || isWokenByHover;
-  const isEyeTrackingActive = isAwake && emotion !== 'error' && emotion !== 'ingesting';
-
-  let eyeDx = 0;
-  let eyeDy = 0;
-
-  if (emotion === 'alert') {
-    // Alert posture: gaze naturally oriented rightwards (+3px) towards the sentinel card
-    eyeDx = 3.0;
-    eyeDy = 0.5;
-  } else if (isEyeTrackingActive && pointerOffset) {
-    const deltaX = pointerOffset.x;
-    const deltaY = pointerOffset.y;
-    const rawHypot = Math.hypot(deltaX, deltaY);
-
-    if (rawHypot > 0.1) {
-      const angle = Math.atan2(deltaY, deltaX);
-      // Sensitivity: reaches full 3.5px displacement when cursor is ~120px away from mascot center
-      const sensitivity = 34.0;
-      const distance = Math.min(rawHypot / sensitivity, 3.5);
-      eyeDx = Math.cos(angle) * distance;
-      eyeDy = Math.sin(angle) * distance;
-    }
-  }
 
   return (
     <div className={`relative flex items-center justify-center ${className}`}>
@@ -346,7 +326,6 @@ export const Mascot: React.FC<MascotProps> = ({
             </g>
           )}
 
-          {/* Eyes rendering according to emotion with smooth gaze offset */}
           {!isAwake ? (
             /* Sleepy closed eyes curves (‿ ‿) */
             <g stroke={COLORS.eyeDark} strokeWidth="2.2" strokeLinecap="round" fill="none">
@@ -354,33 +333,43 @@ export const Mascot: React.FC<MascotProps> = ({
               <path d="M 55 63 Q 60 68 65 63" />
             </g>
           ) : (
-            /* Expressive open eyes with interactive pupil tracking */
-            <g fill={COLORS.eyeDark}>
+            /* Expressive open eyes with GPU-accelerated interactive pupil tracking via CSS variables */
+            <g
+              id="mascot-pupils"
+              fill={COLORS.eyeDark}
+              style={{
+                transform:
+                  emotion === 'alert'
+                    ? 'translate3d(3px, 0.5px, 0)'
+                    : 'translate3d(var(--eye-dx, 0px), var(--eye-dy, 0px), 0)',
+                willChange: 'transform',
+              }}
+            >
               <ellipse
-                cx={40 + eyeDx}
-                cy={62 + eyeDy}
+                cx={40}
+                cy={62}
                 rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
                 ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
               />
               {emotion !== 'error' && (
                 <circle
-                  cx={39 + eyeDx}
-                  cy={60 + eyeDy}
+                  cx={39}
+                  cy={60}
                   r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
                   fill={COLORS.white}
                 />
               )}
 
               <ellipse
-                cx={60 + eyeDx}
-                cy={62 + eyeDy}
+                cx={60}
+                cy={62}
                 rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
                 ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
               />
               {emotion !== 'error' && (
                 <circle
-                  cx={59 + eyeDx}
-                  cy={60 + eyeDy}
+                  cx={59}
+                  cy={60}
                   r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
                   fill={COLORS.white}
                 />
@@ -512,6 +501,6 @@ export const Mascot: React.FC<MascotProps> = ({
       </motion.div>
     </div>
   );
-};
+});
 
 

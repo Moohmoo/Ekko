@@ -250,12 +250,12 @@ export const HomeView: React.FC = () => {
     }
   };
 
-  const [pointerPos, setPointerPos] = React.useState<{ x: number; y: number } | null>(null);
   const [isHoverWoken, setIsHoverWoken] = React.useState<boolean>(false);
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mascotContainerRef = useRef<HTMLDivElement | null>(null);
+  const rafIdRef = useRef<number | null>(null);
 
-  // Global viewport pointer tracking: seamlessly covers PodHeader, Stage, dropzone and cards
+  // Global viewport pointer tracking: completely bypasses React re-render cycle via direct CSS variable mutation
   useEffect(() => {
     const handleGlobalPointerMove = (e: PointerEvent) => {
       // 1. Cancel any pending sleep timer
@@ -264,23 +264,46 @@ export const HomeView: React.FC = () => {
         sleepTimerRef.current = null;
       }
 
-      // 2. Wake up mascot if sleeping
-      setIsHoverWoken(true);
+      // 2. Wake up mascot if sleeping (only triggers state update once when transitioning from sleeping to awake)
+      setIsHoverWoken((prev) => (prev ? prev : true));
 
-      // 3. Compute delta relative to mascot center
+      // 3. Compute delta relative to mascot center and apply directly to CSS variables on animation frame
       if (mascotContainerRef.current) {
-        const rect = mascotContainerRef.current.getBoundingClientRect();
-        const mascotCenterX = rect.left + rect.width / 2;
-        const mascotCenterY = rect.top + rect.height / 2;
-        setPointerPos({
-          x: e.clientX - mascotCenterX,
-          y: e.clientY - mascotCenterY,
+        const container = mascotContainerRef.current;
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+        }
+
+        rafIdRef.current = requestAnimationFrame(() => {
+          const rect = container.getBoundingClientRect();
+          const mascotCenterX = rect.left + rect.width / 2;
+          const mascotCenterY = rect.top + rect.height / 2;
+          const deltaX = e.clientX - mascotCenterX;
+          const deltaY = e.clientY - mascotCenterY;
+          const rawHypot = Math.hypot(deltaX, deltaY);
+
+          let eyeDx = 0;
+          let eyeDy = 0;
+
+          if (rawHypot > 0.1) {
+            const angle = Math.atan2(deltaY, deltaX);
+            const sensitivity = 34.0;
+            const distance = Math.min(rawHypot / sensitivity, 3.5);
+            eyeDx = Math.cos(angle) * distance;
+            eyeDy = Math.sin(angle) * distance;
+          }
+
+          container.style.setProperty('--eye-dx', `${eyeDx.toFixed(2)}px`);
+          container.style.setProperty('--eye-dy', `${eyeDy.toFixed(2)}px`);
         });
       }
     };
 
     const handleGlobalMouseLeave = () => {
-      setPointerPos(null);
+      if (mascotContainerRef.current) {
+        mascotContainerRef.current.style.removeProperty('--eye-dx');
+        mascotContainerRef.current.style.removeProperty('--eye-dy');
+      }
       if (sleepTimerRef.current) {
         clearTimeout(sleepTimerRef.current);
       }
@@ -297,6 +320,9 @@ export const HomeView: React.FC = () => {
     return () => {
       window.removeEventListener('pointermove', handleGlobalPointerMove);
       document.removeEventListener('mouseleave', handleGlobalMouseLeave);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
       if (sleepTimerRef.current) {
         clearTimeout(sleepTimerRef.current);
       }
@@ -328,7 +354,6 @@ export const HomeView: React.FC = () => {
 
         <Mascot
           emotion={displayEmotion}
-          pointerOffset={pointerPos}
           isWokenByHover={isHoverWoken}
         />
       </div>

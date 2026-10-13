@@ -44,6 +44,9 @@ process.env.DIST = path.join(__dirname, '../dist');
 process.env.VITE_PUBLIC = app.isPackaged
     ? process.env.DIST
     : path.join(__dirname, '../public');
+// Hardware acceleration & GPU rasterization optimizations for Linux/Chromium
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
 var win = null;
 var tray = null;
 var isQuitting = false;

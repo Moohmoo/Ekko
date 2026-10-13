@@ -180,4 +180,55 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
     const whitePupils = page.locator('#mascot-body svg circle[fill="#ffffff"]');
     await expect(whitePupils).toHaveCount(2);
   });
+
+  test('5. Test Stabilité et Fluidité Framerate (Zéro Long Task & Zéro Re-render Parasite)', async () => {
+    // S'assurer d'être sur l'onglet Accueil
+    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
+    await homeTabButton.click();
+
+    await page.waitForSelector('#mascot-body', { state: 'visible' });
+
+    // Injecter un collecteur PerformanceObserver traquant les 'longtask' (> 50ms)
+    await page.evaluate(() => {
+      (window as any).__jankStats = { longTasks: 0 };
+      try {
+        const observer = new PerformanceObserver((list) => {
+          (window as any).__jankStats.longTasks += list.getEntries().length;
+        });
+        observer.observe({ entryTypes: ['longtask'] });
+      } catch {
+        // Fallback si longtask n'est pas supporté dans l'environnement
+      }
+    });
+
+    // Enregistrer le nombre initial de re-renders de Mascot
+    const initialRenderCount = await page.evaluate(() => {
+      return (window as any).__mascotRenderCount || 0;
+    });
+
+    // Simuler un balayage continu et intensif de la souris sur tout le notch pendant 2 secondes (40 points de passage)
+    const points = 40;
+    for (let i = 0; i < points; i++) {
+      const x = 50 + (i * 14) % 550;
+      const y = 10 + (i * 9) % 200;
+      await page.mouse.move(x, y);
+      await page.waitForTimeout(50); // 40 * 50ms = 2000ms
+    }
+
+    // Récupérer les métriques de jank et de re-render
+    const finalMetrics = await page.evaluate(() => {
+      return {
+        longTasks: (window as any).__jankStats?.longTasks || 0,
+        renderCount: (window as any).__mascotRenderCount || 0,
+      };
+    });
+
+    // Assertion 1 : Zéro longtask (> 50ms) sur le thread principal pendant le mouvement continu
+    expect(finalMetrics.longTasks).toBe(0);
+
+    // Assertion 2 : Le composant Mascot n'a subi aucun re-render parasite pendant le déplacement continu
+    // (le nombre de renders reste stable à +/- 1 max pour l'état d'éveil initial)
+    const renderDelta = finalMetrics.renderCount - initialRenderCount;
+    expect(renderDelta).toBeLessThanOrEqual(1);
+  });
 });
