@@ -34,7 +34,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, shell, Tray } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt } from './transport/socket-client';
@@ -45,6 +45,8 @@ process.env.VITE_PUBLIC = app.isPackaged
     ? process.env.DIST
     : path.join(__dirname, '../public');
 var win = null;
+var tray = null;
+var isQuitting = false;
 var VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 function getPreloadPath() {
     // 1. Production / compiled path (same directory as main.js)
@@ -74,6 +76,64 @@ function getCenteredTopBounds(width, height) {
         height: height,
     };
 }
+function toggleWindow() {
+    if (!win || win.isDestroyed())
+        return;
+    if (win.isVisible()) {
+        win.hide();
+    }
+    else {
+        // Re-verify centering in case display geometry changed while hidden
+        var _a = win.getSize(), currentWidth = _a[0], currentHeight = _a[1];
+        var bounds = getCenteredTopBounds(currentWidth, currentHeight);
+        win.setPosition(bounds.x, bounds.y);
+        win.show();
+        win.focus();
+    }
+}
+function getTrayIconPath(state) {
+    var publicDir = process.env.VITE_PUBLIC || path.join(__dirname, '../public');
+    switch (state) {
+        case 'ingesting':
+            return path.join(publicDir, 'assets/tray-ingest.png');
+        case 'alert':
+            return path.join(publicDir, 'assets/tray-alert.png');
+        case 'offline':
+            return path.join(publicDir, 'assets/tray-offline.png');
+        case 'idle':
+        default:
+            return path.join(publicDir, 'assets/tray-idle.png');
+    }
+}
+function updateTrayIcon(state) {
+    if (!tray || tray.isDestroyed())
+        return;
+    var iconPath = getTrayIconPath(state);
+    if (fs.existsSync(iconPath)) {
+        tray.setImage(iconPath);
+    }
+}
+function createTray() {
+    var iconPath = getTrayIconPath('idle');
+    tray = new Tray(iconPath);
+    tray.setToolTip('Ekko - Ambient Cognitive Buffer');
+    var contextMenu = Menu.buildFromTemplate([
+        {
+            label: 'Afficher / Masquer Ekko',
+            click: function () { return toggleWindow(); },
+        },
+        { type: 'separator' },
+        {
+            label: 'Quitter Ekko',
+            click: function () {
+                isQuitting = true;
+                app.quit();
+            },
+        },
+    ]);
+    tray.setContextMenu(contextMenu);
+    tray.on('click', function () { return toggleWindow(); });
+}
 function createWindow() {
     var windowWidth = 660; // 620px notch core + 2x20px transparent side margin for fillets
     var podHeight = 230;
@@ -88,7 +148,7 @@ function createWindow() {
         frame: false,
         transparent: true,
         alwaysOnTop: true,
-        skipTaskbar: false,
+        skipTaskbar: true,
         hasShadow: true,
         backgroundColor: '#00000000',
         webPreferences: {
@@ -103,11 +163,22 @@ function createWindow() {
         console.error('[Main:FATAL] Preload execution error in:', preloadErrPath);
         console.error(error);
     });
-    // Native keyboard shortcut fallback for quitting application (Ctrl+Q)
+    // Native keyboard shortcuts: Escape to hide, Ctrl+Q to quit
     win.webContents.on('before-input-event', function (_event, input) {
-        if (input.control && input.key.toLowerCase() === 'q') {
-            console.log('[Main] Ctrl+Q pressed, closing window.');
-            win === null || win === void 0 ? void 0 : win.close();
+        if (input.key === 'Escape') {
+            win === null || win === void 0 ? void 0 : win.hide();
+        }
+        else if (input.control && input.key.toLowerCase() === 'q') {
+            console.log('[Main] Ctrl+Q pressed, quitting application.');
+            isQuitting = true;
+            app.quit();
+        }
+    });
+    // Hide rather than destroy window when user closes it
+    win.on('close', function (event) {
+        if (!isQuitting) {
+            event.preventDefault();
+            win === null || win === void 0 ? void 0 : win.hide();
         }
     });
     // Automatically open detached DevTools in dev mode
@@ -122,10 +193,6 @@ function createWindow() {
         console.log('[Main] Loading static index.html from:', process.env.DIST);
         win.loadFile(path.join(process.env.DIST, 'index.html'));
     }
-    // Auto-hide on blur (optional click outside dismiss)
-    win.on('blur', function () {
-        // Keep window visible or allow user to toggle
-    });
 }
 // State tracker for daemon connectivity transitions
 var isDaemonConnected = null;
@@ -294,20 +361,34 @@ ipcMain.handle('daemon:update_sources', function (_event, sources) { return __aw
         }
     });
 }); });
+ipcMain.handle('tray:set_state', function (_event, state) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        updateTrayIcon(state);
+        return [2 /*return*/];
+    });
+}); });
 ipcMain.handle('window:close', function () {
-    if (win) {
-        win.close();
+    if (win && !win.isDestroyed()) {
+        win.hide();
     }
 });
 ipcMain.handle('window:resize', function (_event_1, _a) { return __awaiter(void 0, [_event_1, _a], void 0, function (_event, _b) {
+    var bounds;
     var width = _b.width, height = _b.height;
     return __generator(this, function (_c) {
         if (win && !win.isDestroyed()) {
-            win.setSize(width, height);
+            bounds = getCenteredTopBounds(width, height);
+            win.setBounds(bounds);
         }
         return [2 /*return*/];
     });
 }); });
+app.on('before-quit', function () {
+    isQuitting = true;
+});
+app.on('will-quit', function () {
+    globalShortcut.unregisterAll();
+});
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {
         app.quit();
@@ -318,5 +399,27 @@ app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
     }
+    else if (win) {
+        win.show();
+        win.focus();
+    }
 });
-app.whenReady().then(createWindow);
+app.whenReady().then(function () {
+    createWindow();
+    createTray();
+    // Register global shortcut to toggle window
+    var shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', function () {
+        toggleWindow();
+    });
+    if (!shortcutRegistered) {
+        console.warn('[Main:WARN] Global shortcut CommandOrControl+Shift+Space registration failed.');
+    }
+    // Recalculate notch position if display resolution or work area changes
+    screen.on('display-metrics-changed', function () {
+        if (win && !win.isDestroyed()) {
+            var _a = win.getSize(), width = _a[0], height = _a[1];
+            var bounds = getCenteredTopBounds(width, height);
+            win.setPosition(bounds.x, bounds.y);
+        }
+    });
+});

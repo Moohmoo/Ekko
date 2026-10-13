@@ -47,6 +47,7 @@ var api = {
     openExternal: function (url) { return ipcRenderer.invoke('shell:open_external', url); },
     closeWindow: function () { return ipcRenderer.invoke('window:close'); },
     resizeWindow: function (width, height) { return ipcRenderer.invoke('window:resize', { width: width, height: height }); },
+    setTrayState: function (state) { return ipcRenderer.invoke('tray:set_state', state); },
     onPromptChunk: function (callback) {
         var handler = function (_event, chunk) { return callback(chunk); };
         ipcRenderer.on('daemon:prompt_chunk', handler);

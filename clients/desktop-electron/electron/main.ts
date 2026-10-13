@@ -326,7 +326,8 @@ ipcMain.handle('window:close', () => {
 
 ipcMain.handle('window:resize', async (_event, { width, height }: { width: number; height: number }) => {
   if (win && !win.isDestroyed()) {
-    win.setSize(width, height);
+    const bounds = getCenteredTopBounds(width, height);
+    win.setBounds(bounds);
   }
 });
 
