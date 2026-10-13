@@ -1,65 +1,336 @@
-- id: chitchat_general_greeting
-  history: []
-  prompt: "Bonjour, qui es-tu et quel est ton rôle ?"
-  expected_tool: null
-  required_terms:
-    - "Ekko"
-  forbidden_tokens:
-    - "[Titre"
-    - "[Date"
-    - "```json"
-    - "query_knowledge("
+# ==============================================================================
+# Golden Dataset - 40 Scénarios d'Évaluation de l'Orchestrateur ReAct
+# ==============================================================================
 
-- id: pkm_query_unix_sockets_performance
+# ------------------------------------------------------------------------------
+# Famille 1 : Requêtes PKM ciblées (8 scénarios)
+# ------------------------------------------------------------------------------
+- id: pkm_sqlite_wal_architecture
   history: []
-  prompt: "Quelles sont les performances des sockets unix documentées dans mes notes ?"
+  prompt: "Que disent mes notes sur le mode WAL de SQLite et la gestion de la concurrence ?"
   expected_tool: "query_knowledge"
-  required_terms:
-    - "socket"
-    - "latence"
-  forbidden_tokens:
-    - "[Titre"
-    - "[Date"
-    - "```json"
-    - "query_knowledge("
+  required_terms: ["wal", "sqlite"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
 
-- id: recent_notes_latest_overview
+- id: pkm_unix_sockets_latency
+  history: []
+  prompt: "Quelle est la latence mesurée des sockets Unix de domaine dans mes fiches ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["socket", "0.3"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: pkm_zerocopy_memory_buffers
+  history: []
+  prompt: "Comment fonctionne le mécanisme zero-copy avec mémoire partagée d'après mes notes ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["shm", "mmap"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: pkm_ebpf_kernel_tracing
+  history: []
+  prompt: "Quels sont les avantages d'eBPF pour l'observabilité système décrits dans mes notes ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["ebpf", "kprobe"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: pkm_transformers_attention_mechanism
+  history: []
+  prompt: "Explique le mécanisme d'auto-attention des Transformers selon mes fiches d'IA."
+  expected_tool: "query_knowledge"
+  required_terms: ["attention", "softmax"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: pkm_lora_finetuning_matrices
+  history: []
+  prompt: "Comment LoRA permet-il de réduire les paramètres lors du fine-tuning selon ma note ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["lora", "rang"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: pkm_rag_vs_graphrag_distinction
+  history: []
+  prompt: "Quelle est la différence fondamentale entre RAG classique et GraphRAG dans mes notes ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["graphrag", "graphe"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: pkm_rust_ownership_borrowing
+  history: []
+  prompt: "Quelles sont les garanties du modèle d'Ownership et d'emprunt en Rust consignées dans mes notes ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["ownership", "emprunt"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+# ------------------------------------------------------------------------------
+# Famille 2 : Consultation & Veille d'état (6 scénarios)
+# ------------------------------------------------------------------------------
+- id: watch_latest_notes_overview
   history: []
   prompt: "Quelles sont mes dernières notes enregistrées dans ma base de connaissances ?"
   expected_tool: "get_recent_notes"
-  required_terms:
-    - "Architecture"
-    - "Transformers"
-  forbidden_tokens:
-    - "[Titre"
-    - "[Date"
-    - "```json"
-    - "query_knowledge("
+  required_terms: ["note", "sqlite"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
 
-- id: inbox_pending_signals_check
+- id: watch_inbox_retained_signals
   history: []
-  prompt: "Y a-t-il des dépêches ou des signaux récents en attente dans ma boîte de veille ?"
+  prompt: "Y a-t-il des dépêches ou des signaux récents retenus dans ma boîte de veille ?"
   expected_tool: "scan_inbox"
-  required_terms:
-    - "Mistral"
-  forbidden_tokens:
-    - "[Titre"
-    - "[Date"
-    - "```json"
-    - "query_knowledge("
+  required_terms: ["mistral", "deepseek"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
 
-- id: followup_contextual_architecture_query
+- id: watch_recent_notes_summary
+  history: []
+  prompt: "Donne-moi un aperçu chronologique de mes dernières fiches PKM."
+  expected_tool: "get_recent_notes"
+  required_terms: ["note", "transformers"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: watch_inbox_pending_queue
+  history: []
+  prompt: "Quels sont les signaux bruts actuellement en attente d'analyse dans la boîte de réception ?"
+  expected_tool: "scan_inbox"
+  required_terms: ["qwen", "kernel"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: watch_overview_recent_vault
+  history: []
+  prompt: "Liste-moi les fiches les plus récentes sauvegardées dans le coffre."
+  expected_tool: "get_recent_notes"
+  required_terms: ["note"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: watch_scan_inbox_all_signals
+  history: []
+  prompt: "Fais-moi un point sur les derniers signaux de veille reçus."
+  expected_tool: "scan_inbox"
+  required_terms: ["signal", "mistral"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+# ------------------------------------------------------------------------------
+# Famille 3 : Cas négatifs / Données absentes (6 scénarios)
+# ------------------------------------------------------------------------------
+- id: negative_kubernetes_operator_missing
+  history: []
+  prompt: "Que disent mes notes sur le déploiement d'un Kubernetes Operator en production ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["aucun", "pas", "trouvé"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: negative_blockchain_solidity_missing
+  history: []
+  prompt: "Ai-je une note sur le développement de smart contracts en Solidity sur Ethereum ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["aucun", "pas", "trouvé"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: negative_swiftui_framework_missing
+  history: []
+  prompt: "Quelle est notre documentation interne sur l'architecture SwiftUI d'Apple ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["aucun", "pas", "trouvé"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: negative_ansible_playbooks_missing
+  history: []
+  prompt: "Y a-t-il des fiches sur l'automatisation d'infrastructure avec Ansible ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["aucun", "pas", "trouvé"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: negative_quantum_computing_missing
+  history: []
+  prompt: "Que contient ma base de connaissances sur l'algorithme de Shor et le calcul quantique ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["aucun", "pas", "trouvé"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: negative_flutter_dart_missing
+  history: []
+  prompt: "Quelles sont les conventions documentées dans mes notes pour le framework Flutter ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["aucun", "pas", "trouvé"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+# ------------------------------------------------------------------------------
+# Famille 4 : Multi-tours & Ancrage contextuel (8 scénarios)
+# ------------------------------------------------------------------------------
+- id: multiturn_wal_busy_timeout
   history:
     - role: "user"
-      content: "Parle-moi de l'architecture d'Ekko."
+      content: "Je m'intéresse à la persistance SQLite dans Ekko."
     - role: "assistant"
-      content: "Ekko utilise une architecture locale-first avec SQLite et une couche hybride vectorielle et FTS5."
-  prompt: "Et quel mode SQLite précis a été retenu pour garantir la concurrence ?"
+      content: "Ekko utilise SQLite pour stocker les notes et signaux."
+  prompt: "Quel paramètre précis de timeout a été consigné dans ma note d'architecture ?"
   expected_tool: "query_knowledge"
-  required_terms:
-    - "WAL"
-  forbidden_tokens:
-    - "[Titre"
-    - "[Date"
-    - "```json"
-    - "query_knowledge("
+  required_terms: ["10000", "busy_timeout", "timeout"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: multiturn_lora_parameter_reduction
+  history:
+    - role: "user"
+      content: "Nous avons abordé le fine-tuning récemment."
+    - role: "assistant"
+      content: "Oui, plusieurs techniques de fine-tuning existent pour les modèles."
+  prompt: "Que dit ma note sur le pourcentage de réduction des paramètres entraînables avec LoRA ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["99%"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: multiturn_ebpf_system_overhead
+  history:
+    - role: "user"
+      content: "Parle-moi du monitoring Linux."
+    - role: "assistant"
+      content: "Le monitoring peut se faire au niveau utilisateur ou noyau."
+  prompt: "Quel est l'impact précis d'eBPF sur l'overhead système consigné dans mes fiches ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["1%"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: multiturn_pydantic_rust_speedup
+  history:
+    - role: "user"
+      content: "Je cherche des infos sur la validation de schémas en Python."
+    - role: "assistant"
+      content: "Pydantic est la bibliothèque de référence pour la modélisation."
+  prompt: "Selon ma note sur Pydantic v2, quel est le gain de vitesse apporté par le moteur en Rust ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["5", "15"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: multiturn_fastembed_vector_dimension
+  history:
+    - role: "user"
+      content: "Comment fonctionnent les embeddings dans notre système ?"
+    - role: "assistant"
+      content: "Le système produit des vecteurs denses pour la recherche hybride."
+  prompt: "Quelle est la dimension exacte des vecteurs générés par FastEmbed dans notre note ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["384"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: multiturn_ipc_memory_throughput
+  history:
+    - role: "user"
+      content: "Peux-tu me rappeler les benchmarks réseau de l'application ?"
+    - role: "assistant"
+      content: "L'application teste différentes méthodes d'échange inter-processus."
+  prompt: "Quel débit mémoire maximal a été mesuré pour les sockets Unix dans ma fiche ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["450"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: multiturn_quantization_vram_reduction
+  history:
+    - role: "user"
+      content: "Quelle est la taille des modèles 7B après compression ?"
+    - role: "assistant"
+      content: "La quantification permet de réduire la taille des poids en mémoire."
+  prompt: "Combien de VRAM consomme un modèle 7B quantifié en 4-bit d'après ma note ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["4.5"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: multiturn_rrf_k_constant
+  history:
+    - role: "user"
+      content: "Comment fonctionne le moteur de recherche hybride ?"
+    - role: "assistant"
+      content: "Le moteur combine recherche textuelle et similarité dense."
+  prompt: "Quelle est la valeur de la constante k utilisée pour la fusion RRF dans mes notes ?"
+  expected_tool: "query_knowledge"
+  required_terms: ["60"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+# ------------------------------------------------------------------------------
+# Famille 5 : Actions d'ingestion & Signaux ciblés (4 scénarios)
+# ------------------------------------------------------------------------------
+- id: signal_check_mistral_details
+  history: []
+  prompt: "Que contient la dépêche retenue sur Mistral Large 4 dans ma boîte de veille ?"
+  expected_tool: "scan_inbox"
+  required_terms: ["mistral", "88.5"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: signal_check_deepseek_details
+  history: []
+  prompt: "Vérifie les signaux retenus : quelles sont les informations sur DeepSeek-V3 ?"
+  expected_tool: "scan_inbox"
+  required_terms: ["deepseek", "671"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: signal_check_linux_kernel_status
+  history: []
+  prompt: "Y a-t-il une dépêche en attente concernant le noyau Linux ?"
+  expected_tool: "scan_inbox"
+  required_terms: ["linux", "6.12"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: signal_check_qwen_coder_bench
+  history: []
+  prompt: "Inspecte les signaux en attente pour trouver le benchmark de Qwen Coder."
+  expected_tool: "scan_inbox"
+  required_terms: ["qwen", "humaneval"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+# ------------------------------------------------------------------------------
+# Famille 6 : Conversations générales / Chitchat (4 scénarios)
+# ------------------------------------------------------------------------------
+- id: chitchat_who_are_you
+  history: []
+  prompt: "Qui es-tu et quelles sont tes fonctionnalités ?"
+  expected_tool: null
+  required_terms: ["ekko", "assistant"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: chitchat_polite_thanks
+  history: []
+  prompt: "Merci beaucoup pour ton assistance aujourd'hui !"
+  expected_tool: null
+  required_terms: ["plaisir", "service", "aide", "journée"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: chitchat_good_morning
+  history: []
+  prompt: "Bonjour ! Comment vas-tu ce matin ?"
+  expected_tool: null
+  required_terms: ["bonjour", "aide", "bien"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: chitchat_capabilities_help
+  history: []
+  prompt: "Comment puis-je utiliser le copilote pour ma veille ?"
+  expected_tool: null
+  required_terms: ["veille", "note", "question"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+# ------------------------------------------------------------------------------
+# Famille 7 : Cas pièges & Requêtes ambiguës (4 scénarios)
+# ------------------------------------------------------------------------------
+- id: ambiguous_weather_query
+  history: []
+  prompt: "Quel temps fait-il à Paris en ce moment ?"
+  expected_tool: null
+  required_terms: ["météo", "accès", "temps", "informations"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: ambiguous_general_sqlite_concept
+  history: []
+  prompt: "Rappelle-moi ce qu'est une base de données relationnelle en informatique."
+  expected_tool: null
+  required_terms: ["relationnelle", "table", "données"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: ambiguous_note_vs_web_fastembed
+  history: []
+  prompt: "Cherche dans mes notes si on parle de FastEmbed."
+  expected_tool: "query_knowledge"
+  required_terms: ["fastembed", "onnx"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+
+- id: ambiguous_latest_without_explicit
+  history: []
+  prompt: "Quelles sont les dernières nouvelles enregistrées dans mon coffre ?"
+  expected_tool: "get_recent_notes"
+  required_terms: ["note", "sqlite"]
+  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
