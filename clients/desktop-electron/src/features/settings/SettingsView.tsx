@@ -1,123 +1,116 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Cpu, Radio, User, Server, AlertCircle, Loader2 } from 'lucide-react';
+import { useSettingsStore } from '../../core/stores/useSettingsStore';
 import { useDaemonStore } from '../../core/stores/useDaemonStore';
-import { Radio, Cpu, HardDrive, ShieldCheck, Server } from 'lucide-react';
+import { ModelsTab } from './tabs/ModelsTab';
+import { SourcesTab } from './tabs/SourcesTab';
+import { ProfileTab } from './tabs/ProfileTab';
+import { SystemTab } from './tabs/SystemTab';
+
+type SettingsTab = 'models' | 'sources' | 'profile' | 'system';
 
 export const SettingsView: React.FC = () => {
-  const isOnline = useDaemonStore((state) => state.isOnline);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('models');
+
+  const {
+    settings,
+    userContext,
+    sources,
+    system,
+    isLoading,
+    isSaving,
+    error,
+    fetchSettings,
+    saveUserContext,
+    toggleSource,
+    addRssSource,
+    removeSource,
+  } = useSettingsStore();
+
+  const isDaemonOnline = useDaemonStore((state) => state.isOnline);
+
+  useEffect(() => {
+    if (!settings && !isLoading) {
+      fetchSettings();
+    }
+  }, [settings, isLoading, fetchSettings]);
+
+  const tabs: { id: SettingsTab; label: string; icon: React.FC<{ className?: string }> }[] = [
+    { id: 'models', label: 'Modèles & Clés', icon: Cpu },
+    { id: 'sources', label: 'Veilleurs', icon: Radio },
+    { id: 'profile', label: 'Profil & IA', icon: User },
+    { id: 'system', label: 'Système', icon: Server },
+  ];
 
   return (
-    <div className="flex-1 p-3 flex flex-col gap-3 text-xs overflow-y-auto select-none">
-      {/* Liaison Daemon & Socket UNIX */}
-      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2.5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Server className="w-4 h-4 text-sky-400" />
-            <span className="font-semibold text-slate-200">Liaison Daemon Ekko</span>
-          </div>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-              isOnline
-                ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30'
-                : 'bg-red-950/40 text-red-300 border-red-500/30'
-            }`}
-          >
-            {isOnline ? 'Connecté' : 'Hors ligne'}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 text-slate-400 pt-1 border-t border-white/[0.04]">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-slate-500">Canal IPC UNIX</span>
-            <span className="font-mono text-slate-300 text-[11px]">/tmp/ekko.sock</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] text-slate-500">Protocole</span>
-            <span className="text-slate-300 text-[11px]">JSON-RPC 2.0 (NDJSON)</span>
-          </div>
-        </div>
+    <div className="flex-1 p-3 flex flex-col h-full overflow-hidden select-none">
+      {/* Barre de navigation supérieure (Segmented Control) */}
+      <div className="p-1 bg-white/[0.04] rounded-lg border border-white/[0.06] flex gap-1 mb-3 text-xs shrink-0">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-1 px-2 rounded-md flex items-center justify-center gap-1.5 transition-all text-[11px] ${
+                isActive
+                  ? 'bg-white/[0.1] text-white shadow-sm font-medium'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-sky-400' : 'text-zinc-400'}`} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Télémétrie Frugale & Confinement Système */}
-      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2.5 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-emerald-400" />
-          <span className="font-semibold text-slate-200">Télémétrie & Empreinte Système</span>
+      {/* Bandeau d'erreur */}
+      {error && (
+        <div className="mb-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center gap-2 shrink-0">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate flex-1">{error}</span>
         </div>
+      )}
 
-        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/[0.04]">
-          <div className="flex flex-col p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] text-slate-500">Allocation VRAM</span>
-            <span className="font-mono text-sky-400 font-semibold text-xs mt-0.5">0 MB</span>
-            <span className="text-[9px] text-slate-500">Confinement strict</span>
+      {/* Zone de contenu défilante confinée */}
+      <div className="flex-1 overflow-y-auto pr-1">
+        {isLoading && !settings ? (
+          <div className="flex flex-col items-center justify-center h-32 text-slate-400 gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-sky-400" />
+            <span className="text-[11px]">Chargement des réglages...</span>
           </div>
-
-          <div className="flex flex-col p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] text-slate-500">Priorité CPU</span>
-            <span className="font-mono text-emerald-400 font-semibold text-xs mt-0.5">nice +10</span>
-            <span className="text-[9px] text-slate-500">Arrière-plan discret</span>
-          </div>
-
-          <div className="flex flex-col p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-            <span className="text-[10px] text-slate-500">Confinement GPU</span>
-            <span className="font-mono text-purple-400 font-semibold text-xs mt-0.5">keep_alive: 0</span>
-            <span className="text-[9px] text-slate-500">Purge immédiate</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Veilleurs & Sources de Signal */}
-      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2.5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-amber-400" />
-            <span className="font-semibold text-slate-200">Veilleurs Configurés</span>
-          </div>
-          <span className="text-[10px] text-slate-500 font-mono">config/sources.yaml</span>
-        </div>
-
-        <div className="flex items-center gap-2 pt-1 border-t border-white/[0.04]">
-          <div className="flex-1 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-medium text-slate-300">arXiv AI & CS</span>
-              <span className="text-[9px] text-slate-500">Flux RSS / XML</span>
-            </div>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          </div>
-
-          <div className="flex-1 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-medium text-slate-300">Hacker News</span>
-              <span className="text-[9px] text-slate-500">API Algolia (Top Stories)</span>
-            </div>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          </div>
-
-          <div className="flex-1 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-medium text-slate-300">Flux Tech RSS</span>
-              <span className="text-[9px] text-slate-500">Agrégateur local</span>
-            </div>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          </div>
-        </div>
-      </div>
-
-      {/* Profils BYOM & Modèles */}
-      <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex flex-col gap-2 shadow-sm">
-        <div className="flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-sky-400" />
-          <span className="font-semibold text-slate-200">Modèles & Moteur Cognitif (BYOM)</span>
-        </div>
-        <div className="flex items-center justify-between text-slate-400 pt-1 border-t border-white/[0.04]">
-          <span>Moteur de distillation :</span>
-          <span className="text-slate-200 font-mono text-[11px]">gemini-2.5-flash / local</span>
-        </div>
-        <div className="flex items-center justify-between text-slate-400">
-          <span>Gouvernance mémoire :</span>
-          <span className="text-emerald-400 font-medium text-[11px] flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5" /> SQLite WAL + FTS5
-          </span>
-        </div>
+        ) : (
+          <>
+            {activeTab === 'models' && <ModelsTab system={system} />}
+            {activeTab === 'sources' && (
+              <SourcesTab
+                sources={sources}
+                isSaving={isSaving}
+                onToggleSource={toggleSource}
+                onAddRssSource={addRssSource}
+                onRemoveSource={removeSource}
+              />
+            )}
+            {activeTab === 'profile' && (
+              <ProfileTab
+                userContext={userContext}
+                isSaving={isSaving}
+                onSave={saveUserContext}
+              />
+            )}
+            {activeTab === 'system' && (
+              <SystemTab
+                system={system}
+                isOnline={isDaemonOnline}
+                isLoading={isLoading}
+                onRefresh={fetchSettings}
+              />
+            )}
+          </>
+        )}
       </div>
     </div>
   );
