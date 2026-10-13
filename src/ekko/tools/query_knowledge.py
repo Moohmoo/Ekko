@@ -38,7 +38,16 @@ def _format_note_entry(note: KnowledgeNote, score: float) -> str:
     date_str = note.created_at.strftime("%Y-%m-%d")
     tags_str = ", ".join(note.tags) if note.tags else "aucun"
     sources_str = ", ".join(note.sources) if note.sources else "aucune"
-    snippet = note.content.strip().split("\n")[0][:250]
+
+    clean_content = note.content.strip()
+    if len(clean_content) <= 2000:
+        snippet = clean_content
+    else:
+        truncated = clean_content[:1500]
+        last_space = truncated.rfind(" ")
+        if last_space > 1000:
+            truncated = truncated[:last_space]
+        snippet = f"{truncated}... [extrait tronqué]"
 
     return (
         f"### {note.title} (Score: {score:.4f})\n"
@@ -46,7 +55,7 @@ def _format_note_entry(note: KnowledgeNote, score: float) -> str:
         f"- **Résumé** : {note.summary}\n"
         f"- **Tags** : {tags_str}\n"
         f"- **Sources** : {sources_str}\n"
-        f"- **Aperçu** : {snippet}..."
+        f"- **Aperçu** : {snippet}"
     )
 
 

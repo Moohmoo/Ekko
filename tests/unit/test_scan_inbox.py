@@ -66,29 +66,37 @@ async def test_scan_inbox_handles_infrastructure_error() -> None:
 
 
 
-def test_scan_inbox_input_defaults_to_retained() -> None:
-    """Ensure ScanInboxInput defaults status to retained."""
+def test_scan_inbox_input_defaults_to_pending() -> None:
+    """Ensure ScanInboxInput defaults status to pending."""
     schema = ScanInboxInput()
-    assert schema.status == "retained"
+    assert schema.status == "pending"
 
 
 @pytest.mark.asyncio
-async def test_scan_inbox_maps_pending_to_retained() -> None:
-    """Ensure ScanInboxTool maps 'pending' synonym to SignalStatus.RETAINED."""
+async def test_scan_inbox_status_routing() -> None:
+    """Ensure ScanInboxTool correctly routes status filters (pending, all, retained)."""
     mock_db = MagicMock()
     mock_db.get_raw_signals = AsyncMock(return_value=[])
 
     tool = ScanInboxTool(db_manager=mock_db)
-    # 1. Default run
+    # 1. Default run -> queries PENDING
     await tool._run()
     mock_db.get_raw_signals.assert_awaited_with(
         source_id=None,
-        status=SignalStatus.RETAINED,
+        status=SignalStatus.PENDING,
         limit=10,
     )
 
-    # 2. Explicit 'pending' synonym
-    await tool._run(status="pending")
+    # 2. Explicit 'all' -> disables status filter (status=None)
+    await tool._run(status="all")
+    mock_db.get_raw_signals.assert_awaited_with(
+        source_id=None,
+        status=None,
+        limit=10,
+    )
+
+    # 3. Explicit 'retained' -> queries RETAINED
+    await tool._run(status="retained")
     mock_db.get_raw_signals.assert_awaited_with(
         source_id=None,
         status=SignalStatus.RETAINED,
