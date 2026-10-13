@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, shell, Tray } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt } from './transport/socket-client';
@@ -13,6 +13,8 @@ process.env.VITE_PUBLIC = app.isPackaged
   : path.join(__dirname, '../public');
 
 let win: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let isQuitting = false;
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 
 function getPreloadPath(): string {
@@ -48,6 +50,46 @@ function getCenteredTopBounds(width: number, height: number) {
   };
 }
 
+function toggleWindow() {
+  if (!win || win.isDestroyed()) return;
+
+  if (win.isVisible()) {
+    win.hide();
+  } else {
+    // Re-verify centering in case display geometry changed while hidden
+    const [currentWidth, currentHeight] = win.getSize();
+    const bounds = getCenteredTopBounds(currentWidth, currentHeight);
+    win.setPosition(bounds.x, bounds.y);
+    win.show();
+    win.focus();
+  }
+}
+
+function createTray() {
+  const publicDir = process.env.VITE_PUBLIC || path.join(__dirname, '../public');
+  const iconPath = path.join(publicDir, 'assets/tray.png');
+  tray = new Tray(iconPath);
+  tray.setToolTip('Ekko - Ambient Cognitive Buffer');
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Afficher / Masquer Ekko',
+      click: () => toggleWindow(),
+    },
+    { type: 'separator' },
+    {
+      label: 'Quitter Ekko',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+  tray.on('click', () => toggleWindow());
+}
+
 function createWindow() {
   const windowWidth = 660; // 620px notch core + 2x20px transparent side margin for fillets
   const podHeight = 230;
@@ -64,7 +106,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    skipTaskbar: false,
+    skipTaskbar: true,
     hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
@@ -81,11 +123,22 @@ function createWindow() {
     console.error(error);
   });
 
-  // Native keyboard shortcut fallback for quitting application (Ctrl+Q)
+  // Native keyboard shortcuts: Escape to hide, Ctrl+Q to quit
   win.webContents.on('before-input-event', (_event, input) => {
-    if (input.control && input.key.toLowerCase() === 'q') {
-      console.log('[Main] Ctrl+Q pressed, closing window.');
-      win?.close();
+    if (input.key === 'Escape') {
+      win?.hide();
+    } else if (input.control && input.key.toLowerCase() === 'q') {
+      console.log('[Main] Ctrl+Q pressed, quitting application.');
+      isQuitting = true;
+      app.quit();
+    }
+  });
+
+  // Hide rather than destroy window when user closes it
+  win.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      win?.hide();
     }
   });
 
@@ -101,11 +154,6 @@ function createWindow() {
     console.log('[Main] Loading static index.html from:', process.env.DIST);
     win.loadFile(path.join(process.env.DIST!, 'index.html'));
   }
-
-  // Auto-hide on blur (optional click outside dismiss)
-  win.on('blur', () => {
-    // Keep window visible or allow user to toggle
-  });
 }
 
 // State tracker for daemon connectivity transitions
@@ -245,8 +293,8 @@ ipcMain.handle('daemon:update_sources', async (_event, sources: unknown[]) => {
 });
 
 ipcMain.handle('window:close', () => {
-  if (win) {
-    win.close();
+  if (win && !win.isDestroyed()) {
+    win.hide();
   }
 });
 
@@ -254,6 +302,14 @@ ipcMain.handle('window:resize', async (_event, { width, height }: { width: numbe
   if (win && !win.isDestroyed()) {
     win.setSize(width, height);
   }
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {
@@ -266,7 +322,30 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+  } else if (win) {
+    win.show();
+    win.focus();
   }
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  createTray();
+
+  // Register global shortcut to toggle window
+  const shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', () => {
+    toggleWindow();
+  });
+  if (!shortcutRegistered) {
+    console.warn('[Main:WARN] Global shortcut CommandOrControl+Shift+Space registration failed.');
+  }
+
+  // Recalculate notch position if display resolution or work area changes
+  screen.on('display-metrics-changed', () => {
+    if (win && !win.isDestroyed()) {
+      const [width, height] = win.getSize();
+      const bounds = getCenteredTopBounds(width, height);
+      win.setPosition(bounds.x, bounds.y);
+    }
+  });
+});
