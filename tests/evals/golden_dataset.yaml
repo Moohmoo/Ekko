@@ -1,0 +1,65 @@
+- id: chitchat_general_greeting
+  history: []
+  prompt: "Bonjour, qui es-tu et quel est ton rôle ?"
+  expected_tool: null
+  required_terms:
+    - "Ekko"
+  forbidden_tokens:
+    - "[Titre"
+    - "[Date"
+    - "```json"
+    - "query_knowledge("
+
+- id: pkm_query_unix_sockets_performance
+  history: []
+  prompt: "Quelles sont les performances des sockets unix documentées dans mes notes ?"
+  expected_tool: "query_knowledge"
+  required_terms:
+    - "socket"
+    - "latence"
+  forbidden_tokens:
+    - "[Titre"
+    - "[Date"
+    - "```json"
+    - "query_knowledge("
+
+- id: recent_notes_latest_overview
+  history: []
+  prompt: "Quelles sont mes dernières notes enregistrées dans ma base de connaissances ?"
+  expected_tool: "get_recent_notes"
+  required_terms:
+    - "Architecture"
+    - "Transformers"
+  forbidden_tokens:
+    - "[Titre"
+    - "[Date"
+    - "```json"
+    - "query_knowledge("
+
+- id: inbox_pending_signals_check
+  history: []
+  prompt: "Y a-t-il des dépêches ou des signaux récents en attente dans ma boîte de veille ?"
+  expected_tool: "scan_inbox"
+  required_terms:
+    - "Mistral"
+  forbidden_tokens:
+    - "[Titre"
+    - "[Date"
+    - "```json"
+    - "query_knowledge("
+
+- id: followup_contextual_architecture_query
+  history:
+    - role: "user"
+      content: "Parle-moi de l'architecture d'Ekko."
+    - role: "assistant"
+      content: "Ekko utilise une architecture locale-first avec SQLite et une couche hybride vectorielle et FTS5."
+  prompt: "Et quel mode SQLite précis a été retenu pour garantir la concurrence ?"
+  expected_tool: "query_knowledge"
+  required_terms:
+    - "WAL"
+  forbidden_tokens:
+    - "[Titre"
+    - "[Date"
+    - "```json"
+    - "query_knowledge("
