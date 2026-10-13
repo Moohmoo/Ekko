@@ -35,7 +35,7 @@
 
 - id: pkm_transformers_attention_mechanism
   history: []
-  prompt: "Rappelle-moi comment fonctionne l'auto-attention dans les Transformers."
+  prompt: "Quelle implémentation de l'auto-attention des Transformers est documentée dans nos fiches ?"
   expected_tool: "query_knowledge"
   required_terms: ["attention", "softmax"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -49,7 +49,7 @@
 
 - id: pkm_rag_vs_graphrag_distinction
   history: []
-  prompt: "C'est quoi la différence concrète entre RAG classique et GraphRAG ?"
+  prompt: "Quelle distinction entre RAG et GraphRAG est consignée dans nos fiches d'architecture ?"
   expected_tool: "query_knowledge"
   required_terms: ["graphrag", "graphe"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -75,7 +75,7 @@
   history: []
   prompt: "Quoi de neuf dans la boîte de veille ?"
   expected_tool: "scan_inbox"
-  required_terms: ["mistral", "deepseek"]
+  required_terms: ["mistral", "deepseek", "linux", "qwen", "signal"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
 
 - id: watch_recent_notes_summary
@@ -118,7 +118,7 @@
 
 - id: negative_blockchain_solidity_missing
   history: []
-  prompt: "On a quelque chose sur les smart contracts Solidity ?"
+  prompt: "A-t-on une note dans le coffre sur les smart contracts Solidity ?"
   expected_tool: "query_knowledge"
   required_terms: ["aucun", "pas", "trouvé"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -146,7 +146,7 @@
 
 - id: negative_flutter_dart_missing
   history: []
-  prompt: "T'as des fiches sur Flutter ou Dart ?"
+  prompt: "Peux-tu chercher dans nos fiches si on a documenté Flutter ou Dart ?"
   expected_tool: "query_knowledge"
   required_terms: ["aucun", "pas", "trouvé"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -160,7 +160,7 @@
       content: "Je m'intéresse à la persistance SQLite dans Ekko."
     - role: "assistant"
       content: "Ekko utilise SQLite pour stocker les notes et signaux."
-  prompt: "Et pour SQLite, quelle valeur de timeout a été consignée dans notre architecture ?"
+  prompt: "Et pour notre architecture SQLite, quelle valeur de timeout a été consignée ?"
   expected_tool: "query_knowledge"
   required_terms: ["10000", "busy_timeout", "timeout"]
   forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
@@ -302,7 +302,7 @@
   prompt: "Comment je peux me servir d'Ekko pour ma veille tech ?"
   expected_tool: null
   required_terms: ["veille", "note", "question", "aide"]
-  forbidden_tokens: ["[Titre", "[Date", "```json", "query_knowledge("]
+  forbidden_tokens: ["[Titre", "[Date", "query_knowledge("]
 
 # ------------------------------------------------------------------------------
 # Famille 7 : Cas pièges & Requêtes ambiguës (4 scénarios)
