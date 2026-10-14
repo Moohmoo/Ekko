@@ -1,4 +1,4 @@
-"""Repository managing knowledge_notes, note_chunks, and vector embeddings in SQLite."""
+"""SQLite concrete persistence repository for Buffer knowledge notes and chunks."""
 
 import asyncio
 from collections import Counter
@@ -14,7 +14,7 @@ from ekko.domains.buffer.entities import KnowledgeNote
 from ekko.domains.ingestion.processing.chunking import chunk_markdown
 from ekko.providers.embedder import EmbedderPort
 
-logger = get_logger("db.notes_repo")
+logger = get_logger("domains.buffer.repository")
 
 
 def _to_iso(dt: datetime | None) -> str | None:
@@ -42,8 +42,8 @@ def _row_to_knowledge_note(row: sqlite3.Row) -> KnowledgeNote:
     )
 
 
-class NotesRepository:
-    """Provides synchronous and asynchronous CRUD operations for notes, chunks, and tags."""
+class SqliteNoteRepository:
+    """SQLite implementation of NoteRepositoryPort for Buffer domain."""
 
     def __init__(
         self,

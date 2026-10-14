@@ -1,4 +1,4 @@
-"""Repository managing source_states and raw_signals tables in SQLite."""
+"""SQLite concrete persistence repository for Radar signals and source states."""
 
 import asyncio
 from datetime import datetime
@@ -8,7 +8,7 @@ from ekko.core.logger import get_logger
 from ekko.db.connection import DatabaseConnection
 from ekko.domains.radar.entities import RawSignal, SignalStatus, SourceState
 
-logger = get_logger("db.signals_repo")
+logger = get_logger("domains.radar.repository")
 
 
 def _to_iso(dt: datetime | None) -> str | None:
@@ -21,8 +21,8 @@ def _from_iso(val: str | None) -> datetime | None:
     return datetime.fromisoformat(val) if val else None
 
 
-class SignalsRepository:
-    """Provides synchronous and asynchronous CRUD operations for signals and source states."""
+class SqliteSignalRepository:
+    """SQLite implementation of SignalRepositoryPort for Radar domain."""
 
     def __init__(self, connection: DatabaseConnection) -> None:
         self.connection = connection

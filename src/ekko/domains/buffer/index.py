@@ -2,22 +2,21 @@
 
 from typing import Any
 from ekko.core.logger import get_logger
-from ekko.db.manager import DatabaseManager
 from ekko.domains.buffer import crud, search
-from ekko.domains.buffer.contracts import NoteSearchResult
+from ekko.domains.buffer.contracts import NoteRepositoryPort, NoteSearchResult, SearchEnginePort
 from ekko.domains.buffer.entities import KnowledgeNote
 
 logger = get_logger("domains.buffer")
 
 
-async def scan_notes(db_manager: DatabaseManager, params: dict[str, Any]) -> list[KnowledgeNote]:
+async def scan_notes(repo: NoteRepositoryPort, params: dict[str, Any]) -> list[KnowledgeNote]:
     """Scan recent knowledge notes ordered by creation time DESC."""
     limit = int(params.get("limit", 20))
-    return await crud.fetch_recent_notes(db_manager, limit=limit)
+    return await crud.fetch_recent_notes(repo, limit=limit)
 
 
 async def search_notes(
-    db_manager: DatabaseManager,
+    search_engine: SearchEnginePort,
     params: dict[str, Any],
     embedder: Any | None = None,
 ) -> list[NoteSearchResult]:
@@ -37,7 +36,7 @@ async def search_notes(
             logger.warning("Embedding generation failed for query %s: %s", query, e)
 
     results = await search.execute_hybrid_search(
-        db_manager=db_manager,
+        search_engine=search_engine,
         query=query,
         query_embedding=query_embedding,
         mode=mode,

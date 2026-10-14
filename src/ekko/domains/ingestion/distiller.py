@@ -9,7 +9,7 @@ import re
 
 from ekko.core.errors import DistillationError
 from ekko.core.logger import get_logger
-from ekko.daemon.resources import ResourceManagerPort
+from ekko.domains.ingestion.contracts import ResourceManagerPort
 from ekko.providers.embedder import EmbedderPort
 from ekko.domains.ingestion.processing.formatters import (
     determine_unique_path,

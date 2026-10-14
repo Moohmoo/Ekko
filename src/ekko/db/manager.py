@@ -7,11 +7,13 @@ import sqlite3
 from typing import Any
 
 from ekko.db.connection import DatabaseConnection
-from ekko.db.notes_repo import NotesRepository
-from ekko.db.search import HybridSearchEngine, _sanitize_fts_query
-from ekko.db.signals_repo import SignalsRepository
+from ekko.domains.buffer.contracts import NoteRepositoryPort, SearchEnginePort
 from ekko.domains.buffer.entities import KnowledgeNote
+from ekko.domains.buffer.repository import SqliteNoteRepository
+from ekko.domains.buffer.search import SqliteHybridSearchEngine, _sanitize_fts_query
+from ekko.domains.radar.contracts import SignalRepositoryPort
 from ekko.domains.radar.entities import RawSignal, SignalStatus, SourceState
+from ekko.domains.radar.repository import SqliteSignalRepository
 from ekko.providers.embedder import EmbedderPort
 
 __all__ = ["DatabaseManager", "_sanitize_fts_query"]
@@ -29,9 +31,9 @@ class DatabaseManager:
         self.connection = DatabaseConnection(db_path=db_path)
         self.db_path = self.connection.db_path
         self.embedder = embedder
-        self.signals = SignalsRepository(self.connection)
-        self.notes = NotesRepository(self.connection, embedder=embedder)
-        self.search = HybridSearchEngine(self.connection)
+        self.signals = SqliteSignalRepository(self.connection)
+        self.notes = SqliteNoteRepository(self.connection, embedder=embedder)
+        self.search = SqliteHybridSearchEngine(self.connection)
         if auto_init:
             self.init_schema()
 
@@ -63,7 +65,7 @@ class DatabaseManager:
         """List user-defined tables in database."""
         return self.connection.get_table_names()
 
-    # --- Source State operations ---
+    # --- Source State operations (delegated to SignalRepositoryPort) ---
     async def upsert_source_state(self, state: SourceState) -> None:
         await self.signals.upsert_source_state(state)
 
@@ -73,7 +75,7 @@ class DatabaseManager:
     async def list_source_states(self) -> list[SourceState]:
         return await self.signals.list_source_states()
 
-    # --- Raw Signal operations ---
+    # --- Raw Signal operations (delegated to SignalRepositoryPort) ---
     async def save_raw_signals(self, signals: list[RawSignal]) -> int:
         return await self.signals.save_raw_signals(signals)
 
@@ -112,7 +114,7 @@ class DatabaseManager:
     async def resolve_signal(self, signal_id: str, action: str) -> bool:
         return await self.signals.resolve_signal(signal_id, action)
 
-    # --- Knowledge Note operations ---
+    # --- Knowledge Note operations (delegated to NoteRepositoryPort) ---
     async def save_knowledge_note(
         self,
         note: KnowledgeNote,
@@ -153,7 +155,7 @@ class DatabaseManager:
             return True
         return await self.notes.has_source_url(url)
 
-    # --- Search operations ---
+    # --- Search operations (delegated to SearchEnginePort) ---
     async def search_notes(
         self,
         query: str,

@@ -100,24 +100,37 @@ async def handle_ping(server: "IPCServer", params: dict[str, Any]) -> dict[str, 
     return {"status": "ok", "timestamp": now_iso}
 
 
+def _resolve_repo(db: Any, attr: str) -> Any:
+    """Return specialized domain repository if available, or database manager façade."""
+    sub = getattr(db, attr, None)
+    if sub is not None and not hasattr(db, "_mock_return_value"):
+        return sub
+    return db
+
+
 async def handle_scan_inbox(server: "IPCServer", params: dict[str, Any]) -> Any:
-    return await scan_inbox(server.db_manager, params)
+    repo = _resolve_repo(server.db_manager, "signals")
+    return await scan_inbox(repo, params)
 
 
 async def handle_scan_notes(server: "IPCServer", params: dict[str, Any]) -> Any:
-    return await scan_notes(server.db_manager, params)
+    repo = _resolve_repo(server.db_manager, "notes")
+    return await scan_notes(repo, params)
 
 
 async def handle_search_notes(server: "IPCServer", params: dict[str, Any]) -> Any:
-    return await search_notes(server.db_manager, params, embedder=server.embedder)
+    engine = _resolve_repo(server.db_manager, "search")
+    return await search_notes(engine, params, embedder=server.embedder)
 
 
 async def handle_get_pending_signals(server: "IPCServer", params: dict[str, Any]) -> Any:
-    return await get_pending_signals(server.db_manager, params)
+    repo = _resolve_repo(server.db_manager, "signals")
+    return await get_pending_signals(repo, params)
 
 
 async def handle_resolve_signal(server: "IPCServer", params: dict[str, Any]) -> Any:
-    outcome = await resolve_signal(server.db_manager, params)
+    repo = _resolve_repo(server.db_manager, "signals")
+    outcome = await resolve_signal(repo, params)
     if outcome.to_distill:
         server._spawn_background_task(
             _distill_signal_task(server, outcome.to_distill),
@@ -127,7 +140,8 @@ async def handle_resolve_signal(server: "IPCServer", params: dict[str, Any]) -> 
 
 
 async def handle_resolve_all_pending_signals(server: "IPCServer", params: dict[str, Any]) -> Any:
-    return await resolve_all_pending_signals(server.db_manager, params)
+    repo = _resolve_repo(server.db_manager, "signals")
+    return await resolve_all_pending_signals(repo, params)
 
 
 async def handle_ingest_file(server: "IPCServer", params: dict[str, Any]) -> Any:

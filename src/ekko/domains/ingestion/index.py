@@ -8,9 +8,9 @@ from typing import Any
 from urllib.parse import urlparse
 
 from ekko.core.logger import get_logger
-from ekko.db.manager import DatabaseManager
 from ekko.domains.buffer.entities import KnowledgeNote
 from ekko.domains.ingestion.contracts import (
+    DeduplicationPort,
     IngestionResponse,
     IngestionStatus,
     PreparedFileIngestion,
@@ -26,7 +26,7 @@ VALID_FILE_SUFFIXES = frozenset({".pdf", ".md", ".markdown", ".txt"})
 
 
 async def prepare_file_ingest(
-    db_manager: DatabaseManager,
+    store: DeduplicationPort,
     file_path_str: str,
 ) -> PreparedFileIngestion:
     """Validate local file, perform deduplication, and return initial reply + target path."""
@@ -67,8 +67,8 @@ async def prepare_file_ingest(
         logger.warning("Failed to compute SHA-256 for file %s: %s", target_path, exc)
         content_hash = ""
 
-    if content_hash and hasattr(db_manager, "has_content_hash"):
-        if await db_manager.has_content_hash(content_hash):
+    if content_hash and hasattr(store, "has_content_hash"):
+        if await store.has_content_hash(content_hash):
             reply = IngestionResponse(
                 status=IngestionStatus.ALREADY_EXISTS,
                 filename=target_path.name,
@@ -100,7 +100,7 @@ async def distill_file_background(
 
 
 async def prepare_url_ingest(
-    db_manager: DatabaseManager,
+    store: DeduplicationPort,
     url_str: str,
 ) -> PreparedUrlIngestion:
     """Validate web URL, perform deduplication, and return initial reply + URL."""
@@ -114,8 +114,8 @@ async def prepare_url_ingest(
             f"Format d'URL non supporté ou invalide : '{clean_url}'. Seuls http:// et https:// sont acceptés."
         )
 
-    if hasattr(db_manager, "has_source_url"):
-        if await db_manager.has_source_url(clean_url):
+    if hasattr(store, "has_source_url"):
+        if await store.has_source_url(clean_url):
             reply = IngestionResponse(
                 status=IngestionStatus.ALREADY_EXISTS,
                 url=clean_url,
