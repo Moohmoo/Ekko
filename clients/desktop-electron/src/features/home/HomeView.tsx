@@ -14,8 +14,6 @@ import { useViewStore } from '../../core/stores/useViewStore';
  */
 export const HomeView: React.FC = () => {
   const setViewMode = useViewStore((state) => state.setViewMode);
-  const { mascotContainerRef, isHoverWoken } = useMascotGaze();
-
   const { dropStatus, mascotEmotion, forcedEmotion } = useDropStore();
   const latestNote = useBufferStore((state) => state.latestNote);
   const currentSignal = useSignalStore((state) => state.currentSignal);
@@ -35,6 +33,8 @@ export const HomeView: React.FC = () => {
       : currentSignal !== null
       ? 'alert'
       : mascotEmotion;
+
+  const { mascotContainerRef, isHoverWoken } = useMascotGaze(displayEmotion === 'alert');
 
   return (
     <div className="w-full h-full flex gap-4 p-2.5 select-none overflow-hidden relative cursor-default">

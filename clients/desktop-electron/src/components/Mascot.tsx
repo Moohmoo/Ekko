@@ -143,22 +143,16 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
   const haloScale =
     emotion === 'hover_drop'
       ? [1.1, 1.25, 1.1]
-      : emotion === 'alert'
-      ? [1.1, 1.3, 1.1]
       : [0.95, 1.05, 0.95];
   const haloOpacity =
     emotion === 'hover_drop'
       ? [0.35, 0.5, 0.35]
       : emotion === 'error'
       ? [0.8, 1.0, 0.8]
-      : emotion === 'alert'
-      ? [0.55, 0.8, 0.55]
       : [0.15, 0.25, 0.15];
   const haloColor =
     emotion === 'error'
       ? COLORS.coralGlow
-      : emotion === 'alert'
-      ? COLORS.amberGlow
       : emotion === 'ready'
       ? COLORS.emeraldOnline
       : COLORS.cyanGlow;
@@ -175,7 +169,7 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
           opacity: haloOpacity,
         }}
         transition={{
-          duration: emotion === 'hover_drop' ? 1.5 : emotion === 'alert' ? 1.6 : 3,
+          duration: emotion === 'hover_drop' ? 1.5 : 3,
           repeat: Infinity,
           ease: 'easeInOut',
         }}
@@ -208,30 +202,6 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
             className="absolute -top-1 right-2 text-[10px] font-bold text-sky-300/70 select-none pointer-events-none"
           >
             z
-          </motion.div>
-        )}
-
-        {/* Floating Neon Alert Badge "!" over right shoulder */}
-        {emotion === 'alert' && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0, y: 4 }}
-            animate={{
-              scale: [1, 1.1, 1],
-              opacity: [0.95, 1, 0.95],
-              y: [0, -2, 0],
-            }}
-            transition={{
-              scale: { ...SPRING_BOUNCY, duration: 0.4 },
-              y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
-              opacity: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
-            }}
-            className="absolute -top-2 right-1 z-30 pointer-events-none"
-          >
-            <div className="w-[18px] h-[18px] rounded-full bg-amber-500/20 border border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.6)] flex items-center justify-center backdrop-blur-sm">
-              <span className="text-[11px] font-black leading-none text-amber-300 drop-shadow-[0_0_4px_rgba(245,158,11,0.8)]">
-                !
-              </span>
-            </div>
           </motion.div>
         )}
 
@@ -318,11 +288,11 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
             strokeWidth="1.2"
           />
 
-          {/* Attentive Eyebrows for Alert emotion */}
+          {/* Attentive Raised Eyebrows for Alert emotion */}
           {emotion === 'alert' && (
             <g stroke={COLORS.eyeDark} strokeWidth="1.4" strokeLinecap="round" fill="none">
-              <path d="M 35 52 Q 40 48 45 51" />
-              <path d="M 55 51 Q 60 48 65 52" />
+              <path d="M 34 50 Q 40 45 46 49" />
+              <path d="M 54 49 Q 60 45 66 50" />
             </g>
           )}
 
@@ -340,7 +310,7 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
               style={{
                 transform:
                   emotion === 'alert'
-                    ? 'translate3d(3px, 0.5px, 0)'
+                    ? 'translate3d(-3.2px, -2.8px, 0)'
                     : 'translate3d(var(--eye-dx, 0px), var(--eye-dy, 0px), 0)',
                 willChange: 'transform',
               }}
@@ -348,14 +318,14 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
               <ellipse
                 cx={40}
                 cy={62}
-                rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
-                ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
+                rx={emotion === 'alert' ? 5.2 : emotion === 'hover_drop' ? 4.5 : 3.5}
+                ry={emotion === 'alert' ? 6.8 : emotion === 'hover_drop' ? 6 : emotion === 'error' ? 2.2 : 5}
               />
               {emotion !== 'error' && (
                 <circle
                   cx={39}
                   cy={60}
-                  r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
+                  r={emotion === 'alert' ? 1.8 : emotion === 'hover_drop' ? 1.6 : 1.2}
                   fill={COLORS.white}
                 />
               )}
@@ -363,14 +333,14 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
               <ellipse
                 cx={60}
                 cy={62}
-                rx={emotion === 'hover_drop' || emotion === 'alert' ? 4.5 : 3.5}
-                ry={emotion === 'hover_drop' || emotion === 'alert' ? 6 : emotion === 'error' ? 2.2 : 5}
+                rx={emotion === 'alert' ? 5.2 : emotion === 'hover_drop' ? 4.5 : 3.5}
+                ry={emotion === 'alert' ? 6.8 : emotion === 'hover_drop' ? 6 : emotion === 'error' ? 2.2 : 5}
               />
               {emotion !== 'error' && (
                 <circle
                   cx={59}
                   cy={60}
-                  r={emotion === 'hover_drop' || emotion === 'alert' ? 1.6 : 1.2}
+                  r={emotion === 'alert' ? 1.8 : emotion === 'hover_drop' ? 1.6 : 1.2}
                   fill={COLORS.white}
                 />
               )}
@@ -399,14 +369,14 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
             />
           )}
 
-          {/* Attentive Curtailed Smile for Alert */}
+          {/* Surprised "OH!" mouth for alert emotion (:o) */}
           {emotion === 'alert' && (
-            <path
-              d="M 46 72 Q 50 75 54 72"
-              fill="none"
-              stroke={COLORS.eyeDark}
-              strokeWidth="1.4"
-              strokeLinecap="round"
+            <ellipse
+              cx="50"
+              cy="74"
+              rx="2.6"
+              ry="3.6"
+              fill={COLORS.eyeDark}
             />
           )}
 
@@ -436,8 +406,6 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
             backgroundColor:
               emotion === 'error'
                 ? COLORS.coralAccent
-                : emotion === 'alert'
-                ? COLORS.amberAccent
                 : COLORS.cyanAccent,
           }}
           className="absolute -left-2 top-[44px] w-2.5 h-2.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.4)]"
@@ -492,8 +460,6 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
             backgroundColor:
               emotion === 'error'
                 ? COLORS.coralAccent
-                : emotion === 'alert'
-                ? COLORS.amberAccent
                 : COLORS.cyanAccent,
           }}
           className="absolute -right-2 top-[44px] w-2.5 h-2.5 rounded-full shadow-[0_2px_8px_rgba(56,189,248,0.5)] origin-bottom"

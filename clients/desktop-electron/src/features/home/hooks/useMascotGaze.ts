@@ -10,11 +10,25 @@ export interface MascotGazeState {
  * directly on the mascot container without triggering React component re-renders.
  * Guaranteed 60 FPS performance and zero long tasks (> 50ms).
  */
-export function useMascotGaze(): MascotGazeState {
+export function useMascotGaze(isAlert: boolean = false): MascotGazeState {
   const [isHoverWoken, setIsHoverWoken] = useState<boolean>(false);
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mascotContainerRef = useRef<HTMLDivElement | null>(null);
   const rafIdRef = useRef<number | null>(null);
+  const isAlertRef = useRef<boolean>(isAlert);
+
+  useEffect(() => {
+    isAlertRef.current = isAlert;
+    if (mascotContainerRef.current) {
+      if (isAlert) {
+        mascotContainerRef.current.style.setProperty('--eye-dx', '-3.2px');
+        mascotContainerRef.current.style.setProperty('--eye-dy', '-2.8px');
+      } else {
+        mascotContainerRef.current.style.removeProperty('--eye-dx');
+        mascotContainerRef.current.style.removeProperty('--eye-dy');
+      }
+    }
+  }, [isAlert]);
 
   useEffect(() => {
     const handleGlobalPointerMove = (e: PointerEvent) => {
@@ -27,7 +41,12 @@ export function useMascotGaze(): MascotGazeState {
       // 2. Wake up mascot if sleeping
       setIsHoverWoken((prev) => (prev ? prev : true));
 
-      // 3. Compute delta relative to mascot center and apply directly to CSS variables
+      // 3. Skip free mouse tracking when alert is active (gaze fixed to Radar tab)
+      if (isAlertRef.current) {
+        return;
+      }
+
+      // 4. Compute delta relative to mascot center and apply directly to CSS variables
       if (mascotContainerRef.current) {
         const container = mascotContainerRef.current;
         if (rafIdRef.current) {
@@ -60,7 +79,7 @@ export function useMascotGaze(): MascotGazeState {
     };
 
     const handleGlobalMouseLeave = () => {
-      if (mascotContainerRef.current) {
+      if (!isAlertRef.current && mascotContainerRef.current) {
         mascotContainerRef.current.style.removeProperty('--eye-dx');
         mascotContainerRef.current.style.removeProperty('--eye-dy');
       }
