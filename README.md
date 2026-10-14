@@ -1,8 +1,6 @@
-<p align="center">
-  <img src="./docs/assets/logo.svg" width="80" height="80" alt="Ekko Mascot Logo" />
-</p>
-
-<h1 align="center">Ekko</h1>
+<h1 align="center">
+  <sub><img src="./docs/assets/logo.svg" width="64" height="64" alt="Ekko Mascot Logo" /></sub> Ekko
+</h1>
 
 <p align="center">
   <strong>Ambient cognitive buffer and blindspot sentinel docked to your desktop panel.</strong>
