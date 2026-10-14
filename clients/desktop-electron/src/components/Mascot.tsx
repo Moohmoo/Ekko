@@ -25,8 +25,8 @@ const bodyVariants: Variants = {
     transition: {
       scale: { duration: 3.2, repeat: Infinity, ease: 'easeInOut' },
       y: { duration: 3.2, repeat: Infinity, ease: 'easeInOut' },
-      scaleX: { type: 'spring', damping: 15, stiffness: 200 },
-      scaleY: { type: 'spring', damping: 15, stiffness: 200 },
+      scaleX: { type: 'spring', damping: 25, stiffness: 300 },
+      scaleY: { type: 'spring', damping: 25, stiffness: 300 },
       rotate: { duration: 0.3 },
       x: { duration: 0.3 },
     },
@@ -96,19 +96,19 @@ const bodyVariants: Variants = {
     },
   },
   alert: {
-    scale: [1.06, 1.02, 1.04, 1.02],
-    scaleX: 1,
-    scaleY: 1,
-    rotate: 0,
+    scale: 1.03,
+    scaleX: [1, 0.94, 1.04, 1],
+    scaleY: [1, 1.10, 0.96, 1],
+    rotate: [0, -3, 1, 0],
     x: 0,
-    y: [-4, 0, -3, 0],
+    y: [-5, -2, -3],
     transition: {
-      scale: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
-      y: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
-      scaleX: { type: 'spring', damping: 15, stiffness: 200 },
-      scaleY: { type: 'spring', damping: 15, stiffness: 200 },
-      rotate: { duration: 0.3 },
-      x: { duration: 0.3 },
+      scale: { type: 'spring', damping: 16, stiffness: 300 },
+      y: { duration: 0.5, ease: 'easeOut' },
+      scaleX: { duration: 0.5, ease: 'easeOut' },
+      scaleY: { duration: 0.5, ease: 'easeOut' },
+      rotate: { duration: 0.5, ease: 'easeOut' },
+      x: { duration: 0.2 },
     },
   },
   error: {
@@ -310,7 +310,7 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
               style={{
                 transform:
                   emotion === 'alert'
-                    ? 'translate3d(-3.2px, -2.8px, 0)'
+                    ? 'translate3d(-4.5px, -5.5px, 0)'
                     : 'translate3d(var(--eye-dx, 0px), var(--eye-dy, 0px), 0)',
                 willChange: 'transform',
               }}
@@ -323,8 +323,8 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
               />
               {emotion !== 'error' && (
                 <circle
-                  cx={39}
-                  cy={60}
+                  cx={emotion === 'alert' ? 38.5 : 39}
+                  cy={emotion === 'alert' ? 59.5 : 60}
                   r={emotion === 'alert' ? 1.8 : emotion === 'hover_drop' ? 1.6 : 1.2}
                   fill={COLORS.white}
                 />
@@ -338,8 +338,8 @@ export const Mascot: React.FC<MascotProps> = React.memo(({
               />
               {emotion !== 'error' && (
                 <circle
-                  cx={59}
-                  cy={60}
+                  cx={emotion === 'alert' ? 58.5 : 59}
+                  cy={emotion === 'alert' ? 59.5 : 60}
                   r={emotion === 'alert' ? 1.8 : emotion === 'hover_drop' ? 1.6 : 1.2}
                   fill={COLORS.white}
                 />

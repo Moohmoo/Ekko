@@ -21,8 +21,8 @@ export function useMascotGaze(isAlert: boolean = false): MascotGazeState {
     isAlertRef.current = isAlert;
     if (mascotContainerRef.current) {
       if (isAlert) {
-        mascotContainerRef.current.style.setProperty('--eye-dx', '-3.2px');
-        mascotContainerRef.current.style.setProperty('--eye-dy', '-2.8px');
+        mascotContainerRef.current.style.setProperty('--eye-dx', '-4.5px');
+        mascotContainerRef.current.style.setProperty('--eye-dy', '-5.5px');
       } else {
         mascotContainerRef.current.style.removeProperty('--eye-dx');
         mascotContainerRef.current.style.removeProperty('--eye-dy');

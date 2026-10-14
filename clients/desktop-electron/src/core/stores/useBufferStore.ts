@@ -24,6 +24,16 @@ interface BufferState {
   setLatestNote: (note: NoteItem) => void;
 }
 
+function areNotesEqual(a: NoteItem[], b: NoteItem[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id || a[i].title !== b[i].title || a[i].summary !== b[i].summary) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function mapRawNote(item: Record<string, unknown>): NoteItem {
   // Support both direct note format and wrapped { note: {...}, score: ... }
   const noteData = (item && typeof item === 'object' && item.note && typeof item.note === 'object')
@@ -92,6 +102,17 @@ export const useBufferStore = create<BufferState>((set, get) => ({
       const raw = await window.ekkoAPI.getNotes();
       if (Array.isArray(raw)) {
         const mapped: NoteItem[] = (raw as Record<string, unknown>[]).map(mapRawNote);
+        const prevNotes = get().notes;
+        const prevOffline = get().isOffline;
+
+        // Skip setting state if notes and offline status have not changed (prevents re-renders during heartbeat)
+        if (areNotesEqual(prevNotes, mapped) && prevOffline === false) {
+          if (!isSilent && get().isLoading) {
+            set({ isLoading: false });
+          }
+          return;
+        }
+
         set({
           notes: mapped,
           latestNote: mapped.length > 0 ? mapped[0] : null,

@@ -141,7 +141,6 @@ export const SignalCard: React.FC<SignalCardProps> = ({
         <button
           type="button"
           onClick={onDismiss}
-          disabled={isResolving}
           className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors text-xs font-medium cursor-pointer"
           title="Dismiss signal"
         >
@@ -152,7 +151,6 @@ export const SignalCard: React.FC<SignalCardProps> = ({
         <button
           type="button"
           onClick={onArchive}
-          disabled={isResolving}
           className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-all text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
           title="Archive into PKM buffer"
         >
