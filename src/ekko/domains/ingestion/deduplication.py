@@ -2,7 +2,6 @@
 
 from typing import Any
 
-from ekko.domains.ingestion.contracts import DeduplicationPort
 
 __all__ = ["SqliteDeduplicationStore"]
 

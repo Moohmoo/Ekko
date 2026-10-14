@@ -1,6 +1,5 @@
 """Unit tests for ContentCompressor (heuristic pruning, token budgeting, chunking)."""
 
-import pytest
 
 from ekko.domains.ingestion.processing.compressor import (
     ContentCompressor,

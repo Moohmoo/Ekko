@@ -1,7 +1,6 @@
 """Unit tests for daemon hardware confinement and VRAM unloading management."""
 
 from unittest.mock import patch
-import pytest
 
 from ekko.daemon.resources import ResourceManager
 

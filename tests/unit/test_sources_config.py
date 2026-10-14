@@ -1,7 +1,6 @@
 """Unit tests for sources.yaml configuration loader and Pydantic schemas."""
 
 from pathlib import Path
-import pytest
 import yaml
 
 from ekko.domains.system.loader import load_sources_config

@@ -27,6 +27,7 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
+    "ruff>=0.9.0",
 ]
 
 [project.scripts]
@@ -34,3 +35,11 @@ ekko = "ekko.daemon.service:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+ignore = ["E501"]

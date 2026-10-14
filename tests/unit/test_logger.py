@@ -1,6 +1,5 @@
 """Unit tests for file-based logging and console isolation."""
 
-import logging
 from pathlib import Path
 import pytest
 

@@ -1,7 +1,6 @@
 """Asynchronous client connecting to Ekko IPC UNIX socket."""
 
 import asyncio
-from collections.abc import AsyncIterator
 import json
 from pathlib import Path
 from typing import Any

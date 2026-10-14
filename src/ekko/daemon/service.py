@@ -4,7 +4,6 @@ import argparse
 import asyncio
 from pathlib import Path
 import signal
-from typing import Any
 
 from ekko.daemon.resources import ResourceManager
 from ekko.daemon.scheduler import IngestionCoordinator

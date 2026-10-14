@@ -1,6 +1,5 @@
 """Unit tests for the unified SQLite database memory store."""
 
-from datetime import datetime, timezone
 from pathlib import Path
 import pytest
 

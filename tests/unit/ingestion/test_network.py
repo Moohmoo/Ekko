@@ -1,7 +1,7 @@
 """Unit tests for resilient HTTP client with SSRF protection, token bucket, and conditional cache."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 

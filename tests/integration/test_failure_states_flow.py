@@ -1,14 +1,10 @@
 """Integration tests verifying error and failure states on daemon IPC."""
 
-import asyncio
 from pathlib import Path
 import pytest
 
 from ekko.daemon.ipc_client import IPCClient
 from ekko.daemon.server import IPCServer
-from ekko.domains.buffer.entities import KnowledgeNote
-from ekko.domains.radar.entities import RawSignal, SignalStatus
-from unittest.mock import AsyncMock, MagicMock
 
 
 @pytest.mark.asyncio

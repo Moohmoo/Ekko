@@ -1,6 +1,5 @@
 """Unit tests for ingestion guardrails (max file size, SHA-256 deduplication, URL deduplication)."""
 
-import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 import pytest

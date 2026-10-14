@@ -1,7 +1,6 @@
 """Unit tests for providers and resource management protocols."""
 
 from typing import Any
-import pytest
 
 from ekko.core.errors import EkkoError, ProviderError
 from ekko.daemon.resources import ResourceManager, ResourceManagerPort
