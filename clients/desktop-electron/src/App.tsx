@@ -38,7 +38,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const isCompact = viewMode === 'welcome' || viewMode === 'home';
+  const isCompact = viewMode === 'welcome' || viewMode === 'home' || viewMode === 'radar';
   const targetHeight = isCompact ? LAYOUT.podHeightCompact : LAYOUT.podHeightExtended;
 
   return (

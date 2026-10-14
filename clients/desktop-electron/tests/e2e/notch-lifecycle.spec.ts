@@ -66,6 +66,18 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
       });
       return bounds;
     }, { timeout: 5000 }).toBe(230);
+
+    // Cliquer sur l'onglet Radar et vérifier qu'il conserve la hauteur compacte 230px (zéro resize)
+    const radarTabButton = page.locator('button[title="Radar"]');
+    await radarTabButton.click();
+
+    await expect.poll(async () => {
+      const bounds = await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        return win ? win.getBounds().height : 0;
+      });
+      return bounds;
+    }, { timeout: 5000 }).toBe(230);
   });
 
   test('2. Test Cycle de Vie Sentinelle (Hide rather than Destroy)', async () => {

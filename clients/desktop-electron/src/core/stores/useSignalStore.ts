@@ -23,6 +23,8 @@ interface SignalState {
   dismissCurrent: (action: 'archive' | 'discard') => Promise<boolean>;
   resolveAll: (action: 'archive' | 'discard') => Promise<boolean>;
   setCurrentSignal: (signal: Signal | null) => void;
+  nextSignal: () => void;
+  prevSignal: () => void;
 }
 
 export const useSignalStore = create<SignalState>((set, get) => ({
@@ -89,9 +91,13 @@ export const useSignalStore = create<SignalState>((set, get) => ({
     }
 
     // Optimistic FIFO shift: pop current immediately from state
+    const currentIndex = get().pendingSignals.findIndex((s) => s.id === current.id);
     const remaining = get().pendingSignals.filter((s) => s.id !== current.id);
     const nextTotal = Math.max(0, get().totalCount - 1);
-    const nextCurrent = remaining.length > 0 ? remaining[0] : null;
+    const nextCurrent =
+      remaining.length > 0
+        ? remaining[Math.min(Math.max(0, currentIndex), remaining.length - 1)]
+        : null;
 
     set({
       pendingSignals: remaining,
@@ -146,5 +152,27 @@ export const useSignalStore = create<SignalState>((set, get) => ({
 
   setCurrentSignal: (signal: Signal | null) => {
     set({ currentSignal: signal });
+  },
+
+  nextSignal: () => {
+    const { pendingSignals, currentSignal } = get();
+    if (pendingSignals.length <= 1) return;
+    const currentIndex = currentSignal
+      ? pendingSignals.findIndex((s) => s.id === currentSignal.id)
+      : -1;
+    if (currentIndex < pendingSignals.length - 1) {
+      set({ currentSignal: pendingSignals[currentIndex + 1] });
+    }
+  },
+
+  prevSignal: () => {
+    const { pendingSignals, currentSignal } = get();
+    if (pendingSignals.length <= 1) return;
+    const currentIndex = currentSignal
+      ? pendingSignals.findIndex((s) => s.id === currentSignal.id)
+      : 1;
+    if (currentIndex > 0) {
+      set({ currentSignal: pendingSignals[currentIndex - 1] });
+    }
   },
 }));
