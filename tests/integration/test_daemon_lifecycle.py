@@ -36,11 +36,14 @@ async def test_daemon_lifecycle_start_ping_and_graceful_stop(tmp_path: Path) -> 
         )
     )
 
-    # Wait briefly for socket creation
-    for _ in range(50):
+    # Attente jusqu'à 8 secondes sur runner CI
+    for _ in range(80):
         if sock_path.exists():
             break
-        await asyncio.sleep(0.05)
+        if daemon_task.done():
+            # Si le daemon a crashé au boot, lève l'exception immédiatement au lieu d'attendre
+            daemon_task.result()
+        await asyncio.sleep(0.1)
 
     assert sock_path.exists(), "IPC socket file was not created by daemon"
 
