@@ -7,9 +7,15 @@ all: install
 install:
 	uv sync
 	cd clients/desktop-electron && npm install
+	@mkdir -p $(HOME)/.local/share/applications $(HOME)/.local/share/icons/hicolor/512x512/apps
+	@cp clients/desktop-electron/public/assets/icon.png $(HOME)/.local/share/icons/hicolor/512x512/apps/ekko.png 2>/dev/null || true
+	@cp clients/desktop-electron/public/assets/icon.png $(HOME)/.local/share/icons/hicolor/512x512/apps/electron.png 2>/dev/null || true
 
 ## dev: Launch the desktop application and supervised daemon in development mode
 dev:
+	@mkdir -p $(HOME)/.local/share/applications $(HOME)/.local/share/icons/hicolor/512x512/apps
+	@cp clients/desktop-electron/public/assets/icon.png $(HOME)/.local/share/icons/hicolor/512x512/apps/ekko.png 2>/dev/null || true
+	@cp clients/desktop-electron/public/assets/icon.png $(HOME)/.local/share/icons/hicolor/512x512/apps/electron.png 2>/dev/null || true
 	cd clients/desktop-electron && npm run dev
 
 ## test: Run the complete test suite (Pytest backend + Playwright E2E)

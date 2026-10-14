@@ -1,5 +1,6 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, shell, Tray } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from 'electron';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt, subscribeDaemonEvents } from './transport/socket-client';
 import { ensureDaemonRunning, stopDaemonIfManaged } from './daemon-manager';
@@ -42,6 +43,60 @@ function getAppIconPath(): string {
   if (fs.existsSync(distCandidate)) return distCandidate;
 
   return candidate;
+}
+
+function registerLinuxDesktopIcons() {
+  if (process.platform !== 'linux') return;
+  try {
+    const homedir = os.homedir();
+    const appsDir = path.join(homedir, '.local/share/applications');
+    const iconsDir = path.join(homedir, '.local/share/icons/hicolor/512x512/apps');
+    fs.mkdirSync(appsDir, { recursive: true });
+    fs.mkdirSync(iconsDir, { recursive: true });
+
+    const iconPath = getAppIconPath();
+    if (fs.existsSync(iconPath)) {
+      const ekkoIcon = path.join(iconsDir, 'ekko.png');
+      const electronIcon = path.join(iconsDir, 'electron.png');
+      if (!fs.existsSync(ekkoIcon) || fs.statSync(iconPath).size !== fs.statSync(ekkoIcon).size) {
+        fs.copyFileSync(iconPath, ekkoIcon);
+      }
+      if (!fs.existsSync(electronIcon) || fs.statSync(iconPath).size !== fs.statSync(electronIcon).size) {
+        fs.copyFileSync(iconPath, electronIcon);
+      }
+    }
+
+    const execPath = process.execPath;
+    const appPath = app.getAppPath();
+
+    const ekkoDesktop = `[Desktop Entry]
+Name=Ekko
+Comment=Ambient Cognitive Buffer and Blindspot Sentinel
+Exec="${execPath}" --no-sandbox "${appPath}"
+Icon=ekko
+Terminal=false
+Type=Application
+Categories=Utility;
+StartupWMClass=Ekko
+`;
+    fs.writeFileSync(path.join(appsDir, 'ekko.desktop'), ekkoDesktop);
+
+    if (!app.isPackaged) {
+      const devDesktop = `[Desktop Entry]
+Name=Ekko
+Comment=Ambient Cognitive Buffer and Blindspot Sentinel
+Exec="${execPath}" --no-sandbox "${appPath}"
+Icon=ekko
+Terminal=false
+Type=Application
+Categories=Utility;
+StartupWMClass=electron
+`;
+      fs.writeFileSync(path.join(appsDir, 'electron.desktop'), devDesktop);
+    }
+  } catch {
+    // Non-fatal if filesystem is restricted
+  }
 }
 
 function getPreloadPath(): string {
@@ -146,10 +201,11 @@ function createWindow() {
 
   const preloadPath = getPreloadPath();
   const iconPath = getAppIconPath();
+  const appIcon = nativeImage.createFromPath(iconPath);
 
   win = new BrowserWindow({
     title: 'Ekko',
-    icon: iconPath,
+    icon: appIcon,
     width: initialBounds.width,
     height: initialBounds.height,
     x: initialBounds.x,
@@ -428,6 +484,9 @@ app.on('activate', () => {
 app.whenReady().then(async () => {
   // Disable default native menu bar
   Menu.setApplicationMenu(null);
+
+  // Register desktop entry and icons on Linux for GNOME Shell / Ubuntu dock
+  registerLinuxDesktopIcons();
 
   // Configure application dock icon on macOS
   if (process.platform === 'darwin' && app.dock) {
