@@ -73,3 +73,19 @@ def test_cli_main_dispatches_daemon_command() -> None:
         with patch("sys.argv", ["ekko", "daemon", "--interval", "15.0"]):
             main()
             mock_daemon.assert_awaited_once_with(poll_interval=15.0)
+
+
+def test_cli_daemon_subcommand_with_debug() -> None:
+    """Ensure CLI parses daemon subcommand with --debug flag."""
+    args = parse_args(["daemon", "--interval", "30.0", "--debug"])
+    assert args.command == "daemon"
+    assert args.interval == 30.0
+    assert args.debug is True
+
+
+def test_cli_main_dispatches_daemon_with_debug() -> None:
+    """Ensure main() passes debug flag to run_daemon when supplied."""
+    with patch("ekko.daemon.service.run_daemon", new_callable=AsyncMock) as mock_daemon:
+        with patch("sys.argv", ["ekko", "daemon", "--interval", "15.0", "--debug"]):
+            main()
+            mock_daemon.assert_awaited_once_with(poll_interval=15.0, debug=True)

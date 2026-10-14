@@ -76,9 +76,12 @@ async def run_daemon(
     socket_path: Path | str | None = None,
     poll_interval: float = 60.0,
     stop_event: asyncio.Event | None = None,
+    debug: bool = False,
 ) -> None:
     """Initialize and run daemon services until shutdown signal."""
     active_settings = settings or Settings()
+    if debug:
+        active_settings.log_level = "DEBUG"
     setup_logger(active_settings)
 
     ResourceManager().apply_process_niceness(increment=10)
@@ -114,9 +117,25 @@ async def run_daemon(
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     """Parse CLI arguments for daemon subcommand and options."""
     parser = argparse.ArgumentParser(description="Ekko Ambient Daemon")
-    subparsers = parser.add_subparsers(dest="command")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable verbose debug logging (DEBUG level)",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=60.0,
+        help="Polling interval in seconds (default: 60.0)",
+    )
 
+    subparsers = parser.add_subparsers(dest="command")
     daemon_parser = subparsers.add_parser("daemon", help="Run Ekko background daemon and IPC server")
+    daemon_parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable verbose debug logging (DEBUG level)",
+    )
     daemon_parser.add_argument(
         "--interval",
         type=float,
@@ -124,12 +143,6 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         help="Polling interval in seconds (default: 60.0)",
     )
 
-    parser.add_argument(
-        "--interval",
-        type=float,
-        default=60.0,
-        help="Polling interval in seconds (default: 60.0)",
-    )
     return parser.parse_args(args)
 
 
@@ -137,7 +150,11 @@ def main(argv: list[str] | None = None) -> None:
     """Main CLI entrypoint launching the daemon directly."""
     parsed = parse_args(argv)
     interval = getattr(parsed, "interval", 60.0)
-    asyncio.run(run_daemon(poll_interval=interval))
+    debug = getattr(parsed, "debug", False)
+    if debug:
+        asyncio.run(run_daemon(poll_interval=interval, debug=True))
+    else:
+        asyncio.run(run_daemon(poll_interval=interval))
 
 
 if __name__ == "__main__":

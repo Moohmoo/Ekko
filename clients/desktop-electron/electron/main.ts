@@ -21,26 +21,27 @@ app.commandLine.appendSwitch('enable-zero-copy');
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
+const isDebugMode = process.argv.includes('--debug');
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 
 function getPreloadPath(): string {
   // 1. Production / compiled path (same directory as main.js)
   const prodPath = path.join(__dirname, 'preload.cjs');
   if (fs.existsSync(prodPath)) {
-    console.log('[Main] Using production preload path:', prodPath);
+    if (isDebugMode) console.log('[Main] Using production preload path:', prodPath);
     return prodPath;
   }
 
   // 2. Dev path relative to electron/ source directory
   const devPath = path.join(__dirname, '../dist-electron/preload.cjs');
   if (fs.existsSync(devPath)) {
-    console.log('[Main] Using dev relative preload path:', devPath);
+    if (isDebugMode) console.log('[Main] Using dev relative preload path:', devPath);
     return devPath;
   }
 
   // 3. Absolute project root fallback
   const fallbackPath = path.resolve(app.getAppPath(), 'dist-electron/preload.cjs');
-  console.log('[Main] Using fallback preload path:', fallbackPath);
+  if (isDebugMode) console.log('[Main] Using fallback preload path:', fallbackPath);
   return fallbackPath;
 }
 
@@ -151,14 +152,32 @@ function createWindow() {
     console.error(error);
   });
 
-  // Native keyboard shortcuts: Escape to hide, Ctrl+Q to quit
-  win.webContents.on('before-input-event', (_event, input) => {
+  // Native keyboard shortcuts: Escape to hide, Ctrl+Q to quit, block debug shortcuts in production
+  win.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'Escape') {
       win?.hide();
-    } else if (input.control && input.key.toLowerCase() === 'q') {
-      console.log('[Main] Ctrl+Q pressed, quitting application.');
+      return;
+    }
+    if ((input.control || input.meta) && input.key.toLowerCase() === 'q') {
+      if (isDebugMode) console.log('[Main] Ctrl+Q pressed, quitting application.');
       isQuitting = true;
       app.quit();
+      return;
+    }
+
+    // In production, block DevTools and reload shortcuts unless --debug is explicitly enabled
+    const isProduction = app.isPackaged || process.env.NODE_ENV === 'production';
+    if (isProduction && !isDebugMode && !process.env.E2E_TEST) {
+      const isDevTools =
+        input.key === 'F12' ||
+        ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i');
+      const isReload =
+        input.key === 'F5' ||
+        ((input.control || input.meta) && input.key.toLowerCase() === 'r');
+
+      if (isDevTools || isReload) {
+        event.preventDefault();
+      }
     }
   });
 
@@ -170,8 +189,8 @@ function createWindow() {
     }
   });
 
-  // Automatically open detached DevTools in dev mode (except in automated E2E tests)
-  if (!process.env.E2E_TEST && (process.env.NODE_ENV !== 'production' || !app.isPackaged)) {
+  // Open detached DevTools only when --debug flag is explicitly passed (never by default)
+  if (!process.env.E2E_TEST && isDebugMode) {
     win.webContents.openDevTools({ mode: 'detach' });
   }
 
@@ -182,10 +201,10 @@ function createWindow() {
   });
 
   if (VITE_DEV_SERVER_URL) {
-    console.log('[Main] Loading dev server URL:', VITE_DEV_SERVER_URL);
+    if (isDebugMode) console.log('[Main] Loading dev server URL:', VITE_DEV_SERVER_URL);
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
-    console.log('[Main] Loading static index.html from:', process.env.DIST);
+    if (isDebugMode) console.log('[Main] Loading static index.html from:', process.env.DIST);
     win.loadFile(path.join(process.env.DIST!, 'index.html'));
   }
 }
@@ -201,13 +220,13 @@ ipcMain.handle('daemon:ping', async () => {
     const res = await sendJsonRpc<{ status: string; timestamp: string }>('ping');
     if (isDaemonConnected !== true) {
       isDaemonConnected = true;
-      console.log('[Daemon] Connecté au socket local /tmp/ekko.sock');
+      if (isDebugMode) console.log('[Daemon] Connecté au socket local /tmp/ekko.sock');
     }
     return res;
   } catch (err) {
     if (isDaemonConnected !== false) {
       isDaemonConnected = false;
-      console.warn('[Daemon:WARN] Liaison perdue avec le daemon');
+      if (isDebugMode) console.warn('[Daemon:WARN] Liaison perdue avec le daemon');
     }
     return null;
   }
@@ -384,6 +403,9 @@ app.on('activate', () => {
 });
 
 app.whenReady().then(async () => {
+  // Disable default native menu bar
+  Menu.setApplicationMenu(null);
+
   // Ensure the Python daemon is running (auto-supervises or adopts external instance)
   try {
     await ensureDaemonRunning();
@@ -405,7 +427,7 @@ app.whenReady().then(async () => {
   const shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', () => {
     toggleWindow();
   });
-  if (!shortcutRegistered) {
+  if (!shortcutRegistered && isDebugMode) {
     console.warn('[Main:WARN] Global shortcut CommandOrControl+Shift+Space registration failed.');
   }
 
