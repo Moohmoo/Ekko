@@ -5,8 +5,6 @@ from typing import Any
 import yaml
 
 from ekko.domains.system.schemas import (
-    CorePromptConfig,
-    PluginsConfig,
     SourcesCatalogConfig,
     UserContextConfig,
 )
@@ -36,15 +34,6 @@ def _ensure_example_template(example_path: Path, sample_content: str) -> None:
         logger.info("Generated configuration template: %s", example_path)
 
 
-def load_core_prompt(config_dir: Path | str) -> CorePromptConfig:
-    """Load core prompt configuration or fallback to defaults."""
-    dir_path = Path(config_dir)
-    data = _read_yaml(dir_path / "core_prompt.yaml")
-    if data:
-        return CorePromptConfig.model_validate(data)
-    return CorePromptConfig()
-
-
 def load_user_context(config_dir: Path | str) -> UserContextConfig:
     """Load user context configuration, generating template if missing."""
     dir_path = Path(config_dir)
@@ -66,24 +55,7 @@ def load_user_context(config_dir: Path | str) -> UserContextConfig:
     return UserContextConfig()
 
 
-def load_plugins_config(config_dir: Path | str) -> PluginsConfig:
-    """Load plugins feature flags, generating template if missing."""
-    dir_path = Path(config_dir)
-    target = dir_path / "plugins.yaml"
-    data = _read_yaml(target)
-    if data:
-        return PluginsConfig.model_validate(data)
-
-    template = (
-        "# Active plugins feature flags\n"
-        "enabled_tools:\n"
-        "  - system_info\n"
-    )
-    _ensure_example_template(dir_path / "plugins.yaml.example", template)
-    return PluginsConfig()
-
-
-EXAMPLE_SOURCES_YAML = """# Ekko V2 Declarative Sources Configuration
+EXAMPLE_SOURCES_YAML = """# Ekko (Beta v0.1.0) Declarative Sources Configuration
 sources:
   - id: hn_tech
     type: rest_api
@@ -136,5 +108,3 @@ def save_sources_config(data: SourcesCatalogConfig, config_dir: Path | str = "co
     _atomic_write_yaml(target_file, data.model_dump(mode="json"))
     logger.info("Saved sources catalog configuration to %s", target_file)
     return target_file
-
-

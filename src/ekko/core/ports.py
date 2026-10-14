@@ -1,16 +1,12 @@
 """Abstract ports (interfaces) defining inbound and outbound domain boundaries."""
 
-from collections.abc import AsyncIterator
 from typing import Any, Protocol, runtime_checkable
-from ekko.core.events import TokenChunk
 from ekko.core.models import (
     KnowledgeNote,
     Message,
     ModelResponse,
     RawSignal,
     SignalStatus,
-    ToolCall,
-    ToolResult,
 )
 
 
@@ -21,28 +17,10 @@ class LLMProviderPort(Protocol):
     async def generate(
         self,
         messages: list[Message],
-        tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> ModelResponse:
         """Generate a response from the underlying LLM provider."""
         ...
-
-
-@runtime_checkable
-class StreamingLLMProviderPort(LLMProviderPort, Protocol):
-    """Optional port extending LLMProviderPort with real-time streaming capabilities."""
-
-    async def generate_stream(
-        self,
-        messages: list[Message],
-        tools: list[dict[str, Any]] | None = None,
-        **kwargs: Any,
-    ) -> AsyncIterator[TokenChunk | ToolCall]:
-        """Stream normalized response chunks and tool calls from the underlying LLM provider."""
-        ...
-
-
-
 
 
 @runtime_checkable
