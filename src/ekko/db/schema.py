@@ -1,6 +1,6 @@
 """SQLite unified schema definitions and migrations for Ekko V2."""
 
-from ekko.db.embedder import EMBEDDING_DIM
+from ekko.providers.embedder import EMBEDDING_DIM
 
 INIT_UNIFIED_SCHEMA_SQL = f"""
 PRAGMA journal_mode = WAL;

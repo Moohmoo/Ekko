@@ -7,7 +7,7 @@ from fastembed import TextEmbedding
 
 from ekko.core.logger import get_logger
 
-logger = get_logger("db.embedder")
+logger = get_logger("providers.embedder")
 
 DEFAULT_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 EMBEDDING_DIM = 384

@@ -5,7 +5,7 @@ import pytest
 
 from ekko.core.errors import EkkoError, ProviderError
 from ekko.daemon.resources import ResourceManager, ResourceManagerPort
-from ekko.db.embedder import EmbedderPort, TextEmbedder
+from ekko.providers.embedder import EmbedderPort, TextEmbedder
 from ekko.providers.base import LLMProvider, Message, ModelResponse
 
 

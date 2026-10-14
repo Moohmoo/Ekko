@@ -9,7 +9,7 @@ from typing import Any
 from ekko.daemon.resources import ResourceManager
 from ekko.daemon.scheduler import IngestionCoordinator
 from ekko.daemon.server import DEFAULT_SOCKET_PATH, IPCServer
-from ekko.db.embedder import TextEmbedder
+from ekko.providers.embedder import TextEmbedder
 from ekko.db.manager import DatabaseManager
 from ekko.domains.ingestion.distiller import SignalDistiller
 from ekko.core.logger import get_logger, setup_logger

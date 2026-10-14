@@ -10,8 +10,13 @@ import re
 from ekko.core.errors import DistillationError
 from ekko.core.logger import get_logger
 from ekko.daemon.resources import ResourceManagerPort
-from ekko.db.embedder import EmbedderPort
-from ekko.db.formatters import determine_unique_path, format_markdown_note, normalize_tag, slugify
+from ekko.providers.embedder import EmbedderPort
+from ekko.domains.ingestion.processing.formatters import (
+    determine_unique_path,
+    format_markdown_note,
+    normalize_tag,
+    slugify,
+)
 from ekko.domains.buffer.entities import KnowledgeNote
 from ekko.domains.ingestion.processing.compressor import ContentCompressor, ModelProfile
 from ekko.domains.ingestion.processing.extractors import extract_text_from_file

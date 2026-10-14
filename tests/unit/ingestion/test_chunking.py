@@ -1,6 +1,6 @@
 """Unit tests for semantic hierarchical Markdown chunking."""
 
-from ekko.db.chunking import chunk_markdown
+from ekko.domains.ingestion.processing.chunking import chunk_markdown
 
 
 def test_chunk_markdown_empty_and_whitespace() -> None:
