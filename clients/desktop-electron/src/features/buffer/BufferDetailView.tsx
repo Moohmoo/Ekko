@@ -88,33 +88,33 @@ export const BufferDetailView: React.FC<BufferDetailViewProps> = ({
         <button
           onClick={onBack}
           className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-sky-300 hover:bg-white/[0.06] transition-colors"
-          title="Retour à la liste (Échap)"
+          title="Back to list (Esc)"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Retour</span>
+          <span>Back</span>
         </button>
 
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleCopyMarkdown}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white/[0.05] hover:bg-white/10 text-slate-300 hover:text-white transition-colors border border-white/5"
-            title="Copier la fiche complète en Markdown"
+            title="Copy note in Markdown"
           >
             {copied ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Copié !</span>
+                <span className="text-emerald-400">Copied!</span>
               </>
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5" />
-                <span>Copier MD</span>
+                <span>Copy MD</span>
               </>
             )}
           </button>
 
           <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-white/5 font-mono text-[9.5px] text-slate-500 border border-white/5">
-            Échap
+            Esc
           </span>
         </div>
       </div>
@@ -152,7 +152,7 @@ export const BufferDetailView: React.FC<BufferDetailViewProps> = ({
 
             {note.score !== undefined && (
               <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 text-[10px] font-mono">
-                ✦ hybride
+                ✦ hybrid
               </span>
             )}
           </div>
@@ -174,7 +174,7 @@ export const BufferDetailView: React.FC<BufferDetailViewProps> = ({
                     }
                   }}
                   className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-sky-500/20 text-slate-400 hover:text-sky-200 transition-colors text-[10px] font-medium"
-                  title={`Filtrer par #${norm}`}
+                  title={`Filter by #${norm}`}
                 >
                   #{norm}
                 </button>

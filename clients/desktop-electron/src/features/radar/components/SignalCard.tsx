@@ -38,7 +38,7 @@ export const SignalCard: React.FC<SignalCardProps> = ({
         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300">
           <Zap className="w-3 h-3 text-amber-400" />
           <span className="text-[10px] font-semibold tracking-wide uppercase">
-            {totalCount > 1 ? `Angle mort ${index + 1} / ${totalCount}` : 'Angle mort identifié'}
+            {totalCount > 1 ? `Blindspot ${index + 1} / ${totalCount}` : 'Blindspot detected'}
           </span>
         </div>
         <span className="text-[10px] text-amber-400/80 font-medium truncate max-w-[130px] uppercase tracking-wider">
@@ -64,20 +64,20 @@ export const SignalCard: React.FC<SignalCardProps> = ({
           onClick={onDismiss}
           disabled={isResolving}
           className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors text-xs font-medium cursor-pointer"
-          title="Écarter ce signal"
+          title="Dismiss signal"
         >
           <X className="w-3.5 h-3.5" />
-          <span>Écarter</span>
+          <span>Dismiss</span>
         </button>
 
         <button
           onClick={onArchive}
           disabled={isResolving}
           className="flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-all text-xs font-semibold shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
-          title="Conserver et archiver dans le Buffer PKM"
+          title="Archive into PKM buffer"
         >
           <Check className="w-3.5 h-3.5 text-amber-400" />
-          <span>Archiver</span>
+          <span>Archive</span>
         </button>
       </div>
     </div>

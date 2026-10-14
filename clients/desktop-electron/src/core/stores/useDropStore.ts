@@ -120,12 +120,12 @@ export const useDropStore = create<DropState>((set, get) => ({
 
       // Handle guardrails responses
       if (res && res.status === 'already_exists') {
-        get().setError('Document déjà indexé dans le coffre');
+        get().setError('Document already indexed in vault');
         return false;
       }
 
       if (res && res.status === 'rejected') {
-        const msg = res.reason === 'file_too_large' ? 'Fichier trop volumineux · 25 Mo max' : (res.message || 'Fichier rejeté');
+        const msg = res.reason === 'file_too_large' ? 'File too large · 25 MB max' : (res.message || 'File rejected');
         get().setError(msg);
         return false;
       }
@@ -150,20 +150,20 @@ export const useDropStore = create<DropState>((set, get) => ({
       // detects the persisted note in SQLite.
       return true;
     } catch (err: unknown) {
-      console.error('[DropStore:Error] Erreur complète ingestion:', err);
+      console.error('[DropStore:Error] Full ingestion error:', err);
       const rawMsg = (err as Error).message || '';
-      let userMsg = "Erreur lors de l'assimilation du document";
+      let userMsg = 'Error assimilating document';
 
-      if (rawMsg.includes('Fichier introuvable') || rawMsg.includes('ENOENT')) {
-        userMsg = 'Fichier introuvable sur le disque';
-      } else if (rawMsg.includes('Fichier illisible') || rawMsg.includes('Permission') || rawMsg.includes('EACCES')) {
-        userMsg = 'Fichier illisible sur le disque';
-      } else if (rawMsg.includes('Format non supporté')) {
-        userMsg = 'Format non supporté · PDF, MD ou TXT uniquement';
-      } else if (rawMsg.includes('aucun texte extractible')) {
-        userMsg = 'Aucun texte extractible dans ce document';
-      } else if (rawMsg.includes('ECONNREFUSED') || rawMsg.includes('Liaison')) {
-        userMsg = 'Daemon Ekko hors ligne';
+      if (rawMsg.includes('Fichier introuvable') || rawMsg.includes('ENOENT') || rawMsg.includes('File not found')) {
+        userMsg = 'File not found on disk';
+      } else if (rawMsg.includes('Fichier illisible') || rawMsg.includes('Permission') || rawMsg.includes('EACCES') || rawMsg.includes('unreadable')) {
+        userMsg = 'File unreadable on disk';
+      } else if (rawMsg.includes('Format non supporté') || rawMsg.includes('unsupported format')) {
+        userMsg = 'Unsupported format · PDF, MD, or TXT only';
+      } else if (rawMsg.includes('aucun texte extractible') || rawMsg.includes('no extractable text')) {
+        userMsg = 'No extractable text in this document';
+      } else if (rawMsg.includes('ECONNREFUSED') || rawMsg.includes('Liaison') || rawMsg.includes('offline')) {
+        userMsg = 'Ekko daemon offline';
       }
 
       playErrorThud();
@@ -171,7 +171,7 @@ export const useDropStore = create<DropState>((set, get) => ({
         dropStatus: 'error',
         fileName: null,
         mascotEmotion: 'error',
-        statusMessage: 'Erreur assimilation',
+        statusMessage: 'Assimilation error',
         errorMessage: userMsg,
         pendingFilePath: null,
         baselineNoteId: null,
@@ -183,7 +183,7 @@ export const useDropStore = create<DropState>((set, get) => ({
           set({
             dropStatus: 'idle',
             mascotEmotion: 'idle',
-            statusMessage: 'Tampon actif',
+            statusMessage: 'Buffer active',
             errorMessage: null,
           });
         }
@@ -196,14 +196,14 @@ export const useDropStore = create<DropState>((set, get) => ({
   ingestUrlInPlace: async (url: string) => {
     const trimmed = url.trim();
     if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-      get().setError('Format non supporté · URL http:// ou https:// uniquement');
+      get().setError('Unsupported format · http:// or https:// URL only');
       return false;
     }
 
-    let host = 'lien web';
+    let host = 'web link';
     try {
       const parsed = new URL(trimmed);
-      host = parsed.hostname || 'lien web';
+      host = parsed.hostname || 'web link';
     } catch {
       // ignore
     }
@@ -216,7 +216,7 @@ export const useDropStore = create<DropState>((set, get) => ({
       dropStatus: 'processing',
       fileName: host,
       mascotEmotion: 'ingesting',
-      statusMessage: `Distillation de ${host} en arrière-plan...`,
+      statusMessage: `Distilling ${host} in background...`,
       errorMessage: null,
       pendingFilePath: trimmed,
       baselineNoteId,
@@ -225,14 +225,14 @@ export const useDropStore = create<DropState>((set, get) => ({
 
     try {
       if (!window.ekkoAPI?.ingestUrl) {
-        throw new Error('IPC non disponible');
+        throw new Error('IPC unavailable');
       }
 
       const res = await window.ekkoAPI.ingestUrl(trimmed);
 
       // Handle guardrails responses
       if (res && res.status === 'already_exists') {
-        get().setError('Lien web déjà indexé dans le coffre');
+        get().setError('Web link already indexed in vault');
         return false;
       }
 
@@ -253,16 +253,16 @@ export const useDropStore = create<DropState>((set, get) => ({
       // Drop & Forget: request accepted by daemon (<50ms).
       return true;
     } catch (err: unknown) {
-      console.error('[DropStore:Error] Erreur complète ingestion URL:', err);
+      console.error('[DropStore:Error] Full URL ingestion error:', err);
       const rawMsg = (err as Error).message || '';
-      let userMsg = "Erreur lors de l'assimilation du lien web";
+      let userMsg = 'Error assimilating web link';
 
-      if (rawMsg.includes('Format') || rawMsg.includes('invalide')) {
-        userMsg = 'Format d’URL invalide';
+      if (rawMsg.includes('Format') || rawMsg.includes('invalide') || rawMsg.includes('invalid')) {
+        userMsg = 'Invalid URL format';
       } else if (rawMsg.includes('SSRF') || rawMsg.includes('Security')) {
-        userMsg = 'Accès URL refusé (sécurité réseau)';
-      } else if (rawMsg.includes('ECONNREFUSED') || rawMsg.includes('Liaison')) {
-        userMsg = 'Daemon Ekko hors ligne';
+        userMsg = 'URL access denied (network security)';
+      } else if (rawMsg.includes('ECONNREFUSED') || rawMsg.includes('Liaison') || rawMsg.includes('offline')) {
+        userMsg = 'Ekko daemon offline';
       }
 
       playErrorThud();
@@ -270,7 +270,7 @@ export const useDropStore = create<DropState>((set, get) => ({
         dropStatus: 'error',
         fileName: null,
         mascotEmotion: 'error',
-        statusMessage: 'Erreur assimilation',
+        statusMessage: 'Assimilation error',
         errorMessage: userMsg,
         pendingFilePath: null,
         baselineNoteId: null,
@@ -282,7 +282,7 @@ export const useDropStore = create<DropState>((set, get) => ({
           set({
             dropStatus: 'idle',
             mascotEmotion: 'idle',
-            statusMessage: 'Tampon actif',
+            statusMessage: 'Buffer active',
             errorMessage: null,
           });
         }
@@ -297,7 +297,7 @@ export const useDropStore = create<DropState>((set, get) => ({
     set({
       dropStatus: 'ready',
       mascotEmotion: 'ready',
-      statusMessage: 'Document absorbé dans le tampon cognitif ✓',
+      statusMessage: 'Document absorbed into cognitive buffer ✓',
       pendingFilePath: null,
       baselineNoteId: null,
       baselineNotesCount: 0,
@@ -310,7 +310,7 @@ export const useDropStore = create<DropState>((set, get) => ({
           dropStatus: 'idle',
           fileName: null,
           mascotEmotion: 'idle',
-          statusMessage: 'Tampon actif',
+          statusMessage: 'Buffer active',
         });
       }
     }, 2000);
@@ -321,7 +321,7 @@ export const useDropStore = create<DropState>((set, get) => ({
       dropStatus: 'idle',
       fileName: null,
       mascotEmotion: 'idle',
-      statusMessage: 'Tampon actif',
+      statusMessage: 'Buffer active',
       errorMessage: null,
       pendingFilePath: null,
       baselineNoteId: null,

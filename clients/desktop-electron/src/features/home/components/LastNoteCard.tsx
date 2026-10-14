@@ -22,10 +22,10 @@ export const LastNoteCard: React.FC<LastNoteCardProps> = ({ title, onClick }) =>
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-[9px] text-slate-500 font-medium uppercase tracking-wider">
-            Dernière fiche
+            Latest Note
           </span>
           <p className="text-xs text-slate-200 font-medium truncate">
-            {title || 'Tampon cognitif vide'}
+            {title || 'Empty cognitive buffer'}
           </p>
         </div>
       </div>

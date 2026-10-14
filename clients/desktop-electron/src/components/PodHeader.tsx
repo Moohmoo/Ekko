@@ -54,7 +54,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
               ? SURFACES.headerTabActive
               : SURFACES.headerTabInactive
           }`}
-          title="Accueil (Bento)"
+          title="Home"
         >
           <Droplet size={15} />
         </button>
@@ -67,7 +67,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
               ? SURFACES.headerTabActive
               : SURFACES.headerTabInactive
           }`}
-          title="Radar (Veille & Signaux)"
+          title="Radar"
         >
           <Radio size={15} />
           {signalCount > 0 && (
@@ -75,7 +75,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           )}
         </button>
 
-        {/* 3. Buffer Tab (In-transit notes & search) - title matches Playwright E2E locator */}
+        {/* 3. Buffer Tab (In-transit notes & search) */}
         <button
           onClick={() => handleTabClick('buffer')}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
@@ -83,7 +83,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
               ? SURFACES.headerTabActive
               : SURFACES.headerTabInactive
           }`}
-          title="Écho (Fiches PKM)"
+          title="Buffer"
         >
           <Layers size={15} />
         </button>
@@ -98,7 +98,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
               ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
               : 'bg-rose-500/80 shadow-[0_0_6px_rgba(244,63,94,0.3)]'
           }`}
-          title={isOnline ? 'Daemon connecté' : 'Daemon déconnecté'}
+          title={isOnline ? 'Daemon connected' : 'Daemon offline'}
         />
 
         {/* 2. Settings Button */}
@@ -109,7 +109,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
               ? SURFACES.headerTabActive
               : SURFACES.headerTabInactive
           }`}
-          title="Réglages & Télémétrie"
+          title="Settings"
         >
           <Settings size={15} />
         </button>
@@ -118,7 +118,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
         <button
           onClick={toggleMute}
           className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-colors"
-          title={isMuted ? 'Activer le son' : 'Couper le son'}
+          title={isMuted ? 'Unmute' : 'Mute'}
         >
           {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
         </button>
@@ -127,7 +127,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
         <button
           onClick={handleClose}
           className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors"
-          title="Fermer"
+          title="Close"
         >
           <X size={15} />
         </button>

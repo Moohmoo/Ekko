@@ -201,67 +201,67 @@ export const DropZone: React.FC<DropZoneProps> = ({
       />
 
       {dropStatus === 'hover' ? (
-        /* État 2 : Au survol de fichier */
+        /* State 2 : On drag-over */
         <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneHover} flex flex-col items-center justify-center gap-1.5 text-center select-none transition-all`}>
           <UploadCloud className="w-7 h-7 text-sky-300 animate-bounce" />
           <span className="text-xs font-semibold text-sky-200">
-            Relâcher pour absorber
+            Release to absorb
           </span>
           <span className="text-[10px] text-sky-400/70">
-            PDF, notes Markdown ou texte brut (.txt)
+            PDF, Markdown notes, or plain text (.txt)
           </span>
         </div>
       ) : dropStatus === 'processing' || isIngesting ? (
-        /* État 3 : En cours de distillation (async) */
+        /* State 3 : Active distillation */
         <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneProcessing} flex flex-col items-center justify-center gap-2 text-center p-3 relative select-none pointer-events-none`}>
           <div className="absolute inset-0 bg-sky-400/[0.03] animate-pulse rounded-xl pointer-events-none" />
           <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
           <div className="flex flex-col z-10 max-w-[280px]">
             <span className="text-xs text-slate-200 font-medium">
-              {fileName ? `Distillation de ${truncateMiddle(fileName, 20)} en cours...` : 'Ingestion en cours...'}
+              {fileName ? `Distilling ${truncateMiddle(fileName, 20)}...` : 'Ingesting...'}
             </span>
             <span className="text-[10px] text-sky-400/80 mt-0.5 animate-pulse">
-              Extraction et synthèse cognitives
+              Cognitive extraction & distillation
             </span>
           </div>
         </div>
       ) : dropStatus === 'ready' ? (
-        /* État 4 : Succès réel */
+        /* State 4 : Success */
         <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneReady} flex flex-col items-center justify-center gap-1.5 text-center p-3 select-none`}>
           <CheckCircle2 className="w-6 h-6 text-emerald-400" />
           <span className="text-xs text-emerald-300 font-semibold">
-            Document absorbé dans le tampon cognitif ✓
+            Document absorbed into cognitive buffer ✓
           </span>
         </div>
       ) : dropStatus === 'error' ? (
-        /* État 5 : Erreur */
+        /* State 5 : Error */
         <div className={`w-full h-full rounded-xl ${SURFACES.dropzoneError} flex flex-col items-center justify-center gap-1 text-center p-3 select-none`}>
           <AlertCircle className="w-5 h-5 text-red-400 mb-0.5" />
           <span className="text-[11px] text-red-300 font-semibold">
-            {errorMessage || 'Format non supporté'}
+            {errorMessage || 'Unsupported format'}
           </span>
           <span className="text-[9px] text-slate-400">
-            PDF, Markdown (.md) ou texte brut (.txt) uniquement
+            PDF, Markdown (.md), or plain text (.txt) only
           </span>
         </div>
       ) : (
-        /* État 1 : Au repos (Split 65/35) */
+        /* State 1 : Idle (Split 65/35) */
         <div className="w-full h-full flex flex-col gap-2">
-          {/* Partie supérieure (~65 %) : invitation au drop */}
+          {/* Top part (~65 %) : Drop invitation */}
           <div
             onClick={handleBrowseFile}
             className={`flex-[0.65] rounded-xl flex flex-col items-center justify-center gap-1 text-center p-2 transition-colors cursor-pointer select-none ${SURFACES.dropzoneIdle}`}
           >
             <UploadCloud className="w-5 h-5 text-sky-400/70 mb-0.5 transition-colors" />
             <span className="text-xs font-semibold text-slate-200">
-              Glisser un document ou une URL
+              Drop a file or paste URL
             </span>
             <span className="text-[10px] text-slate-400">
-              PDF, notes Markdown, articles web (in-place)
+              PDF, Markdown notes, web articles (in-place)
             </span>
           </div>
 
-          {/* Partie inférieure (~35 %) : dernière fiche */}
+          {/* Bottom part (~35 %) : latest note */}
           <LastNoteCard
             title={latestNoteTitle}
             onClick={onNavigateBuffer}

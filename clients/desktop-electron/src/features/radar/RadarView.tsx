@@ -37,7 +37,7 @@ export const RadarView: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <h2 className="text-xs font-semibold text-slate-100">
-              Radar de Veille & Ruptures
+              Radar Watch & Signals
             </h2>
             {totalCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-amber-400/15 border border-amber-400/25 text-amber-300 text-[10px] font-mono font-medium">
@@ -53,9 +53,9 @@ export const RadarView: React.FC = () => {
               onClick={() => resolveAll('discard')}
               disabled={isResolving}
               className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer"
-              title="Écarter tous les signaux en attente"
+              title="Dismiss all pending signals"
             >
-              Tout écarter ({totalCount})
+              Dismiss all ({totalCount})
             </button>
           )}
 
@@ -63,7 +63,7 @@ export const RadarView: React.FC = () => {
             onClick={() => fetchPendingSignals()}
             disabled={isLoading}
             className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-400 hover:text-sky-300 disabled:opacity-40 transition-colors"
-            title="Rafraîchir les signaux"
+            title="Refresh signals"
           >
             <RotateCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-sky-400' : ''}`} />
           </button>
@@ -101,10 +101,10 @@ export const RadarView: React.FC = () => {
             >
               <CheckCircle2 className="w-8 h-8 text-emerald-400/80 mb-1" />
               <span className="text-xs font-semibold text-slate-200">
-                Veille à jour · Aucun angle mort détecté
+                Radar up to date · No blindspots detected
               </span>
               <p className="text-[10px] text-slate-400 max-w-[280px]">
-                Le daemon scanne vos sources en arrière-plan et vous alertera dès l'apparition de nouveaux signaux.
+                The daemon scans your sources in the background and will alert you when new signals emerge.
               </p>
             </motion.div>
           )}

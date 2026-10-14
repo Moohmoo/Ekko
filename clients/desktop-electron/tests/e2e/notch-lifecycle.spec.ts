@@ -42,7 +42,7 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
     expect(initialBounds!.width).toBe(660);
 
     // Cliquer sur le bouton d'onglet Écho (icône éclair Zap)
-    const echoTabButton = page.locator('button[title="Écho (Fiches PKM)"]');
+    const echoTabButton = page.locator('button[title="Buffer"]');
     await echoTabButton.click();
 
     // Attendre que la hauteur s'étende à 460px
@@ -55,7 +55,7 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
     }, { timeout: 5000 }).toBe(460);
 
     // Cliquer sur le bouton d'onglet Accueil (icône goutte)
-    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
+    const homeTabButton = page.locator('button[title="Home"]');
     await homeTabButton.click();
 
     // Vérifier que la hauteur redescend immédiatement et strictement à 230px
@@ -115,7 +115,7 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
 
   test('3. Test Neutralité Géométrique Mascotte (Zéro écrasement résiduel)', async () => {
     // Passer sur l'onglet Accueil si on est en transition welcome
-    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
+    const homeTabButton = page.locator('button[title="Home"]');
     await homeTabButton.click();
 
     // Attendre que le corps de la mascotte soit présent dans le DOM
@@ -161,7 +161,7 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
 
   test('4. Test Continuité du Regard sur PodHeader', async () => {
     // S'assurer d'être sur l'onglet Accueil
-    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
+    const homeTabButton = page.locator('button[title="Home"]');
     await homeTabButton.click();
 
     await page.waitForSelector('#mascot-body', { state: 'visible' });
@@ -183,7 +183,7 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
 
   test('5. Test Stabilité et Fluidité Framerate (Zéro Long Task & Zéro Re-render Parasite)', async () => {
     // S'assurer d'être sur l'onglet Accueil
-    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
+    const homeTabButton = page.locator('button[title="Home"]');
     await homeTabButton.click();
 
     await page.waitForSelector('#mascot-body', { state: 'visible' });
@@ -233,8 +233,8 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
   });
 
   test('6. Stress Test de Clics Rapides (Anti-Race Condition Géométrique)', async () => {
-    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
-    const echoTabButton = page.locator('button[title="Écho (Fiches PKM)"]');
+    const homeTabButton = page.locator('button[title="Home"]');
+    const echoTabButton = page.locator('button[title="Buffer"]');
 
     // Alterner 15 clics rapides consécutifs avec un intervalle de 60ms
     for (let i = 0; i < 15; i++) {
@@ -263,8 +263,8 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
   });
 
   test('7. Soak Test & Détection de Fuites Mémoire (Stabilité du Heap JS)', async () => {
-    const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
-    const echoTabButton = page.locator('button[title="Écho (Fiches PKM)"]');
+    const homeTabButton = page.locator('button[title="Home"]');
+    const echoTabButton = page.locator('button[title="Buffer"]');
 
     await homeTabButton.click();
     await page.waitForTimeout(300);

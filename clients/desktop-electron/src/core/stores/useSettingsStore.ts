@@ -34,7 +34,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   fetchSettings: async () => {
     if (!window.ekkoAPI?.getSystemSettings) {
-      set({ error: 'IPC API getSystemSettings non disponible.' });
+      set({ error: 'IPC API getSystemSettings unavailable.' });
       return;
     }
 
@@ -52,7 +52,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         });
       }
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Échec de récupération des réglages';
+      const msg = (err as Error)?.message || 'Failed to fetch settings';
       console.error('[SettingsStore] fetchSettings failed:', msg);
       set({ error: msg });
     } finally {
@@ -62,14 +62,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   saveUserContext: async (newContext: Partial<UserContextConfig>) => {
     if (!window.ekkoAPI?.updateUserContext) {
-      set({ error: 'IPC API updateUserContext non disponible.' });
+      set({ error: 'IPC API updateUserContext unavailable.' });
       return false;
     }
 
     set({ isSaving: true, error: null });
     try {
       const current = get().userContext || {
-        preferred_language: 'fr',
+        preferred_language: 'en',
         preferences: [],
       };
       const merged: UserContextConfig = {
@@ -91,7 +91,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
       return false;
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Échec de sauvegarde du profil utilisateur';
+      const msg = (err as Error)?.message || 'Failed to save user context';
       console.error('[SettingsStore] saveUserContext failed:', msg);
       set({ error: msg });
       return false;
@@ -102,7 +102,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   toggleSource: async (sourceId: string) => {
     if (!window.ekkoAPI?.updateSources) {
-      set({ error: 'IPC API updateSources non disponible.' });
+      set({ error: 'IPC API updateSources unavailable.' });
       return false;
     }
 
@@ -129,7 +129,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }));
       return true;
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Échec de mise à jour des sources';
+      const msg = (err as Error)?.message || 'Failed to update sources';
       console.error('[SettingsStore] toggleSource failed:', msg);
       set({ error: msg });
       return false;
@@ -140,14 +140,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   addRssSource: async (id: string, url: string, interval: string = '1h') => {
     if (!window.ekkoAPI?.updateSources) {
-      set({ error: 'IPC API updateSources non disponible.' });
+      set({ error: 'IPC API updateSources unavailable.' });
       return false;
     }
 
     const cleanId = id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
     const cleanUrl = url.trim();
     if (!cleanId || !cleanUrl) {
-      set({ error: 'ID et URL requis pour ajouter un flux.' });
+      set({ error: 'ID and URL are required to add a feed.' });
       return false;
     }
 
@@ -155,7 +155,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const currentSources = get().sources;
       if (currentSources.some((s) => s.id === cleanId)) {
-        set({ error: `Une source avec l'identifiant '${cleanId}' existe déjà.` });
+        set({ error: `A source with id '${cleanId}' already exists.` });
         return false;
       }
 
@@ -180,7 +180,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }));
       return true;
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || "Échec d'ajout de la source RSS";
+      const msg = (err as Error)?.message || 'Failed to add RSS source';
       console.error('[SettingsStore] addRssSource failed:', msg);
       set({ error: msg });
       return false;
@@ -191,7 +191,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   removeSource: async (sourceId: string) => {
     if (!window.ekkoAPI?.updateSources) {
-      set({ error: 'IPC API updateSources non disponible.' });
+      set({ error: 'IPC API updateSources unavailable.' });
       return false;
     }
 
@@ -211,7 +211,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }));
       return true;
     } catch (err: unknown) {
-      const msg = (err as Error)?.message || 'Échec de suppression de la source';
+      const msg = (err as Error)?.message || 'Failed to remove source';
       console.error('[SettingsStore] removeSource failed:', msg);
       set({ error: msg });
       return false;

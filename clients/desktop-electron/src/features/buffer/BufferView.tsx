@@ -99,7 +99,7 @@ export const BufferView: React.FC<BufferViewProps> = () => {
             {isOffline && (
               <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] shrink-0">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                <span className="truncate">Daemon déconnecté · Affichage hors-ligne (données en cache)</span>
+                <span className="truncate">Daemon disconnected · Offline view (cached data)</span>
               </div>
             )}
 
@@ -111,14 +111,14 @@ export const BufferView: React.FC<BufferViewProps> = () => {
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Rechercher une note, une idée..."
+                  placeholder="Search notes, ideas..."
                   className="w-full pl-8 pr-7 py-1.5 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-500/50 focus:bg-white/[0.06] transition-colors"
                 />
                 {searchInput && (
                   <button
                     onClick={handleClearSearch}
                     className="absolute right-2 p-0.5 rounded text-slate-400 hover:text-slate-200 transition-colors"
-                    title="Effacer la recherche"
+                    title="Clear search"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -130,7 +130,7 @@ export const BufferView: React.FC<BufferViewProps> = () => {
                 onClick={() => refresh()}
                 disabled={isManualRefreshing}
                 className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-400 hover:text-sky-300 disabled:opacity-40 transition-colors shrink-0"
-                title="Actualiser la liste (conserve la recherche en cours)"
+                title="Refresh list (preserves active search)"
               >
                 <RotateCw className={`w-3.5 h-3.5 ${isManualRefreshing ? 'animate-spin text-sky-400' : ''}`} />
               </button>
@@ -140,12 +140,12 @@ export const BufferView: React.FC<BufferViewProps> = () => {
             <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 shrink-0">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span>
-                  {displayedNotes.length} {displayedNotes.length > 1 ? 'fiches' : 'fiche'}
+                  {displayedNotes.length} {displayedNotes.length > 1 ? 'notes' : 'note'}
                 </span>
                 {isSearchActive && (
                   <span className="flex items-center gap-1 text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded-md border border-sky-500/20">
                     <Sparkles className="w-3 h-3" />
-                    <span>hybride</span>
+                    <span>hybrid</span>
                   </span>
                 )}
                 {selectedTag && (
@@ -155,7 +155,7 @@ export const BufferView: React.FC<BufferViewProps> = () => {
                     <button
                       onClick={handleClearTag}
                       className="hover:text-white transition-colors ml-0.5"
-                      title="Effacer le filtre par tag"
+                      title="Clear tag filter"
                     >
                       <X className="w-2.5 h-2.5" />
                     </button>
@@ -171,8 +171,8 @@ export const BufferView: React.FC<BufferViewProps> = () => {
                   <Layers className="w-8 h-8 text-slate-600" />
                   <p className="text-xs">
                     {isSearchActive || selectedTag
-                      ? 'Aucune fiche ne correspond à votre filtre'
-                      : 'Aucun document absorbé dans le tampon'}
+                      ? 'No notes match your filter'
+                      : 'No notes in buffer yet'}
                   </p>
                   {(isSearchActive || selectedTag) && (
                     <button
@@ -182,7 +182,7 @@ export const BufferView: React.FC<BufferViewProps> = () => {
                       }}
                       className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
                     >
-                      Réinitialiser les filtres
+                      Reset filters
                     </button>
                   )}
                 </div>
@@ -206,7 +206,7 @@ export const BufferView: React.FC<BufferViewProps> = () => {
                         <button
                           onClick={(e) => handleCopy(e, note)}
                           className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-all shrink-0"
-                          title="Copier en Markdown Obsidian"
+                          title="Copy Obsidian Markdown"
                         >
                           {copiedId === note.id ? (
                             <Check className="w-3.5 h-3.5 text-emerald-400" />
