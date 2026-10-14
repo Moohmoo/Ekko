@@ -41,7 +41,7 @@ def test_load_user_context_missing_generates_example(tmp_path: Path) -> None:
     example_file = tmp_path / "user_context.yaml.example"
     assert example_file.exists()
     content = example_file.read_text(encoding="utf-8")
-    assert "user_name" in content
+    assert "language" in content
 
 
 def test_save_user_context_atomic(tmp_path: Path) -> None:

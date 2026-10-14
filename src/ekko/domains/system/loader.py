@@ -43,13 +43,12 @@ def load_user_context(config_dir: Path | str) -> UserContextConfig:
         return UserContextConfig.model_validate(data)
 
     template = (
-        "# User context profile (copy to user_context.yaml and adjust)\n"
-        "user_name: Alice\n"
-        "preferred_language: fr\n"
-        "preferences:\n"
-        "  - Direct answers without pleasantries\n"
-        "  - Focus on code explanations\n"
-        "custom_instructions: null\n"
+        "# Profil utilisateur pour la veille et la distillation (copiez vers user_context.yaml)\n"
+        "language: fr\n"
+        "topics:\n"
+        "  - Intelligence artificielle et LLMs\n"
+        "  - Bio-informatique et modélisation moléculaire\n"
+        "  - Architecture logicielle et systèmes distribués\n"
     )
     _ensure_example_template(dir_path / "user_context.yaml.example", template)
     return UserContextConfig()
@@ -96,7 +95,7 @@ def save_user_context(data: UserContextConfig, config_dir: Path | str = "config"
     """Persist validated user context atomically into user_context.yaml."""
     dir_path = Path(config_dir)
     target_file = dir_path / "user_context.yaml"
-    _atomic_write_yaml(target_file, data.model_dump(mode="json"))
+    _atomic_write_yaml(target_file, data.model_dump(mode="json", exclude_none=True))
     logger.info("Saved user context configuration to %s", target_file)
     return target_file
 

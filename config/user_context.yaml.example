@@ -1,7 +1,7 @@
-# Profil utilisateur (copiez ce fichier vers user_context.yaml pour personnaliser)
-user_name: Alice
-preferred_language: fr
-preferences:
-  - Réponses directes et concises
-  - Focus sur le code propre et l'architecture logicielle
-custom_instructions: null
+# Profil utilisateur pour la veille et la distillation (copiez vers user_context.yaml)
+language: fr
+topics:
+  - "Intelligence artificielle (LLMs, agents autonomes, architectures d'inférence, open-weights)"
+  - "Bio-informatique et modélisation moléculaire"
+  - "Data engineering et régulation technologique (AI Act)"
+  - "Filtre de signal : retenir uniquement les ruptures réelles (nouveaux standards, papiers majeurs, avancées scientifiques). Ignorer le bruit marketing."

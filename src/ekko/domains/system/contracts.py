@@ -1,21 +1,41 @@
 """System domain IPC contracts for configuration, sources, and environment status."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserContextConfig(BaseModel):
-    """User-specific settings and preferences decoupled from source code."""
+    """User-specific settings and radar topics decoupled from source code."""
 
-    user_name: str | None = Field(default=None, description="Preferred user display name")
-    preferred_language: str = Field(default="fr", description="Primary interaction language")
-    preferences: list[str] = Field(
+    model_config = ConfigDict(populate_by_name=True)
+
+    language: str = Field(
+        default="fr",
+        validation_alias="preferred_language",
+        description="Primary interaction and distillation language",
+    )
+    topics: list[str] = Field(
         default_factory=list,
-        description="User habits, preferences, and environment facts",
+        validation_alias="preferences",
+        description="Priority topics and domains of interest for radar and distillation",
     )
-    custom_instructions: str | None = Field(
-        default=None,
-        description="Specific instructions provided by the user",
-    )
+    user_name: str | None = Field(default=None, description="Legacy optional display name (deprecated)")
+    custom_instructions: str | None = Field(default=None, description="Legacy optional instructions (deprecated)")
+
+    @property
+    def preferred_language(self) -> str:
+        return self.language
+
+    @property
+    def preferences(self) -> list[str]:
+        return self.topics
+
+    def model_dump(self, *args: object, **kwargs: object) -> dict[str, object]:
+        data = super().model_dump(*args, **kwargs)
+        if "language" in data and "preferred_language" not in data:
+            data["preferred_language"] = data["language"]
+        if "topics" in data and "preferences" not in data:
+            data["preferences"] = data["topics"]
+        return data
 
 
 class SourceConfig(BaseModel):

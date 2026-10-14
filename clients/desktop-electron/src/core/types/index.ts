@@ -50,9 +50,11 @@ export interface SearchNotesParams {
 }
 
 export interface UserContextConfig {
+  language?: 'fr' | 'en' | string;
+  preferred_language?: 'fr' | 'en' | string;
+  topics?: string[];
+  preferences?: string[];
   user_name?: string | null;
-  preferred_language: 'fr' | 'en' | string;
-  preferences: string[];
   custom_instructions?: string | null;
 }
 
