@@ -27,13 +27,13 @@ Le Pod abandonne les formats verticaux rigides au profit d'un format horizontal 
 ### 2.1 Dimensions Adaptatives
 - **Mode Compact (Welcome & Home) :** `620px` (largeur) × `230px` (hauteur).
   - Empreinte ultra-discrète, ancrée en périphérie visuelle sans encombrer l'espace de travail.
-- **Mode Étendu (Chat, Écho, Réglages) :** `620px` (largeur) × `460px` (hauteur).
-  - Déploiement fluide vers le bas pour accueillir le flux conversationnel, la liste des notes PKM ou la configuration.
+- **Mode Étendu (Radar, Buffer, Réglages) :** `620px` (largeur) × `460px` (hauteur).
+  - Déploiement fluide vers le bas pour accueillir le flux synthétisé du Radar, l'établi éphémère Buffer ou la configuration.
 
 ### 2.2 Conception à Double Coque Top-Docked & Scène Unique (Stage)
 - **Coque extérieure (Encoche / Îlot sommital) :**
-  - Fond noir absolu `#0c0c0e`.
-  - Ancrage sommital sans bordure ni courbure supérieure : `rounded-t-none rounded-b-[26px]`.
+  - Fond noir absolu `#000000` (fusion organique avec le panneau système GNOME).
+  - Ancrage sommital sans bordure ni courbure supérieure : `rounded-t-none rounded-b-[22px]`.
   - Bordures : `border-x border-b border-white/[0.08] border-t-0` (continuité absolue avec le bandeau supérieur de l'OS).
   - Ombre portée diffuse vers le bas `shadow-2xl` avec confinement transparent (`backgroundColor: '#00000000'`).
   - Padding extérieur : `10px` (`p-2.5`).
@@ -41,21 +41,23 @@ Le Pod abandonne les formats verticaux rigides au profit d'un format horizontal 
   - Fond unique `#141824` / `#161b26` surélevé et continu.
   - Rayon `rounded-2xl` (`16px`), bordure fine `border border-white/[0.08]` et ombre portée diffuse `shadow-inner`.
   - Hauteur calée sur l'espace disponible sous le header de 32 px (hauteur utile ~172 px en mode compact 230 px).
-  - **Réceptacle commun unique :** Toutes les vues (`Welcome`, `Home`, `Chat`, `Echo`, `Settings`) s'insèrent directement dans ce Stage. Proscription des sous-cartes opaques empilées.
+  - **Réceptacle commun unique :** Toutes les vues du triptyque (`Welcome`, `Home`, `Radar`, `Buffer`, `Settings`) s'insèrent directement dans ce Stage. Proscription des sous-cartes opaques empilées.
 
 ### 2.3 Bandeau Supérieur Permanent (Header Compact 32px)
 Hauteur fixe de `32px` (`h-8`) assurant la navigation rapide et le contrôle de l'application :
-- **À gauche (Navigation Principale) :**
+- **À gauche (Triptyque Officiel) :**
   - Icônes Lucide nettes de `15px` (`size={15}`) dans des boîtes de clic ergonomiques `28×28px` (`w-7 h-7 rounded-lg`).
   - Onglet actif : fond dépoli subtil `bg-white/[0.08] text-sky-400`.
   - Onglet inactif : `text-slate-400 hover:text-slate-200 hover:bg-white/[0.06]`.
-  - Accueil (💧) : vue principale Bento.
-  - Chat (💬) : dialogue direct et assistant ReAct.
-  - Écho (⚡) : consultation du flux des fiches distillées.
+  - **Accueil (💧) :** Sas d'entrée réflexe, mascotte sentinelle, zone Drop physique universel.
+  - **Radar (📡) :** Veille distillée en tâche de fond (3 à 5 faits saillants du jour, badges sources cliquables).
+  - **Buffer (⚡) :** Établi d'action éphémère (5 à 7 fiches récentes, export Markdown 1-clic ou drag .md, Inbox Zéro).
 - **À droite (Système & Contrôle) :**
-  - Réglages (⚙️) : panneau des veilleurs, profils BYOM et socket IPC.
+  - Réglages (⚙️) : panneau des sources, profils BYOM et statut socket IPC.
   - Pastille d'état réseau : diamètre discret de `6px` (`w-1.5 h-1.5`, `#10b981` connecté, `#ef4444` hors ligne).
   - Fermer (✕) : bouton de repli immédiat de la fenêtre (`w-7 h-7 rounded-lg`).
+
+> **Note de dépréciation :** L'ancien onglet Chat (💬) et la boucle ReAct conversationnelle sont dépréciés et seront élagués lors de la prochaine refactorisation au profit exclusif du triptyque Home-Radar-Buffer.
 
 ---
 

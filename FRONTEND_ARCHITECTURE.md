@@ -7,13 +7,13 @@ Ce document établit les principes d'ingénierie logicielle, l'organisation par 
 ## 1. Philosophie & Principes Directeurs
 - **Couplage lâche, contrat strict :** Le renderer React ne communique JAMAIS directement avec le système d'exploitation ou le réseau. Tout transit passe par le pont typé du Preload (`window.ekkoAPI`).
 - **Source de vérité unique (SSOT) :** Interdiction absolue de disperser les états réseau, de navigation ou de glisser-déposer dans des `useState` locaux disparates. Tout état partagé est centralisé dans des stores Zustand dédiés (`useDaemonStore`, `useDropStore`, `useEchoStore`, `useViewStore`).
-- **Sérénité cognitive & Absorption In-Place :** Le glisser-déposer d'un document ne vole jamais le focus et n'entraîne aucune redirection disruptive vers le chat. L'opération s'exécute silencieusement in-place sur sa tuile Bento dédiée.
+- **Sérénité cognitive & Absorption In-Place :** Le glisser-déposer d'un document ne vole jamais le focus et n'entraîne aucune redirection disruptive. L'opération s'exécute silencieusement in-place sur sa tuile Bento dédiée.
 - **Observabilité & Traçabilité :** Tout échange IPC ou socket UNIX doit être tracé avec des préfixes explicites (`[IPC:REQ]`, `[IPC:RES]`, `[IPC:ERR]`) pour faciliter le diagnostic sans outil intrusif.
 - **Zéro Mock :** L'interface doit refléter fidèlement l'état réel de l'infrastructure locale (`/tmp/ekko.sock`). En cas de déconnexion, l'UI bascule immédiatement en mode dégradé avec un feedback transparent pour l'utilisateur.
 
 ---
 
-## 2. Découpage par Couches
+## 2. Découpage par Couches & Triptyque Applicatif
 
 ```
 clients/desktop-electron/
@@ -25,16 +25,17 @@ clients/desktop-electron/
 │
 └── src/                              # COUCHE PRÉSENTATION & MÉTIER (React 19)
     ├── core/                         # Logique transverse & états globaux
-    │   ├── stores/                   # Stores Zustand (useDaemonStore, useDropStore, useEchoStore, useViewStore)
+    │   ├── stores/                   # Stores Zustand (useDaemonStore, useDropStore, useBufferStore, useViewStore)
     │   ├── hooks/                    # Hooks de cycle de vie (useDaemonHeartbeat, useWindowResize)
     │   └── types/                    # Définitions TypeScript canoniques
     ├── design-system/                # Design tokens & constantes d'animation (Framer Motion)
-    ├── features/                     # Modules fonctionnels découpés
+    ├── features/                     # Le Triptyque Officiel
     │   ├── welcome/                  # Amorce 1,8s & animation coucou mascotte
-    │   ├── home/                     # Grille Bento (Drop in-place, veilleurs, dernier écho, télémétrie)
-    │   ├── assistant/                # Chat, streaming ReAct & fil conversationnel
-    │   ├── echo/                     # Consultation détaillée des fiches PKM
-    │   └── settings/                 # Réglages, profils BYOM, état du daemon
+    │   ├── home/                     # HOME : Sas d'entrée réflexe (Drop universel, veilleurs, dernier écho)
+    │   ├── radar/                    # RADAR : Veille distillée (3-5 faits saillants du jour, badges cliquables)
+    │   ├── buffer/                   # BUFFER : Établi d'action éphémère (5-7 fiches, export Markdown, Inbox Zéro)
+    │   ├── settings/                 # Réglages : Sources déclaratives, profils BYOM, état daemon
+    │   └── assistant/                # [DÉPRÉCIÉ] Ancien chat ReAct — programmé pour élagage
     ├── components/                   # Composants UI partagés (Header, Badges, Tuiles)
     ├── App.tsx                       # Racine de composition & machine d'état des vues
     └── main.tsx                      # Point de montage DOM
@@ -70,7 +71,8 @@ clients/desktop-electron/
 L'état global de navigation est orchestré par un store dédié ou géré au niveau racine (`useViewStore`) :
 
 ```typescript
-export type ViewMode = 'welcome' | 'home' | 'chat' | 'echo' | 'settings';
+export type ViewMode = 'welcome' | 'home' | 'radar' | 'buffer' | 'settings';
+// Note : 'chat' et 'echo' sont conservés temporairement comme alias de transition dépréciés.
 ```
 
 ### 4.1 Séquence d'Amorce (Welcome Sequence)
@@ -81,14 +83,14 @@ export type ViewMode = 'welcome' | 'home' | 'chat' | 'echo' | 'settings';
 ### 4.2 Redimensionnement Dynamique de la Fenêtre
 Lors de tout changement de `viewMode`, l'application pilote de concert le conteneur React (via les transitions spring de Framer Motion) et la fenêtre native :
 - **Mode Compact (620×230 px) :** Activé pour `'welcome'` et `'home'`.
-- **Mode Étendu (620×460 px) :** Déclenché automatiquement lors de la sélection des onglets `'chat'`, `'echo'` ou `'settings'`.
+- **Mode Étendu (620×460 px) :** Déclenché automatiquement lors de la sélection des onglets `'radar'`, `'buffer'` (ou legacy `'chat'`, `'echo'`) ou `'settings'`.
 - La synchronisation s'effectue via l'appel IPC `window.ekkoAPI.resizeWindow(width, height)`.
 
 ---
 
 ## 5. Cycle de Vie "Drop & Forget" In-Place (`useDropStore`)
 
-Le glisser-déposer de fichiers ou documents respecte strictement la règle de non-disruption du flux utilisateur. Il est formellement interdit de rediriger l'utilisateur vers l'onglet Chat lors d'un drop.
+Le glisser-déposer de fichiers ou documents respecte strictement la règle de non-disruption du flux utilisateur (< 3 secondes). Il est formellement interdit d'ouvrir un modal intrusif ou de forcer un dialogue conversationnel lors d'un drop. Tout document brut (PDF, texte, markdown) ou lien RSS/Atom déposé est absorbé et distillé silencieusement vers le Staging Buffer.
 
 ### Machine d'État de la Tuile Drop
 ```
@@ -110,6 +112,6 @@ Le glisser-déposer de fichiers ou documents respecte strictement la règle de n
 Dans la vue Home, les 4 tuiles de la grille Bento sont connectées à des sources de vérité uniques et découplées :
 
 1. **Tuile Drop & Forget :** Connectée à `useDropStore` (gestion de la jauge et des étapes in-place).
-2. **Tuile Veilleurs :** Connectée à `useDaemonStore` (statut des connecteurs déclarés dans `sources.yaml` : arXiv, HackerNews, RSS).
-3. **Tuile Dernier Écho :** Connectée à `useEchoStore` (écoute du dernier item présent dans la base PKM `knowledge_notes`).
+2. **Tuile Radar / Veilleurs :** Connectée à `useDaemonStore` (statut des connecteurs déclarés dans `sources.yaml` : arXiv, HackerNews, flux RSS/Atom auto-détectés).
+3. **Tuile Dernier Item (Buffer) :** Connectée à `useBufferStore` / `useEchoStore` (écoute du dernier item capturé dans le staging buffer SQLite).
 4. **Tuile Télémétrie & Santé :** Connectée à `useDaemonStore` (affichage réactif de `vramUsageMb`, `niceness` et `isOnline`).
