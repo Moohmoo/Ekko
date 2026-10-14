@@ -3,16 +3,20 @@ import type { NoteItem } from '../../core/types';
 import { Copy, Check, ExternalLink, Calendar, Tag, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SPRING_SNAPPY } from '../../design-system/tokens';
-import { MarkdownRenderer } from './MarkdownRenderer';
+import { MarkdownRenderer } from './components/MarkdownRenderer';
 import { formatSourceDisplay, normalizeTag } from '../../core/utils/formatters';
 
-interface NoteDetailViewProps {
+interface BufferDetailViewProps {
   note: NoteItem;
   onBack: () => void;
   onSelectTag?: (tag: string) => void;
 }
 
-export const NoteDetailView: React.FC<NoteDetailViewProps> = ({
+/**
+ * Full-page reader for a single Buffer note with instant markdown copying,
+ * Obsidian link formatting, and external source navigation.
+ */
+export const BufferDetailView: React.FC<BufferDetailViewProps> = ({
   note,
   onBack,
   onSelectTag,
@@ -79,7 +83,7 @@ export const NoteDetailView: React.FC<NoteDetailViewProps> = ({
       transition={SPRING_SNAPPY}
       className="flex-1 flex flex-col h-full w-full min-h-0 select-none overflow-hidden"
     >
-      {/* 1. Header bar with seamless in-place back navigation (shrink-0) */}
+      {/* 1. Header bar with seamless in-place back navigation */}
       <div className="flex items-center justify-between pb-2.5 border-b border-white/[0.08] shrink-0">
         <button
           onClick={onBack}
@@ -115,7 +119,7 @@ export const NoteDetailView: React.FC<NoteDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Reader Body (flex-1 min-h-0 overflow-y-auto) */}
+      {/* 2. Reader Body */}
       <div className="flex-1 overflow-y-auto pr-1 py-3 space-y-3 min-h-0 text-xs">
         {/* Title & Metadata */}
         <div className="space-y-1.5">
@@ -179,7 +183,7 @@ export const NoteDetailView: React.FC<NoteDetailViewProps> = ({
           </div>
         )}
 
-        {/* Markdown Content (direct on surface background without redundant box) */}
+        {/* Markdown Content */}
         <div className="text-slate-300 text-xs pt-1">
           <MarkdownRenderer content={note.content || note.summary} />
         </div>

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDaemonStore } from '../stores/useDaemonStore';
-import { useEchoStore } from '../stores/useEchoStore';
+import { useBufferStore } from '../stores/useBufferStore';
 import { useSignalStore } from '../stores/useSignalStore';
 
 const HEARTBEAT_INTERVAL_MS = 2000;
@@ -15,14 +15,14 @@ export function useDaemonHeartbeat(): void {
   useEffect(() => {
     // Immediate first check and data retrieval
     checkHealth();
-    useEchoStore.getState().fetchNotes({ silent: true });
+    useBufferStore.getState().fetchNotes({ silent: true });
     useSignalStore.getState().fetchPendingSignals();
 
     // Heartbeat ticker
     const timer = setInterval(() => {
       checkHealth().then((online) => {
         if (online) {
-          useEchoStore.getState().fetchNotes({ silent: true });
+          useBufferStore.getState().fetchNotes({ silent: true });
           useSignalStore.getState().fetchPendingSignals();
         }
       });

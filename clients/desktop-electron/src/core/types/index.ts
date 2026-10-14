@@ -10,8 +10,8 @@ export interface NoteItem {
   score?: number;
 }
 
-export type PodTab = 'home' | 'echo';
-export type ViewMode = 'welcome' | 'home' | 'echo' | 'settings';
+export type PodTab = 'home' | 'radar' | 'buffer';
+export type ViewMode = 'welcome' | 'home' | 'radar' | 'buffer' | 'echo' | 'settings';
 
 export interface PingResult {
   status: string;

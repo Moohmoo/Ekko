@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mascot } from '../home/Mascot';
+import { Mascot } from '../../components/Mascot';
 import { useViewStore } from '../../core/stores/useViewStore';
 import { WELCOME_DURATION_MS, COLORS } from '../../design-system/tokens';
 

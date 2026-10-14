@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import type { NoteItem } from '../types';
 
-export interface EchoFilters {
+export interface BufferFilters {
   query: string;
   tag: string | null;
 }
 
-interface EchoState {
+interface BufferState {
   notes: NoteItem[];
   latestNote: NoteItem | null;
   isLoading: boolean;
@@ -53,7 +53,7 @@ function mapRawNote(item: Record<string, unknown>): NoteItem {
   };
 }
 
-export const useEchoStore = create<EchoState>((set, get) => ({
+export const useBufferStore = create<BufferState>((set, get) => ({
   notes: [],
   latestNote: null,
   isLoading: false,
@@ -106,7 +106,7 @@ export const useEchoStore = create<EchoState>((set, get) => ({
         });
       }
     } catch (e) {
-      console.warn('[EchoStore] Erreur récupération notes (conservation du cache):', e);
+      console.warn('[BufferStore] Erreur récupération notes (conservation du cache):', e);
       // Resilience contract: NEVER wipe existing notes on network/socket disconnect
       set({
         ...(isSilent ? {} : { isLoading: false }),
@@ -174,7 +174,7 @@ export const useEchoStore = create<EchoState>((set, get) => ({
       }
     } catch (e) {
       if (get().searchSeq !== currentSeq) return;
-      console.warn('[EchoStore] Erreur recherche hybride:', e);
+      console.warn('[BufferStore] Erreur recherche hybride:', e);
       set({ isLoading: false, isOffline: true });
     }
   },
@@ -203,7 +203,7 @@ export const useEchoStore = create<EchoState>((set, get) => ({
             set({ isLoading: false, isOffline: true });
           }
         } catch (e) {
-          console.warn('[EchoStore] Erreur refresh:', e);
+          console.warn('[BufferStore] Erreur refresh:', e);
           set({ isLoading: false, isOffline: true });
         }
       }
@@ -218,7 +218,7 @@ if (typeof window !== 'undefined' && window.ekkoAPI?.onNoteCreated) {
   window.ekkoAPI.onNoteCreated((rawNote) => {
     if (rawNote) {
       const note = mapRawNote(rawNote as unknown as Record<string, unknown>);
-      useEchoStore.getState().setLatestNote(note);
+      useBufferStore.getState().setLatestNote(note);
     }
   });
 }

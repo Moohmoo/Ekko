@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Signal, SignalsResult } from '../../../electron/preload';
+import type { Signal, SignalsResult } from '../types';
 import { playSuccessChime, playDropBlip } from '../audio/soundManager';
 
 export const MAX_PENDING_SIGNALS = 50;

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { MascotEmotion } from '../../components/Mascot';
 import type { NoteItem } from '../types';
-import { useEchoStore } from './useEchoStore';
+import { useBufferStore } from './useBufferStore';
 import { RESET_ERROR_DELAY_MS } from '../../design-system/tokens';
 import { playDropBlip, playSuccessChime, playErrorThud } from '../audio/soundManager';
 
@@ -96,8 +96,8 @@ export const useDropStore = create<DropState>((set, get) => ({
       return false;
     }
 
-    const baselineNoteId = useEchoStore.getState().latestNote?.id ?? null;
-    const baselineNotesCount = useEchoStore.getState().notes.length;
+    const baselineNoteId = useBufferStore.getState().latestNote?.id ?? null;
+    const baselineNotesCount = useBufferStore.getState().notes.length;
 
     playDropBlip();
     set({
@@ -139,7 +139,7 @@ export const useDropStore = create<DropState>((set, get) => ({
           source: res.note.source || fileName,
           tags: ['ingested'],
         };
-        useEchoStore.getState().setLatestNote(completedNote);
+        useBufferStore.getState().setLatestNote(completedNote);
         get().onDistillationComplete(completedNote);
         return true;
       }
@@ -208,8 +208,8 @@ export const useDropStore = create<DropState>((set, get) => ({
       // ignore
     }
 
-    const baselineNoteId = useEchoStore.getState().latestNote?.id ?? null;
-    const baselineNotesCount = useEchoStore.getState().notes.length;
+    const baselineNoteId = useBufferStore.getState().latestNote?.id ?? null;
+    const baselineNotesCount = useBufferStore.getState().notes.length;
 
     playDropBlip();
     set({
@@ -245,7 +245,7 @@ export const useDropStore = create<DropState>((set, get) => ({
           source: res.note.source || trimmed,
           tags: ['web'],
         };
-        useEchoStore.getState().setLatestNote(completedNote);
+        useBufferStore.getState().setLatestNote(completedNote);
         get().onDistillationComplete(completedNote);
         return true;
       }
@@ -331,18 +331,18 @@ export const useDropStore = create<DropState>((set, get) => ({
   },
 }));
 
-// Reactive subscription: when SQLite updates via scan_notes in useEchoStore,
+// Reactive subscription: when SQLite updates via scan_notes in useBufferStore,
 // complete pending ingestion if a new note is detected.
-useEchoStore.subscribe((echoState) => {
+useBufferStore.subscribe((bufferState) => {
   const dropState = useDropStore.getState();
   if (dropState.dropStatus !== 'processing') return;
 
-  const newLatest = echoState.latestNote;
+  const newLatest = bufferState.latestNote;
   if (!newLatest) return;
 
   const isNew =
     newLatest.id !== dropState.baselineNoteId ||
-    echoState.notes.length > dropState.baselineNotesCount;
+    bufferState.notes.length > dropState.baselineNotesCount;
 
   const matchesPending = dropState.pendingFilePath
     ? newLatest.source === dropState.pendingFilePath ||
@@ -357,8 +357,8 @@ useEchoStore.subscribe((echoState) => {
 // Push IPC listener: instant reactive trigger at t=0ms when daemon completes note persistence
 if (typeof window !== 'undefined' && window.ekkoAPI?.onNoteCreated) {
   window.ekkoAPI.onNoteCreated((data) => {
-    // 1. Immediate background fetch to refresh Echo store without waiting for heartbeat
-    useEchoStore.getState().fetchNotes({ silent: true });
+    // 1. Immediate background fetch to refresh Buffer store without waiting for heartbeat
+    useBufferStore.getState().fetchNotes({ silent: true });
 
     // 2. Complete pending drop instantly at t=0ms
     const dropState = useDropStore.getState();
@@ -370,7 +370,7 @@ if (typeof window !== 'undefined' && window.ekkoAPI?.onNoteCreated) {
         source: data.source || dropState.fileName || 'ekko',
         tags: ['ingested'],
       };
-      useEchoStore.getState().setLatestNote(completedNote);
+      useBufferStore.getState().setLatestNote(completedNote);
       dropState.onDistillationComplete(completedNote);
     }
   });
