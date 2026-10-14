@@ -27,7 +27,7 @@ async def test_end_to_end_distillation_pipeline(tmp_path: Path) -> None:
         source_type="rss",
         url_or_path="https://export.arxiv.org/rss/cs.AI",
     )
-    await store.upsert_source_state(source)
+    await store.signals.upsert_source_state(source)
 
     signal = RawSignal(
         id="sig_int_1",
@@ -38,10 +38,10 @@ async def test_end_to_end_distillation_pipeline(tmp_path: Path) -> None:
         clean_content="We present DeepSeek-R1, which utilizes large-scale reinforcement learning to develop reasoning behaviors.",
         status=SignalStatus.RETAINED,
     )
-    await store.save_raw_signals([signal])
+    await store.signals.save_raw_signals([signal])
 
     # Check signal is pending initially
-    pending_before = await store.get_pending_signals(limit=5)
+    pending_before = await store.signals.get_pending_signals(limit=5)
     assert len(pending_before) == 1
     assert pending_before[0].status == SignalStatus.RETAINED
 
@@ -70,16 +70,16 @@ async def test_end_to_end_distillation_pipeline(tmp_path: Path) -> None:
     assert processed_count == 1
 
     # Verify signal status transitioned to processed in SQLite
-    signals_after = await store.get_raw_signals(source_id="arxiv_ai")
+    signals_after = await store.signals.get_raw_signals(source_id="arxiv_ai")
     assert len(signals_after) == 1
     assert signals_after[0].status == SignalStatus.PROCESSED
 
     # Verify pending signals list is now empty
-    pending_after = await store.get_pending_signals(limit=5)
+    pending_after = await store.signals.get_pending_signals(limit=5)
     assert len(pending_after) == 0
 
     # Verify knowledge note was persisted in SQLite
-    notes = await store.search_notes(query="DeepSeek reasoning", mode="lexical")
+    notes = await store.search.search_notes(query="DeepSeek reasoning", mode="lexical")
     assert len(notes) >= 1
     retrieved_note, _ = notes[0]
     assert "DeepSeek-R1" in retrieved_note.title

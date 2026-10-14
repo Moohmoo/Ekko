@@ -49,9 +49,9 @@ async def test_upsert_and_get_source_state(db_manager: DatabaseManager) -> None:
         last_modified="Wed, 21 Oct 2025 07:28:00 GMT",
         consecutive_errors=0,
     )
-    await db_manager.upsert_source_state(state)
+    await db_manager.signals.upsert_source_state(state)
 
-    fetched = await db_manager.get_source_state("hn_tech")
+    fetched = await db_manager.signals.get_source_state("hn_tech")
     assert fetched is not None
     assert fetched.id == "hn_tech"
     assert fetched.etag == '"etag123"'
@@ -66,9 +66,9 @@ async def test_upsert_and_get_source_state(db_manager: DatabaseManager) -> None:
         last_modified="Thu, 22 Oct 2025 07:28:00 GMT",
         consecutive_errors=1,
     )
-    await db_manager.upsert_source_state(updated_state)
+    await db_manager.signals.upsert_source_state(updated_state)
 
-    fetched_again = await db_manager.get_source_state("hn_tech")
+    fetched_again = await db_manager.signals.get_source_state("hn_tech")
     assert fetched_again is not None
     assert fetched_again.etag == '"etag456"'
     assert fetched_again.consecutive_errors == 1
@@ -79,10 +79,10 @@ async def test_list_source_states(db_manager: DatabaseManager) -> None:
     """Ensure listing source states returns all registered states."""
     s1 = SourceState(id="s1", source_type="rss", url_or_path="https://feed1.xml")
     s2 = SourceState(id="s2", source_type="rest_api", url_or_path="https://api2.json")
-    await db_manager.upsert_source_state(s1)
-    await db_manager.upsert_source_state(s2)
+    await db_manager.signals.upsert_source_state(s1)
+    await db_manager.signals.upsert_source_state(s2)
 
-    states = await db_manager.list_source_states()
+    states = await db_manager.signals.list_source_states()
     assert len(states) == 2
     ids = {s.id for s in states}
     assert ids == {"s1", "s2"}
@@ -92,7 +92,7 @@ async def test_list_source_states(db_manager: DatabaseManager) -> None:
 async def test_save_and_query_raw_signals(db_manager: DatabaseManager) -> None:
     """Ensure raw signals can be saved and queried by source and status."""
     # Source state prerequisite for foreign key
-    await db_manager.upsert_source_state(
+    await db_manager.signals.upsert_source_state(
         SourceState(id="hn_feed", source_type="rss", url_or_path="https://hn.xml")
     )
 
@@ -118,28 +118,28 @@ async def test_save_and_query_raw_signals(db_manager: DatabaseManager) -> None:
         status=SignalStatus.DISCARDED,
     )
 
-    inserted = await db_manager.save_raw_signals([sig1, sig2])
+    inserted = await db_manager.signals.save_raw_signals([sig1, sig2])
     assert inserted == 2
 
     # Query all pending
-    pending = await db_manager.get_raw_signals(status=SignalStatus.PENDING)
+    pending = await db_manager.signals.get_raw_signals(status=SignalStatus.PENDING)
     assert len(pending) == 1
     assert pending[0].id == "sig_1"
     assert pending[0].title == "Breakthrough in LLM Reasoning"
 
     # Query all for source
-    source_sigs = await db_manager.get_raw_signals(source_id="hn_feed")
+    source_sigs = await db_manager.signals.get_raw_signals(source_id="hn_feed")
     assert len(source_sigs) == 2
 
     # Deduplication check on duplicate id
-    duplicate_inserted = await db_manager.save_raw_signals([sig1])
+    duplicate_inserted = await db_manager.signals.save_raw_signals([sig1])
     assert duplicate_inserted == 0
 
 
 @pytest.mark.asyncio
 async def test_update_signal_status(db_manager: DatabaseManager) -> None:
     """Ensure signal status transition updates cleanly."""
-    await db_manager.upsert_source_state(
+    await db_manager.signals.upsert_source_state(
         SourceState(id="src_test", source_type="rss", url_or_path="https://test.xml")
     )
     sig = RawSignal(
@@ -148,22 +148,22 @@ async def test_update_signal_status(db_manager: DatabaseManager) -> None:
         title="Interesting Article",
         status=SignalStatus.PENDING,
     )
-    await db_manager.save_raw_signals([sig])
+    await db_manager.signals.save_raw_signals([sig])
 
-    await db_manager.update_signal_status("sig_update", SignalStatus.RETAINED)
-    signals = await db_manager.get_raw_signals(status=SignalStatus.RETAINED)
+    await db_manager.signals.update_signal_status("sig_update", SignalStatus.RETAINED)
+    signals = await db_manager.signals.get_raw_signals(status=SignalStatus.RETAINED)
     assert len(signals) == 1
     assert signals[0].id == "sig_update"
 
     # Test mark_signal_status with processed and failed string status
-    await db_manager.mark_signal_status("sig_update", "processed")
-    assert (await db_manager.get_raw_signals(status=SignalStatus.PROCESSED))[0].id == "sig_update"
+    await db_manager.signals.mark_signal_status("sig_update", "processed")
+    assert (await db_manager.signals.get_raw_signals(status=SignalStatus.PROCESSED))[0].id == "sig_update"
 
-    await db_manager.mark_signal_status("sig_update", "failed")
-    assert (await db_manager.get_raw_signals(status=SignalStatus.FAILED))[0].id == "sig_update"
+    await db_manager.signals.mark_signal_status("sig_update", "failed")
+    assert (await db_manager.signals.get_raw_signals(status=SignalStatus.FAILED))[0].id == "sig_update"
 
     # Test get_pending_signals
-    assert len(await db_manager.get_pending_signals()) == 0
+    assert len(await db_manager.signals.get_pending_signals()) == 0
 
 
 @pytest.mark.asyncio
@@ -178,15 +178,15 @@ async def test_save_and_get_knowledge_note(db_manager: DatabaseManager) -> None:
         tags=["ai", "llm", "mistral"],
         sources=["https://mistral.ai/news/large-4"],
     )
-    await db_manager.save_knowledge_note(note)
+    await db_manager.notes.save_knowledge_note(note)
 
-    fetched = await db_manager.get_knowledge_note_by_slug("2026-10-10-mistral-architecture")
+    fetched = await db_manager.notes.get_knowledge_note_by_slug("2026-10-10-mistral-architecture")
     assert fetched is not None
     assert fetched.title == "Mistral Architecture"
     assert fetched.tags == ["ai", "llm", "mistral"]
     assert fetched.sources == ["https://mistral.ai/news/large-4"]
 
-    notes = await db_manager.list_knowledge_notes(limit=10)
+    notes = await db_manager.notes.list_knowledge_notes(limit=10)
     assert len(notes) == 1
     assert notes[0].slug == "2026-10-10-mistral-architecture"
 
@@ -200,13 +200,13 @@ async def test_save_and_get_knowledge_note(db_manager: DatabaseManager) -> None:
         tags=["ai", "llm", "mistral", "v2"],
         sources=["https://mistral.ai/news/large-4"],
     )
-    await db_manager.save_knowledge_note(updated_note)
+    await db_manager.notes.save_knowledge_note(updated_note)
 
-    fetched_updated = await db_manager.get_knowledge_note_by_slug("2026-10-10-mistral-architecture-updated")
+    fetched_updated = await db_manager.notes.get_knowledge_note_by_slug("2026-10-10-mistral-architecture-updated")
     assert fetched_updated is not None
     assert fetched_updated.title == "Mistral Architecture v2"
     assert fetched_updated.tags == ["ai", "llm", "mistral", "v2"]
-    assert len(await db_manager.list_knowledge_notes(limit=10)) == 1
+    assert len(await db_manager.notes.list_knowledge_notes(limit=10)) == 1
 
 
 @pytest.mark.asyncio
@@ -249,16 +249,37 @@ async def test_get_popular_tags(db_manager: DatabaseManager) -> None:
         content="C3",
         tags=["python", "rust"],
     )
-    await db_manager.save_knowledge_note(note1)
-    await db_manager.save_knowledge_note(note2)
-    await db_manager.save_knowledge_note(note3)
+    await db_manager.notes.save_knowledge_note(note1)
+    await db_manager.notes.save_knowledge_note(note2)
+    await db_manager.notes.save_knowledge_note(note3)
 
-    popular = await db_manager.get_popular_tags(limit=2)
+    popular = await db_manager.notes.get_popular_tags(limit=2)
     assert len(popular) == 2
     assert popular[0] == "python"
     assert popular[1] == "ai"
 
-    all_popular = await db_manager.get_popular_tags(limit=10)
+    all_popular = await db_manager.notes.get_popular_tags(limit=10)
     assert all_popular[0] == "python"
     assert all_popular[1] == "ai"
     assert set(all_popular[2:]) == {"fastapi", "llm", "rust"}
+
+
+@pytest.mark.asyncio
+async def test_database_manager_unit_of_work_context(db_path: Path) -> None:
+    """Ensure DatabaseManager can be used as a transactional context manager Unit of Work."""
+    with DatabaseManager(db_path=db_path) as db:
+        note = KnowledgeNote(
+            id="uow_note",
+            slug="uow-note",
+            title="Unit of Work Note",
+            summary="UoW pattern verification",
+            content="Context manager bound to session",
+            tags=["uow", "architecture"],
+        )
+        await db.notes.save_knowledge_note(note)
+
+    # Verification outside context
+    manager = DatabaseManager(db_path=db_path)
+    fetched = await manager.notes.get_knowledge_note_by_slug("uow-note")
+    assert fetched is not None
+    assert fetched.title == "Unit of Work Note"

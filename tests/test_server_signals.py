@@ -201,7 +201,7 @@ async def test_resolve_signal_archive_triggers_background_distillation(
         assert row["status"] == "archived"
 
     # Verify note in SQLite knowledge_notes
-    notes = await db_store.list_knowledge_notes(limit=5)
+    notes = await db_store.notes.list_knowledge_notes(limit=5)
     assert len(notes) >= 1
     distilled = next((n for n in notes if n.title == "SQLite WAL2 Insights"), None)
     assert distilled is not None, (

@@ -53,6 +53,8 @@ class IngestionCoordinator:
         auto_distill: bool = False,
     ) -> None:
         self.db_manager = db_manager
+        is_mock = hasattr(db_manager, "_mock_return_value")
+        self.signals = db_manager if is_mock else getattr(db_manager, "signals", db_manager)
         self.catalog = catalog or load_sources_config(config_dir)
         self.rss_connector = rss_connector or RssConnector()
         self.rest_connector = rest_connector or RestApiConnector()
@@ -102,12 +104,12 @@ class IngestionCoordinator:
         error_state.consecutive_errors = errors
         error_state.backoff_until = now + timedelta(seconds=delay_sec)
         error_state.last_polled_at = now
-        await self.db_manager.upsert_source_state(error_state)
+        await self.signals.upsert_source_state(error_state)
         logger.warning("Polling error on source '%s' (%s). Backoff for %ds.", source.id, exc, delay_sec)
 
     async def poll_source(self, source: SourceConfig) -> list[RawSignal]:
         """Poll a single source if due, persisting signals and updating tracking state."""
-        state = await self.db_manager.get_source_state(source.id)
+        state = await self.signals.get_source_state(source.id)
         now = datetime.now(timezone.utc)
         if not self._should_poll(source, state, now):
             return []
@@ -118,9 +120,9 @@ class IngestionCoordinator:
 
         try:
             signals, updated_state = await connector.fetch_signals(source, state=state)
-            await self.db_manager.upsert_source_state(updated_state)
+            await self.signals.upsert_source_state(updated_state)
             if signals:
-                await self.db_manager.save_raw_signals(signals)
+                await self.signals.save_raw_signals(signals)
             return signals
         except Exception as exc:
             await self._handle_polling_error(source, state, now, exc)

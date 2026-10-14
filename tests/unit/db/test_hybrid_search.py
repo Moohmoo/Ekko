@@ -48,11 +48,11 @@ async def test_hybrid_search_indexes_fts_and_vectors(db_manager: DatabaseManager
         sources=["https://biorxiv.org/content/10.1101/2026.01"],
     )
 
-    await db_manager.save_knowledge_note(note_ai, embedding=vec_ai)
-    await db_manager.save_knowledge_note(note_bio, embedding=vec_bio)
+    await db_manager.notes.save_knowledge_note(note_ai, embedding=vec_ai)
+    await db_manager.notes.save_knowledge_note(note_bio, embedding=vec_bio)
 
     # 1. Lexical search (FTS5 BM25)
-    lex_results = await db_manager.search_notes(
+    lex_results = await db_manager.search.search_notes(
         query="distillation reasoning",
         mode="lexical",
         limit=5,
@@ -62,7 +62,7 @@ async def test_hybrid_search_indexes_fts_and_vectors(db_manager: DatabaseManager
 
     # 2. Semantic search (sqlite-vec)
     query_vec = [0.09] * 384
-    sem_results = await db_manager.search_notes(
+    sem_results = await db_manager.search.search_notes(
         query="anything",
         query_embedding=query_vec,
         mode="semantic",
@@ -72,7 +72,7 @@ async def test_hybrid_search_indexes_fts_and_vectors(db_manager: DatabaseManager
     assert sem_results[0][0].id == "note_ai"
 
     # 3. Hybrid search (RRF fusion k=60)
-    hybrid_results = await db_manager.search_notes(
+    hybrid_results = await db_manager.search.search_notes(
         query="CRISPR gene editing",
         query_embedding=[-0.09] * 384,
         mode="hybrid",
@@ -110,11 +110,11 @@ async def test_hybrid_search_rrf_scoring_order(db_manager: DatabaseManager) -> N
         sources=[],
     )
 
-    await db_manager.save_knowledge_note(note1, embedding=vec1)
-    await db_manager.save_knowledge_note(note2, embedding=vec2)
+    await db_manager.notes.save_knowledge_note(note1, embedding=vec1)
+    await db_manager.notes.save_knowledge_note(note2, embedding=vec2)
 
     # Query matches n1 in both lexical and vector, but n2 only partially
-    results = await db_manager.search_notes(
+    results = await db_manager.search.search_notes(
         query="Transformer",
         query_embedding=[0.49] * 384,
         mode="hybrid",
@@ -136,7 +136,7 @@ async def test_search_notes_handles_toxic_fts5_syntax(db_manager: DatabaseManage
         tags=["python", "security"],
         sources=[],
     )
-    await db_manager.save_knowledge_note(note)
+    await db_manager.notes.save_knowledge_note(note)
 
     # Toxic inputs with reserved words, quotes, unmatched syntax, punctuation
     toxic_queries = [
@@ -152,18 +152,18 @@ async def test_search_notes_handles_toxic_fts5_syntax(db_manager: DatabaseManage
 
     for toxic in toxic_queries:
         # Must execute cleanly without sqlite3.OperationalError
-        results = await db_manager.search_notes(query=toxic, mode="lexical", limit=5)
+        results = await db_manager.search.search_notes(query=toxic, mode="lexical", limit=5)
         assert isinstance(results, list)
 
     # Valid keyword should still find the note
-    results_valid = await db_manager.search_notes(query="Python NOT", mode="lexical", limit=5)
+    results_valid = await db_manager.search.search_notes(query="Python NOT", mode="lexical", limit=5)
     assert len(results_valid) == 1
     assert results_valid[0][0].id == "toxic_test_note"
 
 
 def test_sanitize_fts_query_preserves_domains_and_urls() -> None:
     """Ensure _sanitize_fts_query splits on punctuation instead of fusing domains."""
-    from ekko.db.manager import _sanitize_fts_query
+    from ekko.domains.buffer.search import _sanitize_fts_query
 
     # Dot should not fuse words together
     sanitized = _sanitize_fts_query("sqlite.org")
@@ -194,21 +194,21 @@ async def test_multi_chunk_indexing_and_deep_paragraph_retrieval(db_manager: Dat
     )
 
     # Chunks will be generated automatically
-    chunks = await db_manager.get_note_chunks(note.id)
+    chunks = await db_manager.notes.get_note_chunks(note.id)
     assert len(chunks) == 0
 
     # Provide distinct vectors for each chunk: chunk 0 = vec_base, chunk 2 (deep) = vec_quantum
     vec_general = [0.1] * 384
     vec_quantum = [-0.8] * 384
     # We will pass embeddings for the 3 sections
-    await db_manager.save_knowledge_note(note, embeddings=[vec_general, vec_general, vec_quantum])
+    await db_manager.notes.save_knowledge_note(note, embeddings=[vec_general, vec_general, vec_quantum])
 
-    saved_chunks = await db_manager.get_note_chunks(note.id)
+    saved_chunks = await db_manager.notes.get_note_chunks(note.id)
     assert len(saved_chunks) >= 3
 
     # Query matching specifically the deep 3rd chunk
     query_vec = [-0.79] * 384
-    results = await db_manager.search_notes(query="anything", query_embedding=query_vec, mode="semantic", limit=5)
+    results = await db_manager.search.search_notes(query="anything", query_embedding=query_vec, mode="semantic", limit=5)
     assert len(results) >= 1
     assert results[0][0].id == "note_deep"
 
@@ -226,8 +226,8 @@ async def test_save_knowledge_note_idempotence_purges_old_chunks(db_manager: Dat
         sources=[],
     )
     vec1 = [0.2] * 384
-    await db_manager.save_knowledge_note(note, embedding=vec1)
-    chunks_v1 = await db_manager.get_note_chunks("note_idempotent")
+    await db_manager.notes.save_knowledge_note(note, embedding=vec1)
+    chunks_v1 = await db_manager.notes.get_note_chunks("note_idempotent")
     assert len(chunks_v1) >= 2
 
     # Update note with shorter single-chunk content
@@ -240,8 +240,8 @@ async def test_save_knowledge_note_idempotence_purges_old_chunks(db_manager: Dat
         tags=["test", "v2"],
         sources=[],
     )
-    await db_manager.save_knowledge_note(updated_note, embedding=vec1)
-    chunks_v2 = await db_manager.get_note_chunks("note_idempotent")
+    await db_manager.notes.save_knowledge_note(updated_note, embedding=vec1)
+    chunks_v2 = await db_manager.notes.get_note_chunks("note_idempotent")
     assert len(chunks_v2) == 1
     assert "Short updated text" in chunks_v2[0]
 
@@ -258,18 +258,18 @@ async def test_delete_knowledge_note_cascades_chunks_and_vectors(db_manager: Dat
         tags=["ephemeral"],
         sources=[],
     )
-    await db_manager.save_knowledge_note(note, embedding=[0.3] * 384)
-    chunks_before = await db_manager.get_note_chunks("note_to_delete")
+    await db_manager.notes.save_knowledge_note(note, embedding=[0.3] * 384)
+    chunks_before = await db_manager.notes.get_note_chunks("note_to_delete")
     assert len(chunks_before) >= 2
 
-    deleted = await db_manager.delete_knowledge_note("note_to_delete")
+    deleted = await db_manager.notes.delete_knowledge_note("note_to_delete")
     assert deleted is True
 
-    chunks_after = await db_manager.get_note_chunks("note_to_delete")
+    chunks_after = await db_manager.notes.get_note_chunks("note_to_delete")
     assert len(chunks_after) == 0
 
     # Ensure search does not return it
-    results = await db_manager.search_notes(query="Ephemeral", mode="lexical", limit=5)
+    results = await db_manager.search.search_notes(query="Ephemeral", mode="lexical", limit=5)
     assert not any(n.id == "note_to_delete" for n, _ in results)
 
 
@@ -304,6 +304,6 @@ async def test_backfill_existing_notes_into_chunks(tmp_path: Path) -> None:
     # Run init_schema to trigger backfill
     store.init_schema()
 
-    chunks = await store.get_note_chunks("legacy_note_1")
+    chunks = await store.notes.get_note_chunks("legacy_note_1")
     assert len(chunks) >= 1
 

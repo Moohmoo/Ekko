@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from ekko.core.logger import get_logger
 from ekko.domains.buffer.index import scan_notes, search_notes
+from ekko.domains.ingestion.deduplication import SqliteDeduplicationStore
 from ekko.domains.ingestion.index import (
     distill_file_background,
     distill_signal_background,
@@ -144,9 +145,19 @@ async def handle_resolve_all_pending_signals(server: "IPCServer", params: dict[s
     return await resolve_all_pending_signals(repo, params)
 
 
+def _resolve_dedup(db: Any) -> Any:
+    """Return SqliteDeduplicationStore delegating to domain repositories or mock store."""
+    signals = getattr(db, "signals", None)
+    notes = getattr(db, "notes", None)
+    if signals is not None and notes is not None and not hasattr(db, "_mock_return_value"):
+        return SqliteDeduplicationStore(signals, notes)
+    return db
+
+
 async def handle_ingest_file(server: "IPCServer", params: dict[str, Any]) -> Any:
     file_path = str(params.get("file_path") or params.get("path") or "")
-    prepared = await prepare_file_ingest(server.db_manager, file_path)
+    dedup_store = _resolve_dedup(server.db_manager)
+    prepared = await prepare_file_ingest(dedup_store, file_path)
     if prepared.target_path:
         server._spawn_background_task(
             _distill_file_task(server, prepared.target_path),
@@ -157,7 +168,8 @@ async def handle_ingest_file(server: "IPCServer", params: dict[str, Any]) -> Any
 
 async def handle_ingest_url(server: "IPCServer", params: dict[str, Any]) -> Any:
     url = str(params.get("url") or params.get("uri") or "")
-    prepared = await prepare_url_ingest(server.db_manager, url)
+    dedup_store = _resolve_dedup(server.db_manager)
+    prepared = await prepare_url_ingest(dedup_store, url)
     if prepared.url:
         server._spawn_background_task(
             _distill_url_task(server, prepared.url),

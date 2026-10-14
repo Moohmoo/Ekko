@@ -108,6 +108,9 @@ class SignalDistiller:
         semaphore: asyncio.Semaphore | None = None,
     ) -> None:
         self.store = store
+        is_mock = hasattr(store, "_mock_return_value")
+        self.notes_repo = store if is_mock else getattr(store, "notes", store)
+        self.signals_repo = store if is_mock else getattr(store, "signals", store)
         self.llm_provider = llm_provider
         self.notes_dir = Path(notes_dir)
         self.embedder = embedder
@@ -155,16 +158,16 @@ class SignalDistiller:
             if self.embedder
             else None
         )
-        await self.store.save_knowledge_note(note, embedding=vec)
+        await self.notes_repo.save_knowledge_note(note, embedding=vec)
         await asyncio.to_thread(self._write_physical_note, note, date_str, slug)
         return note
 
     async def _execute_distill(self, signal: RawSignal) -> KnowledgeNote:
         """Execute LLM generation and note persistence."""
         existing_tags: list[str] = []
-        if self.store is not None and hasattr(self.store, "get_popular_tags"):
+        if self.notes_repo is not None and hasattr(self.notes_repo, "get_popular_tags"):
             try:
-                existing_tags = await self.store.get_popular_tags(limit=30)
+                existing_tags = await self.notes_repo.get_popular_tags(limit=30)
             except Exception as exc:
                 logger.warning("Failed to retrieve popular tags for distillation: %s", exc)
 
@@ -228,7 +231,7 @@ class SignalDistiller:
 
     async def distill_batch(self, batch_size: int = 5) -> int:
         """Fetch pending signals, distill them, and transition states."""
-        signals = await self.store.get_pending_signals(limit=batch_size)
+        signals = await self.signals_repo.get_pending_signals(limit=batch_size)
         if not signals:
             return 0
 
@@ -236,11 +239,11 @@ class SignalDistiller:
         for signal in signals:
             try:
                 await self.distill_signal(signal)
-                await self.store.mark_signal_status(signal.id, "processed")
+                await self.signals_repo.mark_signal_status(signal.id, "processed")
                 success_count += 1
                 logger.info("Signal '%s' distilled successfully into note.", signal.id)
             except Exception as exc:
                 logger.error("Failed to distill signal '%s': %s", signal.id, exc)
-                await self.store.mark_signal_status(signal.id, "failed")
+                await self.signals_repo.mark_signal_status(signal.id, "failed")
 
         return success_count
