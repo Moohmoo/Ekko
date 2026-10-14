@@ -1,23 +1,20 @@
 """Unified daemon composition root coordinating background ingestion, IPC server, and resource confinement."""
 
+import argparse
 import asyncio
 from pathlib import Path
 import signal
+from typing import Any
 
-from ekko.config.loader import load_core_prompt, load_plugins_config, load_user_context
-from ekko.core.engine import EkkoEngine
-from ekko.core.prompt import build_system_prompt
 from ekko.daemon.resources import ResourceManager
 from ekko.daemon.scheduler import IngestionCoordinator
 from ekko.daemon.server import DEFAULT_SOCKET_PATH, IPCServer
-from ekko.ingestion.distiller import SignalDistiller
+from ekko.db.embedder import TextEmbedder
+from ekko.db.manager import DatabaseManager
+from ekko.domains.ingestion.distiller import SignalDistiller
 from ekko.logger import get_logger, setup_logger
-from ekko.memory.embedder import TextEmbedder
-from ekko.memory.hybrid_store import HybridStore
-from ekko.memory.sqlite_memory import SqliteMemory
 from ekko.providers.router import LLMRouter
 from ekko.settings import Settings
-from ekko.tools.catalog import ToolCatalog
 
 logger = get_logger("daemon.service")
 
@@ -29,33 +26,6 @@ def _setup_signal_handlers(loop: asyncio.AbstractEventLoop, stop_event: asyncio.
             loop.add_signal_handler(sig, stop_event.set)
         except (NotImplementedError, RuntimeError):
             pass
-
-
-def _build_engine(
-    settings: Settings,
-    store: HybridStore,
-    embedder: TextEmbedder | None = None,
-) -> EkkoEngine:
-    """Compose and return an EkkoEngine instance for IPC prompt execution."""
-    core_prompt = load_core_prompt(settings.config_dir)
-    user_context = load_user_context(settings.config_dir)
-    plugins_config = load_plugins_config(settings.config_dir)
-    system_prompt = build_system_prompt(core_prompt, user_context)
-
-    catalog = ToolCatalog(include_defaults=True)
-    tools = catalog.build_registry(
-        plugins_config.enabled_tools,
-        db_manager=store,
-        embedder=embedder,
-    )
-    provider = LLMRouter(settings=settings).get_provider()
-    memory = SqliteMemory(db_path=settings.sqlite_db_path)
-    return EkkoEngine(
-        provider=provider,
-        memory=memory,
-        tools=tools,
-        system_prompt=system_prompt,
-    )
 
 
 async def _run_services(
@@ -79,7 +49,7 @@ async def _run_services(
 
 def _compose_coordinator(
     settings: Settings,
-    store: HybridStore,
+    store: DatabaseManager,
     embedder: TextEmbedder | None = None,
     semaphore: asyncio.Semaphore | None = None,
 ) -> IngestionCoordinator:
@@ -115,8 +85,7 @@ async def run_daemon(
     embedder = TextEmbedder()
     inference_semaphore = asyncio.Semaphore(1)
 
-    store = HybridStore(db_path=active_settings.sqlite_db_path)
-    engine = _build_engine(active_settings, store, embedder=embedder)
+    store = DatabaseManager(db_path=active_settings.sqlite_db_path)
     coordinator = _compose_coordinator(
         active_settings,
         store,
@@ -128,7 +97,6 @@ async def run_daemon(
     server = IPCServer(
         socket_path=sock,
         db_manager=store,
-        engine=engine,
         distiller=coordinator.distiller,
         distillation_semaphore=inference_semaphore,
         embedder=embedder,
@@ -143,5 +111,34 @@ async def run_daemon(
     await _run_services(coordinator, server, evt, poll_interval)
 
 
+def parse_args(args: list[str] | None = None) -> argparse.Namespace:
+    """Parse CLI arguments for daemon subcommand and options."""
+    parser = argparse.ArgumentParser(description="Ekko Ambient Daemon")
+    subparsers = parser.add_subparsers(dest="command")
+
+    daemon_parser = subparsers.add_parser("daemon", help="Run Ekko background daemon and IPC server")
+    daemon_parser.add_argument(
+        "--interval",
+        type=float,
+        default=60.0,
+        help="Polling interval in seconds (default: 60.0)",
+    )
+
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=60.0,
+        help="Polling interval in seconds (default: 60.0)",
+    )
+    return parser.parse_args(args)
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Main CLI entrypoint launching the daemon directly."""
+    parsed = parse_args(argv)
+    interval = getattr(parsed, "interval", 60.0)
+    asyncio.run(run_daemon(poll_interval=interval))
+
+
 if __name__ == "__main__":
-    asyncio.run(run_daemon())
+    main()

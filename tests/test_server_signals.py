@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock
 import pytest
 
 from ekko.core.models import ModelResponse
-from ekko.ingestion.distiller import SignalDistiller
 from ekko.daemon.ipc_client import IPCClient
 from ekko.daemon.server import IPCServer
-from ekko.memory.hybrid_store import HybridStore
+from ekko.db.manager import DatabaseManager
+from ekko.domains.ingestion.distiller import SignalDistiller
 
 
 @pytest.fixture
@@ -19,13 +19,13 @@ def socket_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def db_store(tmp_path: Path) -> HybridStore:
+def db_store(tmp_path: Path) -> DatabaseManager:
     db_file = tmp_path / "test_signals.db"
-    return HybridStore(db_path=db_file)
+    return DatabaseManager(db_path=db_file)
 
 
 @pytest.mark.asyncio
-async def test_get_pending_signals_empty(socket_path: Path, db_store: HybridStore) -> None:
+async def test_get_pending_signals_empty(socket_path: Path, db_store: DatabaseManager) -> None:
     """When no retained signals exist, get_pending_signals returns empty list and count 0."""
     server = IPCServer(socket_path=socket_path, db_manager=db_store)
     await server.start()
@@ -39,7 +39,7 @@ async def test_get_pending_signals_empty(socket_path: Path, db_store: HybridStor
 
 
 @pytest.mark.asyncio
-async def test_get_pending_signals_nominal(socket_path: Path, db_store: HybridStore) -> None:
+async def test_get_pending_signals_nominal(socket_path: Path, db_store: DatabaseManager) -> None:
     """Ensure get_pending_signals returns retained signals and total_count."""
     with db_store._get_connection() as conn:
         conn.execute(
@@ -78,7 +78,7 @@ async def test_get_pending_signals_nominal(socket_path: Path, db_store: HybridSt
 
 
 @pytest.mark.asyncio
-async def test_resolve_signal_archive(socket_path: Path, db_store: HybridStore) -> None:
+async def test_resolve_signal_archive(socket_path: Path, db_store: DatabaseManager) -> None:
     """Resolving with action 'archive' transitions status to 'archived'."""
     with db_store._get_connection() as conn:
         conn.execute(
@@ -113,7 +113,7 @@ async def test_resolve_signal_archive(socket_path: Path, db_store: HybridStore) 
 
 
 @pytest.mark.asyncio
-async def test_resolve_signal_discard(socket_path: Path, db_store: HybridStore) -> None:
+async def test_resolve_signal_discard(socket_path: Path, db_store: DatabaseManager) -> None:
     """Resolving with action 'discard' transitions status to 'discarded'."""
     with db_store._get_connection() as conn:
         conn.execute(
@@ -141,7 +141,7 @@ async def test_resolve_signal_discard(socket_path: Path, db_store: HybridStore) 
 
 @pytest.mark.asyncio
 async def test_resolve_signal_archive_triggers_background_distillation(
-    socket_path: Path, db_store: HybridStore, tmp_path: Path
+    socket_path: Path, db_store: DatabaseManager, tmp_path: Path
 ) -> None:
     """Archiving a signal triggers background distillation, creating note in DB and on disk.
 
@@ -224,7 +224,7 @@ async def test_resolve_signal_archive_triggers_background_distillation(
 
 
 @pytest.mark.asyncio
-async def test_resolve_signal_errors(socket_path: Path, db_store: HybridStore) -> None:
+async def test_resolve_signal_errors(socket_path: Path, db_store: DatabaseManager) -> None:
     """Validate error cases: missing signal and invalid action."""
     server = IPCServer(socket_path=socket_path, db_manager=db_store)
     await server.start()
@@ -244,7 +244,7 @@ async def test_resolve_signal_errors(socket_path: Path, db_store: HybridStore) -
 
 
 @pytest.mark.asyncio
-async def test_get_pending_signals_sanitizes_raw_json_leak(socket_path: Path, db_store: HybridStore) -> None:
+async def test_get_pending_signals_sanitizes_raw_json_leak(socket_path: Path, db_store: DatabaseManager) -> None:
     """Ensure signals with raw JSON or Algolia _highlightResult have their summary sanitized to empty string."""
     raw_algolia_json = '{"objectID": "999", "title": "HN Leaked Story", "_highlightResult": {"title": "..."}}'
     with db_store._get_connection() as conn:
@@ -283,7 +283,7 @@ async def test_get_pending_signals_sanitizes_raw_json_leak(socket_path: Path, db
 
 
 @pytest.mark.asyncio
-async def test_resolve_all_pending_signals(socket_path: Path, db_store: HybridStore) -> None:
+async def test_resolve_all_pending_signals(socket_path: Path, db_store: DatabaseManager) -> None:
     """Ensure resolve_all_pending_signals updates all retained signals in bulk."""
     with db_store._get_connection() as conn:
         for i in range(5):

@@ -6,8 +6,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from ekko.daemon.ipc_client import IPCClient
-from ekko.daemon.server import IPCServer, MAX_FILE_SIZE_BYTES
-from ekko.memory.hybrid_store import HybridStore
+from ekko.daemon.server import IPCServer
+from ekko.db.manager import DatabaseManager
+from ekko.domains.ingestion.index import MAX_FILE_SIZE_BYTES
 
 
 @pytest.fixture
@@ -17,14 +18,14 @@ def socket_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def db_store(tmp_path: Path) -> HybridStore:
-    """Provide isolated HybridStore instance."""
+def db_store(tmp_path: Path) -> DatabaseManager:
+    """Provide isolated DatabaseManager instance."""
     db_file = tmp_path / "test_guardrails.db"
-    return HybridStore(db_path=db_file)
+    return DatabaseManager(db_path=db_file)
 
 
 @pytest.mark.asyncio
-async def test_ingest_file_too_large_rejected(socket_path: Path, db_store: HybridStore, tmp_path: Path) -> None:
+async def test_ingest_file_too_large_rejected(socket_path: Path, db_store: DatabaseManager, tmp_path: Path) -> None:
     """Files exceeding MAX_FILE_SIZE_BYTES (25 MB) are rejected with reason file_too_large."""
     large_file = tmp_path / "oversized.pdf"
     # Create sparse file > 25 MB without wasting actual disk blocks
@@ -46,7 +47,7 @@ async def test_ingest_file_too_large_rejected(socket_path: Path, db_store: Hybri
 
 
 @pytest.mark.asyncio
-async def test_ingest_file_sha256_deduplication(socket_path: Path, db_store: HybridStore, tmp_path: Path) -> None:
+async def test_ingest_file_sha256_deduplication(socket_path: Path, db_store: DatabaseManager, tmp_path: Path) -> None:
     """Submitting the same document twice returns already_exists on the second call without re-distilling."""
     test_file = tmp_path / "architecture_notes.md"
     test_file.write_text("# Guide Architecture\n\nContenu unique et documenté sur les systèmes distribués.", encoding="utf-8")
@@ -93,7 +94,7 @@ async def test_ingest_file_sha256_deduplication(socket_path: Path, db_store: Hyb
 
 
 @pytest.mark.asyncio
-async def test_ingest_url_deduplication(socket_path: Path, db_store: HybridStore) -> None:
+async def test_ingest_url_deduplication(socket_path: Path, db_store: DatabaseManager) -> None:
     """Submitting an already-indexed URL returns already_exists without re-fetching."""
     target_url = "https://arxiv.org/abs/2602.09999"
 

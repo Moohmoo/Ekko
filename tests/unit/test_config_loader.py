@@ -4,12 +4,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ekko.config.loader import (
+from ekko.domains.system.loader import (
     load_core_prompt,
     load_plugins_config,
     load_user_context,
 )
-from ekko.config.schemas import (
+from ekko.domains.system.schemas import (
     CorePromptConfig,
     PluginsConfig,
     UserContextConfig,
@@ -95,7 +95,7 @@ def test_load_plugins_config_missing_generates_example(tmp_path: Path) -> None:
 
 def test_save_user_context_atomic(tmp_path: Path) -> None:
     """Ensure save_user_context writes atomically and can be read back cleanly."""
-    from ekko.config.loader import save_user_context, load_user_context
+    from ekko.domains.system.loader import save_user_context, load_user_context
 
     ctx = UserContextConfig(
         user_name="Bob",
@@ -113,8 +113,8 @@ def test_save_user_context_atomic(tmp_path: Path) -> None:
 
 def test_save_sources_config_atomic(tmp_path: Path) -> None:
     """Ensure save_sources_config writes atomically and can be read back cleanly."""
-    from ekko.config.loader import save_sources_config, load_sources_config
-    from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
+    from ekko.domains.system.loader import save_sources_config, load_sources_config
+    from ekko.domains.system.schemas import SourceConfig, SourcesCatalogConfig
 
     catalog = SourcesCatalogConfig(
         sources=[

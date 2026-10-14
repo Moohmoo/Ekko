@@ -3,11 +3,11 @@
 from unittest.mock import AsyncMock
 import pytest
 
-from ekko.config.schemas import SourceConfig
-from ekko.ingestion.client import HttpResponseResult
+from ekko.domains.system.schemas import SourceConfig
+from ekko.domains.ingestion.client import HttpResponseResult
 from ekko.core.models import SignalStatus, SourceState
-from ekko.ingestion.connectors.rest_api import RestApiConnector
-from ekko.ingestion.connectors.rss import RssConnector
+from ekko.domains.ingestion.connectors.rest_api import RestApiConnector
+from ekko.domains.ingestion.connectors.rss import RssConnector
 
 SAMPLE_ATOM_XML = """<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
@@ -264,7 +264,7 @@ async def test_rss_connector_handles_malformed_xml() -> None:
 
 def test_url_normalization_strips_tracking() -> None:
     """Ensure normalize_url strips query tracking params and standardizes url."""
-    from ekko.ingestion.connectors.base import normalize_url
+    from ekko.domains.ingestion.connectors.base import normalize_url
 
     raw = "https://EXAMPLE.COM/articles/test/?utm_source=twitter&utm_medium=social&ref=hn#section"
     normalized = normalize_url(raw)
@@ -273,7 +273,7 @@ def test_url_normalization_strips_tracking() -> None:
 
 def test_cross_source_deduplication_same_signal_id() -> None:
     """Ensure compute_signal_id generates identical id across sources and tracking params."""
-    from ekko.ingestion.connectors.base import compute_signal_id
+    from ekko.domains.ingestion.connectors.base import compute_signal_id
 
     url1 = "https://example.com/post?utm_source=reddit"
     url2 = "https://example.com/post?ref=newsletter"

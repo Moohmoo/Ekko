@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ekko.config.loader import load_sources_config
-from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
+from ekko.domains.system.loader import load_sources_config
+from ekko.domains.system.schemas import SourceConfig, SourcesCatalogConfig
 
 
 def test_source_config_validation() -> None:

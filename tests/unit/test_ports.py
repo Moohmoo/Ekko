@@ -61,48 +61,19 @@ def test_provider_error_hierarchy() -> None:
     assert "Provider failed to respond" in str(err)
 
 
-def test_tool_port_runtime_checkable() -> None:
-    """Ensure ToolPort protocol verifies compliant tool implementations."""
-    from ekko.core.models import ToolResult
-    from ekko.core.ports import ToolPort
-
-    class ValidTool:
-        name: str = "test_tool"
-        description: str = "Does testing"
-
-        def get_schema(self) -> dict[str, Any]:
-            return {"type": "function"}
-
-        async def execute(self, **kwargs: Any) -> ToolResult:
-            return ToolResult(content="done", success=True)
-
-    class InvalidTool:
-        pass
-
-    assert isinstance(ValidTool(), ToolPort)
-    assert not isinstance(InvalidTool(), ToolPort)
-
-
 def test_hybrid_memory_port_runtime_checkable() -> None:
-    """Ensure HybridStore complies with HybridMemoryPort."""
+    """Ensure DatabaseManager complies with HybridMemoryPort."""
     from ekko.core.ports import HybridMemoryPort
-    from ekko.memory.hybrid_store import HybridStore
+    from ekko.db.manager import DatabaseManager
 
-    assert issubclass(HybridStore, HybridMemoryPort)
-
-
-def test_sqlite_memory_port_runtime_checkable() -> None:
-    """Ensure SqliteMemory complies with MemoryPort."""
-    from ekko.core.ports import MemoryPort
-    from ekko.memory.sqlite_memory import SqliteMemory
-
-    assert issubclass(SqliteMemory, MemoryPort)
+    assert issubclass(DatabaseManager, HybridMemoryPort)
 
 
 def test_embedder_port_runtime_checkable() -> None:
     """Ensure TextEmbedder complies with EmbedderPort."""
     from ekko.core.ports import EmbedderPort
-    from ekko.memory.embedder import TextEmbedder
+    from ekko.db.embedder import TextEmbedder
 
     assert issubclass(TextEmbedder, EmbedderPort)
+
 

@@ -6,7 +6,7 @@ import pytest
 
 from ekko.core.models import RawSignal, SignalStatus, SourceState
 from ekko.daemon.scheduler import IngestionCoordinator, parse_interval_seconds
-from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
+from ekko.domains.system.schemas import SourceConfig, SourcesCatalogConfig
 
 
 def test_parse_interval_seconds() -> None:

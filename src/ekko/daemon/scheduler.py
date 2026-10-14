@@ -5,13 +5,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
 
-from ekko.config.loader import load_sources_config
-from ekko.config.schemas import SourceConfig, SourcesCatalogConfig
-from ekko.ingestion.connectors.base import BaseConnector
-from ekko.ingestion.connectors.rest_api import RestApiConnector
-from ekko.ingestion.connectors.rss import RssConnector
-from ekko.ingestion.distiller import SignalDistiller
-from ekko.memory.hybrid_store import HybridStore
+from ekko.domains.system.loader import load_sources_config
+from ekko.domains.system.schemas import SourceConfig, SourcesCatalogConfig
+from ekko.domains.ingestion.connectors.base import BaseConnector
+from ekko.domains.ingestion.connectors.rest_api import RestApiConnector
+from ekko.domains.ingestion.connectors.rss import RssConnector
+from ekko.domains.ingestion.distiller import SignalDistiller
+from ekko.db.manager import DatabaseManager
 from ekko.core.models import RawSignal, SourceState
 from ekko.logger import get_logger
 
@@ -44,7 +44,7 @@ class IngestionCoordinator:
 
     def __init__(
         self,
-        db_manager: HybridStore,
+        db_manager: DatabaseManager,
         catalog: SourcesCatalogConfig | None = None,
         rss_connector: BaseConnector | None = None,
         rest_connector: BaseConnector | None = None,

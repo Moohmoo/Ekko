@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
-from ekko.core.events import StepStarted, TokenChunk, TurnCompleted
 from ekko.core.models import KnowledgeNote, RawSignal, SignalStatus
 from ekko.daemon.ipc_client import IPCClient
 from ekko.daemon.server import IPCServer
@@ -111,37 +110,6 @@ async def test_ipc_server_query_knowledge(socket_path: Path) -> None:
     await client.close()
     await server.stop()
 
-
-
-@pytest.mark.asyncio
-async def test_ipc_server_submit_prompt_streaming(socket_path: Path) -> None:
-    """Ensure submit_prompt streams EngineEvent chunks over socket."""
-    mock_engine = MagicMock()
-
-    async def fake_stream(prompt: str, session_id: str):
-        yield StepStarted(step_index=1, max_steps=1)
-        yield TokenChunk(delta="Hello ")
-        yield TokenChunk(delta="world!")
-        yield TurnCompleted(content="Hello world!", total_steps=1)
-
-    mock_engine.run_stream = fake_stream
-
-    server = IPCServer(socket_path=socket_path, engine=mock_engine)
-    await server.start()
-
-    client = IPCClient(socket_path=socket_path)
-    events: list[dict] = []
-    async for event in client.stream_prompt("Hi Ekko"):
-        events.append(event)
-
-    assert len(events) == 4
-    assert events[0]["type"] == "step_started"
-    assert events[1]["type"] == "token_chunk"
-    assert events[1]["delta"] == "Hello "
-    assert events[3]["type"] == "turn_completed"
-
-    await client.close()
-    await server.stop()
 
 
 @pytest.mark.asyncio
@@ -389,9 +357,8 @@ async def test_ipc_server_update_user_context(socket_path: Path, tmp_path: Path)
     """Ensure update_user_context persists YAML, updates engine prompt, and handles validation errors."""
     from ekko.settings import Settings
 
-    mock_engine = MagicMock()
     settings = Settings(config_dir=str(tmp_path))
-    server = IPCServer(socket_path=socket_path, engine=mock_engine, settings=settings)
+    server = IPCServer(socket_path=socket_path, settings=settings)
     await server.start()
 
     async with IPCClient(socket_path=socket_path) as client:
@@ -405,7 +372,6 @@ async def test_ipc_server_update_user_context(socket_path: Path, tmp_path: Path)
         assert res["status"] == "ok"
         assert res["user_context"]["user_name"] == "Charlie"
         assert res["user_context"]["preferred_language"] == "en"
-        mock_engine.update_system_prompt.assert_called_once()
 
         # Check persisted file
         assert (tmp_path / "user_context.yaml").exists()

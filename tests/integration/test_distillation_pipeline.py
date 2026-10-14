@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from ekko.core.models import ModelResponse, RawSignal, SignalStatus, SourceState
-from ekko.ingestion.distiller import SignalDistiller
-from ekko.memory.hybrid_store import HybridStore
+from ekko.db.manager import DatabaseManager
+from ekko.domains.ingestion.distiller import SignalDistiller
 
 
 @pytest.mark.asyncio
@@ -17,7 +17,7 @@ async def test_end_to_end_distillation_pipeline(tmp_path: Path) -> None:
     notes_dir = tmp_path / "notes"
     notes_dir.mkdir(parents=True, exist_ok=True)
 
-    store = HybridStore(db_path=db_file)
+    store = DatabaseManager(db_path=db_file)
     store.init_schema()
 
     # Create prerequisite source state and pending raw signal

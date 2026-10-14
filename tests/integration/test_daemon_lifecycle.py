@@ -6,8 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from ekko.daemon.ipc_client import IPCClient
-from ekko.daemon.service import run_daemon
-from ekko.cli.app import main, parse_args
+from ekko.daemon.service import main, parse_args, run_daemon
 from ekko.settings import Settings
 
 

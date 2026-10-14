@@ -98,29 +98,3 @@ class IPCClient:
             raise IPCClientError(f"RPC Error ({err.get('code')}): {err.get('message')}")
 
         return resp.get("result")
-
-    async def stream_prompt(
-        self,
-        prompt: str,
-        session_id: str = "default",
-    ) -> AsyncIterator[dict[str, Any]]:
-        """Stream EngineEvents line-by-line emitted by submit_prompt."""
-        reader, writer = await self._ensure_connection()
-        req_payload = {
-            "jsonrpc": "2.0",
-            "method": "submit_prompt",
-            "params": {"prompt": prompt, "session_id": session_id},
-            "id": 1,
-        }
-        writer.write((json.dumps(req_payload) + "\n").encode("utf-8"))
-        await writer.drain()
-
-        while not reader.at_eof():
-            line = await reader.readline()
-            if not line:
-                break
-            event_data = json.loads(line.decode("utf-8"))
-            yield event_data
-            event_type = event_data.get("type") or event_data.get("event")
-            if event_type in {"turn_completed", "TurnCompleted", "engine_error", "EngineError"}:
-                break

@@ -33,6 +33,6 @@ dev = [
 ]
 
 [project.scripts]
-ekko = "ekko.cli.app:main"
+ekko = "ekko.daemon.service:main"
 
 

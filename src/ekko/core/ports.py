@@ -43,37 +43,6 @@ class StreamingLLMProviderPort(LLMProviderPort, Protocol):
 
 
 
-@runtime_checkable
-class MemoryPort(Protocol):
-    """Port defining conversation session memory persistence."""
-
-    async def add_message(self, session_id: str, message: Message) -> None:
-        """Persist a message into the specified session."""
-        ...
-
-    async def get_messages(self, session_id: str, limit: int = 10) -> list[Message]:
-        """Retrieve conversation history for the session, up to limit turns."""
-        ...
-
-    async def clear_session(self, session_id: str) -> None:
-        """Remove all messages associated with the specified session."""
-        ...
-
-
-@runtime_checkable
-class ToolPort(Protocol):
-    """Port defining the contract for modular tools and capabilities."""
-
-    name: str
-    description: str
-
-    def get_schema(self) -> dict[str, Any]:
-        """Return the tool JSON schema definition for LLM tool calling."""
-        ...
-
-    async def execute(self, **kwargs: Any) -> ToolResult:
-        """Execute the tool logic using provided parameters."""
-        ...
 
 
 @runtime_checkable
