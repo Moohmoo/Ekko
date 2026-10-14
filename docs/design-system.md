@@ -31,23 +31,18 @@ border-top-right-radius: 0;
 
 ---
 
-## 2. Adaptive Chromatic Anchor
+## 2. Adaptive Chromatic Anchor & Geometry
 
-To merge organically with varying OS desktop environments (Ubuntu Yaru Dark, GNOME Adwaita Dark, macOS Notch/Menu Bar, Windows Taskbar), Ekko calculates a dynamic CSS anchor token `--notch-anchor`:
+To merge organically with varying OS desktop environments (Ubuntu Yaru Dark, GNOME Adwaita Dark, macOS Notch/Menu Bar, Windows Taskbar), Ekko calculates a dynamic CSS anchor token `--notch-anchor` and applies precise geometric surfaces:
 
-```
-           +-----------------------------------------------+
-           |               Host OS Top Panel               |
-           +-----------------------------------------------+
-           \ [Fillet L]      --notch-anchor       [Fillet R]/
-            \                                              /
-             +--------------------------------------------+
-             |                 Pod Header                 |
-             +--------------------------------------------+
-             |                 Main Stage                 |
-             |                                            |
-             +--------------------------------------------+
-```
+| Surface / Component | Width | Height | Fill / Color Token | Corner Radius & Geometry |
+|---|---|---|---|---|
+| **Host Panel Junction** | Screen width | System panel height | OS Panel Color (`--notch-anchor`) | Straight horizontal plane (`border-top: none`) |
+| **Concave Left Fillet** | 20 px | 20 px | `var(--notch-anchor)` | SVG cubic bezier outer concave curve |
+| **Concave Right Fillet** | 20 px | 20 px | `var(--notch-anchor)` | SVG cubic bezier outer concave curve |
+| **Mini-Capsule Shell** | 130 px | 32 px | `var(--notch-anchor)` to `#0c0c0e` | `rounded-b-2xl` (`16px` bottom corners) |
+| **Compact Notch Shell** | 660 px | 230 px | `var(--notch-anchor)` to `#000000` | `rounded-b-3xl` (`24px` bottom corners) |
+| **Extended Notch Shell** | 660 px | 460 px | `var(--notch-anchor)` to `#000000` | `rounded-b-3xl` (`24px` bottom corners) |
 
 1. **Auto-Detection**: On startup, the Electron main process samples the system theme (`gsettings`, desktop environment variables, or platform defaults) and injects the value into the DOM root as `--notch-anchor`.
 2. **Vertical Fusion Gradient**:

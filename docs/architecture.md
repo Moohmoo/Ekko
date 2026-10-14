@@ -8,48 +8,51 @@ Ekko is an ambient cognitive buffer and blind-spot watch sentinel docked directl
 
 The application is architected into two decoupled tiers communicating over a dedicated local UNIX domain socket using JSON-RPC 2.0 and NDJSON streaming:
 
-```
-+-------------------------------------------------------------------------+
-|                        ELECTRON CLIENT (DESKTOP)                        |
-|                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                 Renderer Process (React 19 + Vite)                |  |
-|  |  [Home: Drop & Last Note]  [Radar: Triage]  [Buffer: Obsidian]    |  |
-|  |             Zustand Stores  *  Framer Motion Engine               |  |
-|  +---------------------------------+---------------------------------+  |
-|                                    | window.ekkoAPI (ContextBridge)     |
-|  +---------------------------------v---------------------------------+  |
-|  |                      Main Process (Node.js)                       |  |
-|  |  * Window Bounds & Geometry      * Top Bar Anchor Detection       |  |
-|  |  * Global Shortcuts & System Tray * Daemon Process Lifecycle       |  |
-|  +---------------------------------+---------------------------------+  |
-+------------------------------------|------------------------------------+
-                                     | UNIX Domain Socket (/tmp/ekko.sock)
-                                     | JSON-RPC 2.0 / NDJSON Streaming
-+------------------------------------v------------------------------------+
-|                         EKKO DAEMON (PYTHON 3.14+)                      |
-|                                                                         |
-|  +-------------------------+  +--------------------------------------+  |
-|  |       IPC Server        |  |        Ingestion Coordinator         |  |
-|  |  * Socket Dispatcher    |  |  * Polite Polling Scheduler          |  |
-|  |  * NDJSON Streamer      |  |  * Connectors (RSS, REST, arXiv, HN) |  |
-|  +------------+------------+  +------------------+-------------------+  |
-|               |                                  |                      |
-|  +------------v----------------------------------v-------------------+  |
-|  |                         Domain Slices                             |  |
-|  |  * Distiller (LiteLLM Provider: Gemini / Ollama Local)            |  |
-|  |  * Resource Confinement (OS Niceness + Semaphores)                |  |
-|  +----------------------------+--------------------------------------+  |
-|                               |                                         |
-|  +----------------------------v--------------------------------------+  |
-|  |                    Storage & Retrieval Engine                     |  |
-|  |  * SQLite (WAL Mode, synchronous=NORMAL)                          |  |
-|  |  * Lexical Search (FTS5 BM25)                                     |  |
-|  |  * Dense Vector Search (sqlite-vec + FastEmbed)                   |  |
-|  |  * Hybrid Fusion: Reciprocal Rank Fusion (RRF, k=60)              |  |
-|  |  * File Exporter: Markdown with Obsidian Frontmatter              |  |
-|  +-------------------------------------------------------------------+  |
-+-------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph Client ["Electron Client (Desktop)"]
+        subgraph Renderer ["Renderer Process (React 19 + Vite)"]
+            Home["Home View (Drop & Ingestion)"]
+            Radar["Radar View (Blindspot Triage)"]
+            Buffer["Buffer View (Notes & Obsidian)"]
+            Stores["Zustand Stores & Framer Motion"]
+        end
+        Bridge["window.ekkoAPI (ContextBridge)"]
+        subgraph Main ["Main Process (Node.js)"]
+            WinMgr["Window Bounds & Geometry"]
+            Anchor["OS Anchor Detection"]
+            Tray["Global Shortcuts & System Tray"]
+            DaemonMgr["Daemon Supervisor"]
+        end
+        Renderer --> Bridge
+        Bridge --> Main
+    end
+
+    IPC["Local UNIX Domain Socket\n(/tmp/ekko.sock · JSON-RPC 2.0 / NDJSON)"]
+    Main <--> IPC
+
+    subgraph Daemon ["Ekko Daemon (Python 3.12+)"]
+        IPCServer["IPC Server (Socket Dispatcher)"]
+        IngestionCoord["Ingestion Scheduler & Connectors"]
+        subgraph Domains ["Domain Slices"]
+            RadarSlice["domains/radar (Signal Scoring & Triage)"]
+            BufferSlice["domains/buffer (Obsidian Notes & Cards)"]
+            IngestSlice["domains/ingestion (RSS / REST / arXiv / HN)"]
+            SystemSlice["domains/system (User Context & Config)"]
+        end
+        subgraph Storage ["Storage & Retrieval Subsystem"]
+            SQLite["SQLite Engine (WAL Mode)"]
+            FTS["Lexical Index (FTS5 BM25)"]
+            Vec["Dense Vectors (sqlite-vec)"]
+            RRF["Hybrid Fusion (RRF k=60)"]
+            Obsidian["Obsidian Vault (data/notes/*.md)"]
+        end
+        IPCServer <--> Domains
+        IngestionCoord --> IngestSlice
+        Domains --> Storage
+    end
+
+    IPC <--> IPCServer
 ```
 
 ---
@@ -58,34 +61,11 @@ The application is architected into two decoupled tiers communicating over a ded
 
 Ekko operates as a frameless, transparent, top-docked window (`resizable: false`, `alwaysOnTop: true`). Its geometry adapts dynamically across three discrete states:
 
-```
-+-------------------------------------------------------------------------+
-| 1. Mini-Capsule Mode (32px x 130px)                                     |
-|    [ (Mascot) * Pending Signals Dot  ^ ]                                |
-+-------------------------------------------------------------------------+
-
-+-------------------------------------------------------------------------+
-| 2. Compact Notch Mode (230px x 660px) -- Home & Radar                   |
-|    +---------------------------------------------------------------+    |
-|    | Header (32px): Navigation tabs [Home | Radar | Buffer] [ - X ]|    |
-|    +---------------------------------------------------------------+    |
-|    | Stage (178px):                                                |    |
-|    |   - Home: Bento Drop Zone + Reactive Mascot + Last Note Card  |    |
-|    |   - Radar: Blindspot Signal Card + Action Bar                 |    |
-|    +---------------------------------------------------------------+    |
-+-------------------------------------------------------------------------+
-
-+-------------------------------------------------------------------------+
-| 3. Extended Mode (460px x 660px) -- Buffer & Settings                   |
-|    +---------------------------------------------------------------+    |
-|    | Header (32px): Navigation tabs [Home | Radar | Buffer] [ - X ]|    |
-|    +---------------------------------------------------------------+    |
-|    | Stage (408px):                                                |    |
-|    |   - Buffer: Note List + Instant Search + Markdown Viewer      |    |
-|    |   - Settings: Distillation Language, Topics, Sources          |    |
-|    +---------------------------------------------------------------+    |
-+-------------------------------------------------------------------------+
-```
+| State | Width | Height | Stage Layout & Components | Interaction & Ergonomics |
+|---|---|---|---|---|
+| **Mini-Capsule** | 130 px | 32 px | Mascot slot (`w-6 h-6`), unread alert dot, chevron indicator | Desktop click targets unimpeded; click or drag-over expands to Compact |
+| **Compact Notch** | 660 px | 230 px | PodHeader (32px) + Stage (178px): Bento drop zone, reactive mascot (`w-24 h-24`), last note or Radar signal card | Default interaction mode; rapid drag-and-drop & one-click signal triage (< 3s) |
+| **Extended Notch** | 660 px | 460 px | PodHeader (32px) + Stage (408px): Buffer note browser, hybrid search bar, Obsidian viewer, or Settings panel | Deep exploration and configuration; invoked on tab click or hotkey |
 
 ### Transition & Curtain Orchestration
 - **Expansion (32px -> 230/460px)**: The native Electron window expands immediately via `win.setBounds()`, followed by an unrolling curtain animation rendered by Framer Motion.
@@ -118,7 +98,9 @@ The storage architecture is strictly **local-first** and self-contained within a
 
 The Python daemon (`src/ekko/`) is structured into decoupled domain slices:
 
+- **`domains/radar/`**: Blindspot signals, alert scoring, and background triage watch box.
+- **`domains/buffer/`**: Distilled note cards, staging buffer, and Obsidian Markdown vault persistence.
 - **`domains/ingestion/`**: Declarative polling connectors for RSS, REST, arXiv, and HackerNews with rate-limiting, jitter, and heuristic content extraction.
-- **`domains/distillation/`**: Distillation coordinator compressing ingested raw signals into structured atomic notes using LiteLLM (supporting Gemini, Ollama, and OpenAI-compatible endpoints).
-- **`db/`**: Schema migrations, transactional connections, and hybrid search implementation.
-- **`daemon/`**: UNIX socket server handling client requests, lifecycle management, and resource confinement (process niceness incremented by +10 to ensure zero impact on foreground desktop tasks).
+- **`domains/system/`**: User context, profile configuration, and YAML settings loader.
+- **`db/`**: Schema migrations, transactional WAL connections, lexical indexing (FTS5 BM25), dense vector embeddings (`sqlite-vec`), and Reciprocal Rank Fusion (RRF $k=60$).
+- **`daemon/`**: UNIX domain socket server (`/tmp/ekko.sock`), client RPC dispatcher, process supervisor, and resource confinement (process niceness incremented by +10 to ensure zero impact on foreground desktop tasks).

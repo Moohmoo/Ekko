@@ -1,106 +1,146 @@
-# Ekko
+<p align="center">
+  <img src="./docs/assets/logo.svg" width="80" height="80" alt="Ekko Mascot Logo" />
+</p>
+
+<h1 align="center">Ekko</h1>
 
 <p align="center">
-  <strong>Ambient Cognitive Buffer & Blind-Spot Sentinel</strong><br>
-  A distraction-free, local-first companion docked beneath your system status bar.
+  <strong>Ambient cognitive buffer and blindspot sentinel docked to your desktop panel.</strong>
 </p>
 
 <p align="center">
-  <a href="#quickstart">Quickstart</a> &bull;
-  <a href="docs/architecture.md">Architecture</a> &bull;
-  <a href="docs/design-system.md">Design System</a> &bull;
-  <a href="docs/adr/">Decisions (ADRs)</a> &bull;
-  <a href="CHANGELOG.md">Changelog</a>
+  <a href="#introduction">Introduction</a> &middot;
+  <a href="#features">Features</a> &middot;
+  <a href="#tech-stack">Tech Stack</a> &middot;
+  <a href="#architecture">Architecture</a> &middot;
+  <a href="#quickstart">Quickstart</a> &middot;
+  <a href="#documentation">Documentation</a> &middot;
+  <a href="#license">License</a>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License MIT" /></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v0.2.0--beta-38bdf8.svg" alt="Release v0.2.0-beta" /></a>
+  <img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-131313.svg" alt="Supported Platforms" />
+  <img src="https://img.shields.io/badge/python-3.12%2B-3776ab.svg" alt="Python 3.12+" />
+  <img src="https://img.shields.io/badge/react-19-61dafb.svg" alt="React 19" />
 </p>
 
 ---
 
-## What is Ekko?
+## Introduction
 
-Ekko lives as an organic notch directly docked under your host operating system's top bar (Linux, macOS, Windows). It serves as an **ambient cognitive buffer**:
+**Ekko** is a local-first, distraction-free ambient cognitive buffer and blind-spot watch sentinel docked directly beneath your operating system's top panel (Linux, macOS, Windows).
 
-- **Instant Reflex Capture (Home)**: Drag and drop files (PDF, code, markdown) or links directly into the notch. Ekko ingests and distills them into atomic notes in seconds without breaking your workflow.
-- **Blind-Spot Sentinel (Radar)**: Quietly monitors selected technical sources (arXiv, HackerNews, RSS, REST) in the background. Synthesizes anomalies and signals into high-signal briefings you can triage with one click.
-- **Actionable Workbench (Buffer)**: Browse your distilled memory with sub-millisecond hybrid search (FTS5 BM25 + dense vector embeddings) and export notes to your Obsidian vault.
-- **The Golden Rule**: Every interaction must take **under 3 seconds**.
+Engineered around a radical ergonomic constraint: **every interaction must complete in under 3 seconds**.
+
+- **Drop & Forget In-Place**: Absorb documents, code snippets, and links instantly without leaving your current workspace or switching windows.
+- **Rapid Radar Triage**: Sift through anomalies and high-value technical signals curated silently in the background with a single keystroke or click.
+- **Frictionless Obsidian Export**: Query distilled atomic notes with sub-millisecond hybrid retrieval and save them directly into your Obsidian markdown vault.
 
 ---
 
-## Data Flow
+## Features
 
+- **Ambient Notch Dock**: Organically anchored beneath your desktop panel with host OS color blending (`--notch-anchor`) and seamless concave fillets. Adapts across 3 geometry states: Mini-Capsule (`32px`), Compact (`230px`), and Extended (`460px`).
+- **Drop & Forget In-Place**: Drag and drop any file or URL into the notch. Ekko compresses and distills content into atomic notes in seconds with zero layout jank.
+- **Radar Blindspot Watch**: Autonomous background sentinel monitoring selected technical sources (arXiv, HackerNews, RSS, REST) and distilling them into actionable briefing cards.
+- **Ephemeral Staging Buffer**: Instant-access memory workbench featuring sub-millisecond hybrid retrieval (FTS5 BM25 + dense vector similarity) and native Obsidian Markdown compatibility.
+- **100% Local-First & Zero-Cloud**: Self-contained SQLite WAL engine, on-device vector embeddings (`sqlite-vec`), and local LLM distillation (Ollama `qwen2.5:7b` or private endpoints) with zero telemetry and zero external tracking.
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Description |
+|---|---|---|
+| **Desktop Shell** | [Electron](https://www.electronjs.org/) | Frameless, transparent, top-docked window orchestration and system integration |
+| **Frontend UI** | [React 19](https://react.dev/) &bull; [TypeScript](https://www.typescriptlang.org/) | Declarative component architecture and strict static typing |
+| **Styling & Motion** | [Tailwind CSS](https://tailwindcss.com/) &bull; [Framer Motion](https://www.framer.com/motion/) | OLED dark mode tokens and hardware-accelerated spring physics |
+| **Backend Daemon** | [Python 3.12+](https://www.python.org/) &bull; [uv](https://docs.astral.sh/uv/) | Asynchronous vertical slices daemon communicating over `/tmp/ekko.sock` |
+| **Relational Storage** | [SQLite](https://www.sqlite.org/) (WAL Mode) | Local-first persistence with transactional write-ahead logging |
+| **Lexical Search** | [FTS5 BM25](https://www.sqlite.org/fts5.html) | Native full-text search indexing title, tags, content, and summaries |
+| **Vector Search** | [sqlite-vec](https://github.com/asg017/sqlite-vec) &bull; [FastEmbed](https://github.com/qdrant/fastembed) | In-process dense vector embeddings and cosine similarity search |
+| **LLM Distillation** | [LiteLLM](https://github.com/BerriAI/litellm) | Local inference via Ollama (`qwen2.5:7b`) or private API endpoints |
+
+---
+
+## Architecture
+
+Ekko decouples presentation from daemon workloads via a high-performance local UNIX domain socket protocol:
+
+```mermaid
+flowchart LR
+    subgraph Input ["Input Signals"]
+        Drop["Drag & Drop\n(Files / URLs)"]
+        RadarFeeds["Radar Feeds\n(arXiv / HN / RSS)"]
+    end
+
+    subgraph Desktop ["Desktop Shell (Electron)"]
+        Notch["Ambient Notch UI\n(32px / 230px / 460px)"]
+    end
+
+    subgraph Daemon ["Ekko Daemon (Python 3.12+)"]
+        IPC["/tmp/ekko.sock\n(JSON-RPC / NDJSON)"]
+        Slices["Vertical Slices\n(Radar / Buffer / Ingestion)"]
+    end
+
+    subgraph Storage ["Local Storage & Vault"]
+        DB[("SQLite WAL\nFTS5 + sqlite-vec")]
+        Vault[("Obsidian Vault\nMarkdown Notes")]
+    end
+
+    Drop --> Notch
+    RadarFeeds --> Slices
+    Notch <--> IPC
+    IPC <--> Slices
+    Slices --> DB
+    Slices --> Vault
 ```
-   Raw Signals                           Distilled Knowledge
- (Web / Drag & Drop)                     (Hybrid Local Store)
-        |                                         ^
-        v                                         |
-+-------------------+      UNIX Socket     +-------------------+
-|  Electron Notch   | <==================> |   Ekko Daemon     |
-|   (React / UI)    |   /tmp/ekko.sock     |   (Python 3.14)   |
-+-------------------+                      +-------------------+
-        |                                         |
-        | [32px Capsule / 230px Notch]            | [LiteLLM Distiller]
-        v                                         v
-   User Focus                               Obsidian Vault
- (Uninterrupted)                           (Markdown Notes)
-```
+
+For full details on the IPC contract, state machines, and ranking mathematics, see the [System Architecture Specification](docs/architecture.md).
 
 ---
 
 ## Quickstart
 
-Get running in three simple commands:
+### Recommended Versions
+
+| Prerequisite | Recommended Version | Verification Command |
+|---|---|---|
+| **Python** | `>= 3.12` | `python3 --version` |
+| **Node.js** | `>= 20.x` | `node --version` |
+| **uv** | `>= 0.4.x` | `uv --version` |
+
+### Installation & Launch
 
 ```bash
-# 1. Install all backend and frontend dependencies
+# 1. Clone the repository and enter the directory
+git clone https://github.com/Moohmoo/Ekko.git && cd Ekko
+
+# 2. Install all frontend and backend dependencies
 make install
 
-# 2. Launch the desktop application and background daemon
+# 3. Launch the desktop application and background daemon
 make dev
+```
 
-# 3. Execute the full verification suite (Pytest & Playwright E2E)
+### Verification & Tests
+
+```bash
+# Run the full automated verification suite (Pytest & Playwright E2E)
 make test
 ```
 
 ---
 
-## Key Capabilities
-
-- **Tri-State Adaptive Geometry**:
-  - **Mini-Capsule (`32px`)**: Discrete status indicator with mascot presence and pending signal dot. Leaves desktop click targets completely free.
-  - **Compact Mode (`230px`)**: Default home for drag-and-drop ingestion and radar signal triage.
-  - **Extended Mode (`460px`)**: Expands downward for note browsing, full-text search, and configuration.
-- **OS-Aware Chromatic Anomaly**: The notch dynamically samples your host system panel color (`--notch-anchor`) to blend seamlessly with GNOME, macOS, or Windows panels via smooth concave SVG fillets.
-- **Reactive Vector Mascot**: A 100% SVG companion expressing 7 micro-emotions (`idle`, `welcome`, `hover_drop`, `ingesting`, `ready`, `alert`, `error`) that morphs between capsule and notch states with zero layout jank.
-- **Local-First & Private**: Powered by SQLite WAL, local vector embeddings (`sqlite-vec`), and local or cloud LLMs via LiteLLM (Gemini / Ollama). Distilled notes are saved directly as Markdown files with YAML frontmatter.
-
----
-
 ## Documentation
 
-Comprehensive engineering documentation lives in [`docs/`](docs/) :
+In-depth technical specifications and architectural decision records are organized within [`docs/`](./docs/):
 
-- **[System Architecture](docs/architecture.md)**: System topology, IPC protocol, window orchestration, and hybrid search mechanics.
-- **[Ekko Design System](docs/design-system.md)**: OLED color tokens, adaptive anchor gradients, 7 micro-emotions matrix, and Framer Motion spring physics.
-- **[Architecture Decision Records](docs/adr/)**:
-  - [ADR 0001: UNIX Domain Socket Over HTTP for Local IPC](docs/adr/0001-unix-socket-over-http.md)
-  - [ADR 0002: Vertical Slices Architecture for Backend Daemon](docs/adr/0002-vertical-slices-architecture.md)
-  - [ADR 0003: Mascot Slot / FLIP Shared Layout Pattern](docs/adr/0003-mascot-slot-flip-pattern.md)
-
----
-
-## Project Structure
-
-```
-.
-├── clients/desktop-electron/  # Electron, React 19, Tailwind CSS, Framer Motion
-├── config/                    # Default system prompts, sources, and user context
-├── data/                      # Local SQLite database (ekko.db) and Markdown notes
-├── docs/                      # Architectural specs, design system, and ADRs
-├── src/ekko/                  # Python 3.14 backend daemon & vertical slices
-├── tests/                     # Backend unit/integration tests and Playwright E2E
-├── Makefile                   # High-level build and development tasks
-└── pyproject.toml             # Python package configuration (managed via uv)
-```
+- **[System Architecture](./docs/architecture.md)** – Full-stack IPC contract, vertical slices, and hybrid search engine.
+- **[Design System](./docs/design-system.md)** – OLED palette, responsive notch geometry, and mascot motion physics.
+- **[Architecture Decision Records (ADRs)](./docs/adr/README.md)** – Foundational technical decisions and trade-offs.
 
 ---
 

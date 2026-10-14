@@ -8,18 +8,20 @@ Initial iterations organized the Python daemon in traditional horizontal technic
 
 ## Decision
 We organize the Ekko backend using **Vertical Slices** partitioned by functional domain contexts:
-- `domains/ingestion`: Connectors (RSS, REST, arXiv, HackerNews), scheduler, and raw payload normalization.
-- `domains/distillation`: Prompt management, LLM distillation, and synthesis pipeline.
-- `db`: Database management, migrations, and the hybrid search engine (SQLite WAL + FTS5 + sqlite-vec).
-- `daemon`: IPC server, process supervisor, and resource confinement.
+- `domains/radar`: Blindspot signals, alert scoring, and background triage watch box.
+- `domains/buffer`: Distilled note cards, staging buffer, and Obsidian Markdown vault persistence.
+- `domains/ingestion`: Network polling connectors (RSS, REST, arXiv, HackerNews), scheduler, and raw payload normalization/compression.
+- `domains/system`: User context, profile preferences, and YAML configuration loading.
+- `db/`: Database connections, schema migrations, lexical indexing (FTS5 BM25), dense vector embeddings (`sqlite-vec`), and Reciprocal Rank Fusion (RRF $k=60$).
+- `daemon/`: UNIX domain socket server (`/tmp/ekko.sock`), client RPC dispatcher, process supervisor, and resource confinement.
 
 Each slice manages its own domain logic, data models, and specialized helpers, interacting with other slices only through explicit contracts and ports.
 
 ## Consequences
 ### Positive
-- **High Cohesion**: All code related to an ingestion connector or search ranking lives together.
-- **Independent Evolution**: Adding a new signal source or modifying distillation logic does not ripple into the IPC dispatcher or storage manager.
-- **Isolated Testing**: Unit and integration tests can execute against a single slice without standing up mock infrastructure for the entire application.
+- **High Cohesion**: All code related to an ingestion connector, radar signal scoring, or buffer note export lives together.
+- **Independent Evolution**: Modifying radar alert heuristics or buffer note formatting does not ripple into the IPC dispatcher or storage manager.
+- **Isolated Testing**: Unit and integration tests execute against a single slice without standing up mock infrastructure for the entire application.
 
 ### Negative
-- Shared utility logic must be intentionally placed in `core/` to prevent premature duplication between slices.
+- Shared utility logic and foundational ports must be intentionally placed in `core/` to prevent premature duplication between slices.
