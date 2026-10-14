@@ -1,8 +1,11 @@
 """Document and text extractors decoupling file reading from cognitive distillation."""
 
 from pathlib import Path
+import pypdf
+import trafilatura
 
 from ekko.core.errors import DistillationError
+from ekko.domains.ingestion.network.client import ResilientHttpClient
 
 
 def extract_text_from_file(file_path: Path | str) -> tuple[str, str]:
@@ -21,8 +24,6 @@ def extract_text_from_file(file_path: Path | str) -> tuple[str, str]:
     suffix = path.suffix.lower()
     if suffix == ".pdf":
         try:
-            import pypdf
-
             reader = pypdf.PdfReader(str(path))
             extracted_text = "".join(page.extract_text() or "" for page in reader.pages)
         except Exception as exc:
@@ -43,10 +44,6 @@ def extract_text_from_file(file_path: Path | str) -> tuple[str, str]:
 
 async def fetch_web_resource(url: str, max_chars: int = 25000) -> str:
     """Fetch and extract web page content as Markdown with resilient SSRF and error guards."""
-    import httpx
-    import trafilatura
-    from ekko.domains.ingestion.client import ResilientHttpClient
-
     try:
         async with ResilientHttpClient() as client:
             resp = await client.get(url)
@@ -59,4 +56,3 @@ async def fetch_web_resource(url: str, max_chars: int = 25000) -> str:
         raise DistillationError(f"Could not extract readable text from '{url}' (it may require JavaScript rendering).")
 
     return markdown[:max_chars].strip()
-

@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 
 from ekko.core.logger import get_logger
-from ekko.domains.ingestion.client import ResilientHttpClient
 from ekko.domains.ingestion.connectors.base import BaseConnector, compute_signal_id
+from ekko.domains.ingestion.network.client import ResilientHttpClient
 from ekko.domains.radar.entities import RawSignal, SignalStatus, SourceState
 from ekko.domains.system.contracts import SourceConfig
 

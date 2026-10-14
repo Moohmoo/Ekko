@@ -10,10 +10,10 @@ import httpx
 
 from ekko.core.errors import EkkoError
 from ekko.core.logger import get_logger
-from ekko.domains.ingestion.rate_limiter import DomainRateLimiter
-from ekko.domains.ingestion.ssrf import SSRFValidator
+from ekko.domains.ingestion.network.rate_limiter import DomainRateLimiter
+from ekko.domains.ingestion.network.ssrf import SSRFValidator
 
-logger = get_logger("domains.ingestion.client")
+logger = get_logger("domains.ingestion.network.client")
 
 DEFAULT_USER_AGENT = "EkkoAgent/2.0 (+https://github.com/ekko-org/ekko; polite-ingestion)"
 HttpQueryParamValue = str | int | float | bool | list[str | int | float | bool]

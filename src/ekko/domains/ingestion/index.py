@@ -16,7 +16,7 @@ from ekko.domains.ingestion.contracts import (
     PreparedFileIngestion,
     PreparedUrlIngestion,
 )
-from ekko.domains.ingestion.extractors import fetch_web_resource
+from ekko.domains.ingestion.processing.extractors import fetch_web_resource
 from ekko.domains.radar.entities import RawSignal, SignalStatus
 
 logger = get_logger("domains.ingestion")

@@ -13,8 +13,8 @@ from ekko.daemon.resources import ResourceManagerPort
 from ekko.db.embedder import EmbedderPort
 from ekko.db.formatters import determine_unique_path, format_markdown_note, normalize_tag, slugify
 from ekko.domains.buffer.entities import KnowledgeNote
-from ekko.domains.ingestion.compressor import ContentCompressor, ModelProfile
-from ekko.domains.ingestion.extractors import extract_text_from_file
+from ekko.domains.ingestion.processing.compressor import ContentCompressor, ModelProfile
+from ekko.domains.ingestion.processing.extractors import extract_text_from_file
 from ekko.domains.radar.entities import RawSignal
 from ekko.providers.base import LLMProvider, Message
 

@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock
 import pytest
 
-from ekko.domains.ingestion.client import HttpResponseResult
+from ekko.domains.ingestion.network.client import HttpResponseResult
 from ekko.domains.ingestion.connectors.rest_api import RestApiConnector
 from ekko.domains.ingestion.connectors.rss import RssConnector
 from ekko.domains.radar.entities import SignalStatus, SourceState

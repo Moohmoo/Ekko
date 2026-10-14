@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from ekko.domains.ingestion.client import HttpResponseResult, ResilientHttpClient
-from ekko.domains.ingestion.rate_limiter import DomainRateLimiter
-from ekko.domains.ingestion.ssrf import SSRFValidator, SSRFViolationError
+from ekko.domains.ingestion.network.client import HttpResponseResult, ResilientHttpClient
+from ekko.domains.ingestion.network.rate_limiter import DomainRateLimiter
+from ekko.domains.ingestion.network.ssrf import SSRFValidator, SSRFViolationError
 
 
 def test_ssrf_validator_blocks_private_and_loopback_ips() -> None:
@@ -255,7 +255,7 @@ async def test_resilient_http_client_retries_on_gateway_errors() -> None:
 @pytest.mark.asyncio
 async def test_resilient_http_client_encapsulates_http_status_error() -> None:
     """Ensure HTTPStatusError (e.g. 404 Not Found) is wrapped in HttpFetchError."""
-    from ekko.domains.ingestion.client import HttpFetchError
+    from ekko.domains.ingestion.network.client import HttpFetchError
 
     client = ResilientHttpClient()
 
