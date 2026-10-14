@@ -22,6 +22,8 @@ async def test_daemon_lifecycle_start_ping_and_graceful_stop(tmp_path: Path) -> 
         sqlite_db_path=str(db_file),
         config_dir=str(config_dir),
         ipc_socket_path=str(sock_path),
+        llm_provider="gemini",
+        gemini_api_key="mock-api-key-ci",
         _env_file=None,
     )
 
