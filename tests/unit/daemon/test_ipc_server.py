@@ -458,3 +458,55 @@ async def test_ipc_server_broadcast_note_created(socket_path: Path, tmp_path: Pa
     await server.stop()
 
 
+def test_translate_rpc_exception_mappings() -> None:
+    """Ensure translate_rpc_exception accurately maps all exception types to JSON-RPC codes."""
+    from pydantic import BaseModel, Field
+    from ekko.daemon.server import translate_rpc_exception
+
+    # 1. FileNotFoundError & LookupError -> -32001
+    code, msg = translate_rpc_exception(FileNotFoundError("Missing file"))
+    assert code == -32001
+    assert "Missing file" in msg
+
+    code, msg = translate_rpc_exception(LookupError("Key not found"))
+    assert code == -32001
+    assert "Key not found" in msg
+
+    # 2. PermissionError -> -32003
+    code, msg = translate_rpc_exception(PermissionError("Access denied"))
+    assert code == -32003
+    assert "Access denied" in msg
+
+    # 3. ValueError with Format / URL keyword -> -32002
+    code, msg = translate_rpc_exception(ValueError("Unsupported Format: xyz"))
+    assert code == -32002
+    assert "Unsupported Format" in msg
+
+    code, msg = translate_rpc_exception(ValueError("Invalid URL scheme"))
+    assert code == -32002
+    assert "Invalid URL" in msg
+
+    # 4. Standard ValueError -> -32602
+    code, msg = translate_rpc_exception(ValueError("Invalid parameter count"))
+    assert code == -32602
+    assert "Invalid parameter count" in msg
+
+    # 5. ValidationError -> -32602 with formatted field path
+    class SampleModel(BaseModel):
+        count: int = Field(gt=0)
+
+    try:
+        SampleModel(count=-5)
+    except Exception as val_err:
+        code, msg = translate_rpc_exception(val_err)
+        assert code == -32602
+        assert "Validation error:" in msg
+        assert "count" in msg
+
+    # 6. Unhandled generic exception -> -32000
+    code, msg = translate_rpc_exception(RuntimeError("Unexpected state"))
+    assert code == -32000
+    assert "Unexpected state" in msg
+
+
+

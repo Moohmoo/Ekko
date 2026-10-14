@@ -41,6 +41,23 @@ def _log_task_exception(task: asyncio.Task[object]) -> None:
         logger.error("Background task '%s' raised unhandled exception: %s", task.get_name(), exc, exc_info=True)
 
 
+def translate_rpc_exception(exc: Exception, method: str | None = None) -> tuple[int, str]:
+    """Translate Python exceptions into standardized JSON-RPC 2.0 error code and message."""
+    if isinstance(exc, (FileNotFoundError, LookupError)):
+        return -32001, str(exc)
+    if isinstance(exc, PermissionError):
+        return -32003, str(exc)
+    if isinstance(exc, ValidationError):
+        code = -32002 if ("Format" in str(exc) or "URL" in str(exc)) else -32602
+        err_msg = "; ".join(f"{'.'.join(str(loc) for loc in e['loc'])}: {e['msg']}" for e in exc.errors())
+        return code, f"Validation error: {err_msg}"
+    if isinstance(exc, ValueError):
+        code = -32002 if ("Format" in str(exc) or "URL" in str(exc)) else -32602
+        return code, str(exc)
+    logger.error("Unhandled error dispatching method '%s': %s", method, exc, exc_info=True)
+    return -32000, str(exc)
+
+
 class IPCServer:
     """IPC UNIX Domain Socket server delegating to registered RPC method handlers."""
 
@@ -169,16 +186,7 @@ class IPCServer:
             else:
                 result = await handler(self, params)
                 writer.write(_rpc_result(req_id, _serialize_result(result)).encode("utf-8"))
-        except (FileNotFoundError, LookupError) as exc:
-            writer.write(_rpc_error(req_id, -32001, str(exc)).encode("utf-8"))
-        except PermissionError as exc:
-            writer.write(_rpc_error(req_id, -32003, str(exc)).encode("utf-8"))
-        except (ValueError, ValidationError) as exc:
-            code = -32002 if ("Format" in str(exc) or "URL" in str(exc)) else -32602
-            err_msg = "; ".join(f"{'.'.join(str(loc) for loc in e['loc'])}: {e['msg']}" for e in exc.errors()) if isinstance(exc, ValidationError) else str(exc)
-            prefix = "Validation error: " if isinstance(exc, ValidationError) else ""
-            writer.write(_rpc_error(req_id, code, f"{prefix}{err_msg}").encode("utf-8"))
         except Exception as exc:
-            logger.error("Unhandled error dispatching method '%s': %s", method, exc, exc_info=True)
-            writer.write(_rpc_error(req_id, -32000, str(exc)).encode("utf-8"))
+            code, msg = translate_rpc_exception(exc, method)
+            writer.write(_rpc_error(req_id, code, msg).encode("utf-8"))
         await writer.drain()
