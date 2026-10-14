@@ -96,7 +96,7 @@ flowchart LR
     Slices --> Vault
 ```
 
-For full details on the IPC contract, state machines, and ranking mathematics, see the [System Architecture Specification](docs/architecture.md).
+For full details on the IPC contract, state machines, and hybrid retrieval, see the [System Architecture Specification](docs/architecture.md).
 
 ---
 
