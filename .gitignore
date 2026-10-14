@@ -21,6 +21,12 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+clients/desktop-electron/dist/
+clients/desktop-electron/dist-electron/
+clients/desktop-electron/test-results/
+clients/desktop-electron/logs/
+clients/desktop-electron/data/
+*.tsbuildinfo
 
 # Local configuration and runtime data
 .env
@@ -30,6 +36,8 @@ logs/
 notes/
 config/user_context.yaml
 !config/user_context.yaml.example
+config/sources.yaml
+!config/sources.yaml.example
 
 
 

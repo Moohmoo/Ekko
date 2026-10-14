@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Python Backend Tests & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.14
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Lint with Ruff
+        run: uvx ruff check .
+
+      - name: Run Pytest test suite
+        run: uv run pytest
+
+  frontend:
+    name: Electron & Playwright E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv (for daemon supervisor)
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.14
+
+      - name: Install Python dependencies
+        run: uv sync
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: clients/desktop-electron/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd clients/desktop-electron
+          npm ci
+
+      - name: Typecheck and compile production bundle
+        run: |
+          cd clients/desktop-electron
+          npm run build
+
+      - name: Install Playwright browsers and OS dependencies
+        run: |
+          cd clients/desktop-electron
+          npx playwright install --with-deps
+
+      - name: Run Playwright E2E test suite (under xvfb)
+        run: |
+          cd clients/desktop-electron
+          xvfb-run --auto-servernum npm run test:e2e

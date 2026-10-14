@@ -1,0 +1,75 @@
+{
+  "name": "ekko-desktop-electron",
+  "productName": "Ekko",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Ekko Ambient Cognitive Buffer - Electron Desktop Pod",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "start": "electron --no-sandbox .",
+    "build": "tsc && vite build && tsc -p tsconfig.node.json",
+    "test:e2e": "playwright test",
+    "test:mascot": "echo 'Pour tester les 7 micro-émotions, ouvrez la console DevTools (Ctrl+Shift+I) et lancez : window.ekkoAPI.cycleAllEmotions() ou window.ekkoAPI.testMascotEmotion(\"ingesting\")'"
+  },
+  "build": {
+    "appId": "com.ekko.desktop",
+    "productName": "Ekko",
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "public/assets/icon.png",
+      "category": "Utility",
+      "desktop": {
+        "Name": "Ekko",
+        "Comment": "Ambient Cognitive Buffer and Blindspot Sentinel",
+        "Icon": "ekko",
+        "Terminal": false,
+        "Type": "Application",
+        "Categories": "Utility;"
+      }
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/assets/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/assets/icon.png"
+    }
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.4.7",
+    "lucide-react": "^0.475.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.1",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^22.13.4",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^34.2.0",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.6"
+  }
+}

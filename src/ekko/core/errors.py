@@ -13,3 +13,9 @@ class ProviderError(EkkoError):
     """Raised when an external LLM provider fails or returns invalid output."""
 
     pass
+
+
+class DistillationError(EkkoError):
+    """Raised when cognitive distillation of a signal or file fails."""
+
+    pass

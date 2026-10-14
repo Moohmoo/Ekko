@@ -1,9 +1,9 @@
 """LLM Router and Factory selecting the configured inference provider."""
 
 from ekko.core.errors import ProviderError
-from ekko.core.ports import LLMProviderPort
+from ekko.core.settings import Settings
+from ekko.providers.base import LLMProvider
 from ekko.providers.litellm_provider import LiteLLMProvider
-from ekko.settings import Settings
 
 
 def _normalize_model_name(model: str, default_prefix: str) -> str:
@@ -62,7 +62,7 @@ class LLMRouter:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
 
-    def get_provider(self) -> LLMProviderPort:
+    def get_provider(self) -> LLMProvider:
         """Resolve and instantiate the configured LLM provider."""
         provider_name = self.settings.llm_provider.strip().lower()
 

@@ -1,15 +1,15 @@
-"""Unit tests for core domain ports and exceptions."""
+"""Unit tests for providers and resource management protocols."""
 
 from typing import Any
-import pytest
 
 from ekko.core.errors import EkkoError, ProviderError
-from ekko.core.models import Message, ModelResponse
-from ekko.core.ports import LLMProviderPort
+from ekko.daemon.resources import ResourceManager, ResourceManagerPort
+from ekko.providers.embedder import EmbedderPort, TextEmbedder
+from ekko.providers.base import LLMProvider, Message, ModelResponse
 
 
 class DummyValidProvider:
-    """Mock provider correctly implementing the LLMProviderPort contract."""
+    """Mock provider correctly implementing the LLMProvider contract."""
 
     async def generate(
         self,
@@ -25,13 +25,13 @@ class DummyInvalidProvider:
     pass
 
 
-def test_provider_port_runtime_checkable() -> None:
-    """Ensure LLMProviderPort validates conforming implementations at runtime."""
+def test_provider_protocol_runtime_checkable() -> None:
+    """Ensure LLMProvider validates conforming implementations at runtime."""
     valid_instance = DummyValidProvider()
     invalid_instance = DummyInvalidProvider()
 
-    assert isinstance(valid_instance, LLMProviderPort)
-    assert not isinstance(invalid_instance, LLMProviderPort)
+    assert isinstance(valid_instance, LLMProvider)
+    assert not isinstance(invalid_instance, LLMProvider)
 
 
 def test_provider_error_hierarchy() -> None:
@@ -44,24 +44,11 @@ def test_provider_error_hierarchy() -> None:
     assert "Provider failed to respond" in str(err)
 
 
-def test_tool_port_runtime_checkable() -> None:
-    """Ensure ToolPort protocol verifies compliant tool implementations."""
-    from ekko.core.models import ToolResult
-    from ekko.core.ports import ToolPort
+def test_embedder_port_runtime_checkable() -> None:
+    """Ensure TextEmbedder complies with EmbedderPort."""
+    assert issubclass(TextEmbedder, EmbedderPort)
 
-    class ValidTool:
-        name: str = "test_tool"
-        description: str = "Does testing"
 
-        def get_schema(self) -> dict[str, Any]:
-            return {"type": "function"}
-
-        async def execute(self, **kwargs: Any) -> ToolResult:
-            return ToolResult(content="done", success=True)
-
-    class InvalidTool:
-        pass
-
-    assert isinstance(ValidTool(), ToolPort)
-    assert not isinstance(InvalidTool(), ToolPort)
-
+def test_resource_manager_port_runtime_checkable() -> None:
+    """Ensure ResourceManager complies with ResourceManagerPort."""
+    assert issubclass(ResourceManager, ResourceManagerPort)

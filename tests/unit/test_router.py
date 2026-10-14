@@ -5,7 +5,7 @@ import pytest
 from ekko.core.errors import ProviderError
 from ekko.providers.litellm_provider import LiteLLMProvider
 from ekko.providers.router import LLMRouter
-from ekko.settings import Settings
+from ekko.core.settings import Settings
 
 
 def test_settings_default_values() -> None:
