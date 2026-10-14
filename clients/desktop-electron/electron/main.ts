@@ -14,6 +14,11 @@ process.env.VITE_PUBLIC = app.isPackaged
   ? process.env.DIST
   : path.join(__dirname, '../public');
 
+app.setName('Ekko');
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.ekko.desktop');
+}
+
 // Hardware acceleration & GPU rasterization optimizations for Linux/Chromium
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
@@ -23,6 +28,21 @@ let tray: Tray | null = null;
 let isQuitting = false;
 const isDebugMode = process.argv.includes('--debug');
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
+
+function getAppIconPath(): string {
+  const publicDir = process.env.VITE_PUBLIC || path.join(__dirname, '../public');
+  const candidate = path.join(publicDir, 'assets/icon.png');
+  if (fs.existsSync(candidate)) return candidate;
+
+  const appPath = app.getAppPath();
+  const rootCandidate = path.join(appPath, 'public/assets/icon.png');
+  if (fs.existsSync(rootCandidate)) return rootCandidate;
+
+  const distCandidate = path.join(appPath, 'dist/assets/icon.png');
+  if (fs.existsSync(distCandidate)) return distCandidate;
+
+  return candidate;
+}
 
 function getPreloadPath(): string {
   // 1. Production / compiled path (same directory as main.js)
@@ -125,8 +145,11 @@ function createWindow() {
   const initialBounds = getCenteredTopBounds(windowWidth, podHeight);
 
   const preloadPath = getPreloadPath();
+  const iconPath = getAppIconPath();
 
   win = new BrowserWindow({
+    title: 'Ekko',
+    icon: iconPath,
     width: initialBounds.width,
     height: initialBounds.height,
     x: initialBounds.x,
@@ -405,6 +428,14 @@ app.on('activate', () => {
 app.whenReady().then(async () => {
   // Disable default native menu bar
   Menu.setApplicationMenu(null);
+
+  // Configure application dock icon on macOS
+  if (process.platform === 'darwin' && app.dock) {
+    const iconPath = getAppIconPath();
+    if (fs.existsSync(iconPath)) {
+      app.dock.setIcon(iconPath);
+    }
+  }
 
   // Ensure the Python daemon is running (auto-supervises or adopts external instance)
   try {

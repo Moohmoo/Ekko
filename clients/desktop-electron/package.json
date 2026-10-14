@@ -1,5 +1,6 @@
 {
   "name": "ekko-desktop-electron",
+  "productName": "Ekko",
   "version": "0.1.0",
   "type": "module",
   "description": "Ekko Ambient Cognitive Buffer - Electron Desktop Pod",
@@ -10,6 +11,42 @@
     "build": "tsc && vite build && tsc -p tsconfig.node.json",
     "test:e2e": "playwright test",
     "test:mascot": "echo 'Pour tester les 7 micro-émotions, ouvrez la console DevTools (Ctrl+Shift+I) et lancez : window.ekkoAPI.cycleAllEmotions() ou window.ekkoAPI.testMascotEmotion(\"ingesting\")'"
+  },
+  "build": {
+    "appId": "com.ekko.desktop",
+    "productName": "Ekko",
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "public/assets/icon.png",
+      "category": "Utility",
+      "desktop": {
+        "Name": "Ekko",
+        "Comment": "Ambient Cognitive Buffer and Blindspot Sentinel",
+        "Icon": "ekko",
+        "Terminal": false,
+        "Type": "Application",
+        "Categories": "Utility;"
+      }
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/assets/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/assets/icon.png"
+    }
   },
   "dependencies": {
     "clsx": "^2.1.1",
