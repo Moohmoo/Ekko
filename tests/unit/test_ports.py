@@ -1,15 +1,16 @@
-"""Unit tests for core domain ports and exceptions."""
+"""Unit tests for providers and resource management protocols."""
 
 from typing import Any
 import pytest
 
 from ekko.core.errors import EkkoError, ProviderError
-from ekko.core.models import Message, ModelResponse
-from ekko.core.ports import LLMProviderPort
+from ekko.daemon.resources import ResourceManager, ResourceManagerPort
+from ekko.db.embedder import EmbedderPort, TextEmbedder
+from ekko.providers.base import LLMProvider, Message, ModelResponse
 
 
 class DummyValidProvider:
-    """Mock provider correctly implementing the LLMProviderPort contract."""
+    """Mock provider correctly implementing the LLMProvider contract."""
 
     async def generate(
         self,
@@ -25,14 +26,13 @@ class DummyInvalidProvider:
     pass
 
 
-def test_provider_port_runtime_checkable() -> None:
-    """Ensure LLMProviderPort validates conforming implementations at runtime."""
+def test_provider_protocol_runtime_checkable() -> None:
+    """Ensure LLMProvider validates conforming implementations at runtime."""
     valid_instance = DummyValidProvider()
     invalid_instance = DummyInvalidProvider()
 
-    assert isinstance(valid_instance, LLMProviderPort)
-    assert not isinstance(invalid_instance, LLMProviderPort)
-
+    assert isinstance(valid_instance, LLMProvider)
+    assert not isinstance(invalid_instance, LLMProvider)
 
 
 def test_provider_error_hierarchy() -> None:
@@ -45,19 +45,11 @@ def test_provider_error_hierarchy() -> None:
     assert "Provider failed to respond" in str(err)
 
 
-def test_hybrid_memory_port_runtime_checkable() -> None:
-    """Ensure DatabaseManager complies with HybridMemoryPort."""
-    from ekko.core.ports import HybridMemoryPort
-    from ekko.db.manager import DatabaseManager
-
-    assert issubclass(DatabaseManager, HybridMemoryPort)
-
-
 def test_embedder_port_runtime_checkable() -> None:
     """Ensure TextEmbedder complies with EmbedderPort."""
-    from ekko.core.ports import EmbedderPort
-    from ekko.db.embedder import TextEmbedder
-
     assert issubclass(TextEmbedder, EmbedderPort)
 
 
+def test_resource_manager_port_runtime_checkable() -> None:
+    """Ensure ResourceManager complies with ResourceManagerPort."""
+    assert issubclass(ResourceManager, ResourceManagerPort)

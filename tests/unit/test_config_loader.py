@@ -9,7 +9,7 @@ from ekko.domains.system.loader import (
     save_sources_config,
     save_user_context,
 )
-from ekko.domains.system.schemas import (
+from ekko.domains.system.contracts import (
     SourceConfig,
     SourcesCatalogConfig,
     UserContextConfig,

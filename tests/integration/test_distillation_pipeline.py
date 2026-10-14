@@ -5,7 +5,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 import pytest
 
-from ekko.core.models import ModelResponse, RawSignal, SignalStatus, SourceState
+from ekko.domains.radar.entities import RawSignal, SignalStatus, SourceState
+from ekko.providers.base import ModelResponse
 from ekko.db.manager import DatabaseManager
 from ekko.domains.ingestion.distiller import SignalDistiller
 

@@ -4,13 +4,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 import pytest
 
-from ekko.core.models import (
-    KnowledgeNote,
+from ekko.db.manager import DatabaseManager
+from ekko.domains.buffer.entities import KnowledgeNote
+from ekko.domains.radar.entities import (
     RawSignal,
     SignalStatus,
     SourceState,
 )
-from ekko.db.manager import DatabaseManager
 
 
 @pytest.fixture

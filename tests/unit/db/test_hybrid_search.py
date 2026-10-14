@@ -3,7 +3,7 @@
 from pathlib import Path
 import pytest
 
-from ekko.core.models import KnowledgeNote
+from ekko.domains.buffer.entities import KnowledgeNote
 from ekko.db.manager import DatabaseManager
 
 

@@ -12,9 +12,9 @@ from ekko.daemon.server import DEFAULT_SOCKET_PATH, IPCServer
 from ekko.db.embedder import TextEmbedder
 from ekko.db.manager import DatabaseManager
 from ekko.domains.ingestion.distiller import SignalDistiller
-from ekko.logger import get_logger, setup_logger
+from ekko.core.logger import get_logger, setup_logger
+from ekko.core.settings import Settings
 from ekko.providers.router import LLMRouter
-from ekko.settings import Settings
 
 logger = get_logger("daemon.service")
 

@@ -1,25 +1,26 @@
 """Buffer domain façade exposing knowledge notes retrieval and hybrid search."""
 
 from typing import Any
+from ekko.core.logger import get_logger
 from ekko.db.manager import DatabaseManager
 from ekko.domains.buffer import crud, search
-from ekko.logger import get_logger
+from ekko.domains.buffer.contracts import NoteSearchResult
+from ekko.domains.buffer.entities import KnowledgeNote
 
 logger = get_logger("domains.buffer")
 
 
-async def scan_notes(db_manager: DatabaseManager, params: dict[str, Any]) -> list[dict[str, Any]]:
+async def scan_notes(db_manager: DatabaseManager, params: dict[str, Any]) -> list[KnowledgeNote]:
     """Scan recent knowledge notes ordered by creation time DESC."""
     limit = int(params.get("limit", 20))
-    notes = await crud.fetch_recent_notes(db_manager, limit=limit)
-    return [n.model_dump(mode="json") for n in notes]
+    return await crud.fetch_recent_notes(db_manager, limit=limit)
 
 
 async def search_notes(
     db_manager: DatabaseManager,
     params: dict[str, Any],
     embedder: Any | None = None,
-) -> list[dict[str, Any]]:
+) -> list[NoteSearchResult]:
     """Search knowledge notes with hybrid lexical/semantic ranking."""
     query = str(params.get("query", ""))
     limit = int(params.get("limit", 10))
@@ -44,9 +45,6 @@ async def search_notes(
     )
 
     return [
-        {
-            "note": note.model_dump(mode="json"),
-            "score": round(score, 4),
-        }
+        NoteSearchResult(note=note, score=round(score, 4))
         for note, score in results
     ]

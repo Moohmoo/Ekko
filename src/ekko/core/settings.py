@@ -31,6 +31,3 @@ class Settings(BaseSettings):
     def active_model(self) -> str:
         """Return the active model identifier based on selected provider."""
         return self.local_llm_model if self.llm_provider == "local" else self.gemini_model
-
-
-

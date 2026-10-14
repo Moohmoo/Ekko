@@ -7,10 +7,17 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from ekko.core.models import KnowledgeNote, RawSignal, SignalStatus
+from ekko.core.logger import get_logger
 from ekko.db.manager import DatabaseManager
+from ekko.domains.buffer.entities import KnowledgeNote
+from ekko.domains.ingestion.contracts import (
+    IngestionResponse,
+    IngestionStatus,
+    PreparedFileIngestion,
+    PreparedUrlIngestion,
+)
 from ekko.domains.ingestion.extractors import fetch_web_resource
-from ekko.logger import get_logger
+from ekko.domains.radar.entities import RawSignal, SignalStatus
 
 logger = get_logger("domains.ingestion")
 
@@ -21,7 +28,7 @@ VALID_FILE_SUFFIXES = frozenset({".pdf", ".md", ".markdown", ".txt"})
 async def prepare_file_ingest(
     db_manager: DatabaseManager,
     file_path_str: str,
-) -> tuple[dict[str, Any], Path | None]:
+) -> PreparedFileIngestion:
     """Validate local file, perform deduplication, and return initial reply + target path."""
     if not file_path_str:
         raise ValueError("Missing 'file_path' parameter")
@@ -41,12 +48,13 @@ async def prepare_file_ingest(
     # 1. Size guardrail: reject files exceeding 25 MB
     file_size = target_path.stat().st_size
     if file_size > MAX_FILE_SIZE_BYTES:
-        return {
-            "status": "rejected",
-            "reason": "file_too_large",
-            "message": f"Fichier trop volumineux ({file_size} octets > {MAX_FILE_SIZE_BYTES} octets max).",
-            "max_bytes": MAX_FILE_SIZE_BYTES,
-        }, None
+        reply = IngestionResponse(
+            status=IngestionStatus.REJECTED,
+            reason="file_too_large",
+            message=f"Fichier trop volumineux ({file_size} octets > {MAX_FILE_SIZE_BYTES} octets max).",
+            max_bytes=MAX_FILE_SIZE_BYTES,
+        )
+        return PreparedFileIngestion(reply=reply, target_path=None)
 
     # 2. SHA-256 deduplication
     try:
@@ -61,20 +69,22 @@ async def prepare_file_ingest(
 
     if content_hash and hasattr(db_manager, "has_content_hash"):
         if await db_manager.has_content_hash(content_hash):
-            return {
-                "status": "already_exists",
-                "filename": target_path.name,
-                "content_hash": content_hash,
-                "message": "Document déjà indexé dans le coffre.",
-            }, None
+            reply = IngestionResponse(
+                status=IngestionStatus.ALREADY_EXISTS,
+                filename=target_path.name,
+                content_hash=content_hash,
+                message="Document déjà indexé dans le coffre.",
+            )
+            return PreparedFileIngestion(reply=reply, target_path=None)
 
     # Drop & Forget instant response (< 50ms)
-    return {
-        "status": "accepted",
-        "filename": target_path.name,
-        "content_hash": content_hash,
-        "message": "Document absorbé · Distillation en cours",
-    }, target_path
+    reply = IngestionResponse(
+        status=IngestionStatus.ACCEPTED,
+        filename=target_path.name,
+        content_hash=content_hash,
+        message="Document absorbé · Distillation en cours",
+    )
+    return PreparedFileIngestion(reply=reply, target_path=target_path)
 
 
 async def distill_file_background(
@@ -92,7 +102,7 @@ async def distill_file_background(
 async def prepare_url_ingest(
     db_manager: DatabaseManager,
     url_str: str,
-) -> tuple[dict[str, Any], str | None]:
+) -> PreparedUrlIngestion:
     """Validate web URL, perform deduplication, and return initial reply + URL."""
     clean_url = url_str.strip()
     if not clean_url:
@@ -106,20 +116,22 @@ async def prepare_url_ingest(
 
     if hasattr(db_manager, "has_source_url"):
         if await db_manager.has_source_url(clean_url):
-            return {
-                "status": "already_exists",
-                "url": clean_url,
-                "filename": parsed.netloc,
-                "message": "Lien web déjà indexé dans le coffre.",
-            }, None
+            reply = IngestionResponse(
+                status=IngestionStatus.ALREADY_EXISTS,
+                url=clean_url,
+                filename=parsed.netloc,
+                message="Lien web déjà indexé dans le coffre.",
+            )
+            return PreparedUrlIngestion(reply=reply, url=None)
 
     host = parsed.netloc
-    return {
-        "status": "accepted",
-        "url": clean_url,
-        "filename": host,
-        "message": f"URL absorbée ({host}) · Distillation en cours",
-    }, clean_url
+    reply = IngestionResponse(
+        status=IngestionStatus.ACCEPTED,
+        url=clean_url,
+        filename=host,
+        message=f"URL absorbée ({host}) · Distillation en cours",
+    )
+    return PreparedUrlIngestion(reply=reply, url=clean_url)
 
 
 async def distill_url_background(
@@ -150,19 +162,22 @@ async def distill_url_background(
 
 async def distill_signal_background(
     distiller: Any,
-    signal_data: dict[str, Any],
+    signal_data: RawSignal | dict[str, Any],
     semaphore: asyncio.Semaphore | None = None,
 ) -> KnowledgeNote:
     """Execute background distillation and note persistence for an archived signal."""
-    raw_sig = RawSignal(
-        id=str(signal_data["id"]),
-        source_id=signal_data.get("source_id") or signal_data.get("source_type") or "signal",
-        title=str(signal_data.get("title") or "Signal"),
-        url=signal_data.get("url") or signal_data.get("source_url"),
-        raw_content=signal_data.get("raw_content"),
-        clean_content=signal_data.get("clean_content"),
-        status=SignalStatus.ARCHIVED,
-    )
+    if isinstance(signal_data, RawSignal):
+        raw_sig = signal_data
+    else:
+        raw_sig = RawSignal(
+            id=str(signal_data["id"]),
+            source_id=signal_data.get("source_id") or signal_data.get("source_type") or "signal",
+            title=str(signal_data.get("title") or "Signal"),
+            url=signal_data.get("url") or signal_data.get("source_url"),
+            raw_content=signal_data.get("raw_content"),
+            clean_content=signal_data.get("clean_content"),
+            status=SignalStatus.ARCHIVED,
+        )
 
     if semaphore and getattr(distiller, "semaphore", None) is not semaphore:
         async with semaphore:

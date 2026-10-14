@@ -1,15 +1,29 @@
 """CPU text embedding service encapsulating FastEmbed (bge-small-en-v1.5)."""
 
 import asyncio
+from typing import Protocol, runtime_checkable
 
 from fastembed import TextEmbedding
 
-from ekko.logger import get_logger
+from ekko.core.logger import get_logger
 
 logger = get_logger("db.embedder")
 
 DEFAULT_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 EMBEDDING_DIM = 384
+
+
+@runtime_checkable
+class EmbedderPort(Protocol):
+    """Port defining local text embedding generation."""
+
+    def embed_query(self, query: str) -> list[float]:
+        """Generate dense embedding vector for a single query string."""
+        ...
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Generate dense embedding vectors for a list of strings asynchronously."""
+        ...
 
 
 class TextEmbedder:

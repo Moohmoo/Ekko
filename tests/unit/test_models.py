@@ -1,15 +1,17 @@
-"""Unit tests for core domain models."""
+"""Unit tests for domain entities and LLM primitives."""
 
 import pytest
 from pydantic import ValidationError
 
-from ekko.core.models import (
-    KnowledgeNote,
-    Message,
-    ModelResponse,
+from ekko.domains.buffer.entities import KnowledgeNote
+from ekko.domains.radar.entities import (
     RawSignal,
     SignalStatus,
     SourceState,
+)
+from ekko.providers.base import (
+    Message,
+    ModelResponse,
 )
 
 
@@ -52,7 +54,7 @@ def test_model_response_creation() -> None:
 
 
 def test_core_domain_entities_instantiation() -> None:
-    """Ensure core models RawSignal, KnowledgeNote, SourceState, and SignalStatus instantiate cleanly."""
+    """Ensure domain entities RawSignal, KnowledgeNote, SourceState, and SignalStatus instantiate cleanly."""
     state = SourceState(id="src_1", source_type="rss", url_or_path="https://example.com/rss")
     assert state.id == "src_1"
     assert state.consecutive_errors == 0

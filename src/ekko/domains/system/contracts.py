@@ -1,4 +1,4 @@
-"""Pydantic schemas for user context and sources configuration."""
+"""System domain IPC contracts for configuration, sources, and environment status."""
 
 from pydantic import BaseModel, Field
 
@@ -37,3 +37,22 @@ class SourcesCatalogConfig(BaseModel):
     """Collection catalog of all active ingestion sources."""
 
     sources: list[SourceConfig] = Field(default_factory=list)
+
+
+class SystemStatusInfo(BaseModel):
+    """System runtime environment information."""
+
+    llm_provider: str
+    active_model: str
+    sqlite_db_path: str
+    ipc_socket_path: str
+    status: str = "online"
+
+
+class SystemSettingsResponse(BaseModel):
+    """Contract payload returned by get_system_settings endpoint."""
+
+    status: str = "ok"
+    user_context: UserContextConfig
+    sources: SourcesCatalogConfig
+    system: SystemStatusInfo

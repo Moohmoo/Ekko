@@ -4,11 +4,11 @@ from datetime import datetime, timezone
 import json
 from typing import Any
 
-from ekko.domains.system.schemas import SourceConfig
+from ekko.core.logger import get_logger
 from ekko.domains.ingestion.client import ResilientHttpClient
 from ekko.domains.ingestion.connectors.base import BaseConnector, compute_signal_id
-from ekko.core.models import RawSignal, SignalStatus, SourceState
-from ekko.logger import get_logger
+from ekko.domains.radar.entities import RawSignal, SignalStatus, SourceState
+from ekko.domains.system.contracts import SourceConfig
 
 logger = get_logger("domains.ingestion.connectors.rest_api")
 

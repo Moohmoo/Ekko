@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
-from ekko.core.models import RawSignal, SignalStatus, SourceState
 from ekko.daemon.scheduler import IngestionCoordinator, parse_interval_seconds
-from ekko.domains.system.schemas import SourceConfig, SourcesCatalogConfig
+from ekko.domains.radar.entities import RawSignal, SignalStatus, SourceState
+from ekko.domains.system.contracts import SourceConfig, SourcesCatalogConfig
 
 
 def test_parse_interval_seconds() -> None:

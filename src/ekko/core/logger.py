@@ -4,7 +4,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from ekko.settings import Settings
+from ekko.core.settings import Settings
 
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 MAX_BYTES = 5 * 1024 * 1024  # 5 MB

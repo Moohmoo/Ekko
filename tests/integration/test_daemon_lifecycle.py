@@ -7,7 +7,7 @@ import pytest
 
 from ekko.daemon.ipc_client import IPCClient
 from ekko.daemon.service import main, parse_args, run_daemon
-from ekko.settings import Settings
+from ekko.core.settings import Settings
 
 
 @pytest.mark.asyncio

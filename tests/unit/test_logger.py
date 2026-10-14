@@ -4,8 +4,8 @@ import logging
 from pathlib import Path
 import pytest
 
-from ekko.settings import Settings
-from ekko.logger import get_logger, setup_logger
+from ekko.core.logger import get_logger, setup_logger
+from ekko.core.settings import Settings
 
 
 def test_settings_has_logging_defaults() -> None:

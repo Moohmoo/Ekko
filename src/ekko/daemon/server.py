@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 from pydantic import ValidationError
 
+from ekko.core.logger import get_logger
+from ekko.core.settings import Settings
 from ekko.db.manager import DatabaseManager
 from ekko.domains.buffer.index import scan_notes, search_notes
 from ekko.domains.ingestion.index import (
@@ -17,6 +19,7 @@ from ekko.domains.ingestion.index import (
     prepare_file_ingest,
     prepare_url_ingest,
 )
+from ekko.domains.radar.entities import RawSignal
 from ekko.domains.radar.index import (
     get_pending_signals,
     resolve_all_pending_signals,
@@ -28,8 +31,6 @@ from ekko.domains.system.index import (
     update_sources,
     update_user_context,
 )
-from ekko.logger import get_logger
-from ekko.settings import Settings
 
 logger = get_logger("daemon.server")
 DEFAULT_SOCKET_PATH = "/tmp/ekko.sock"
@@ -186,46 +187,46 @@ class IPCServer:
                 writer.write(_rpc_result(req_id, {"status": "ok", "timestamp": now_iso}).encode("utf-8"))
             elif method == "scan_inbox":
                 res = await scan_inbox(self.db_manager, params)
-                writer.write(_rpc_result(req_id, res).encode("utf-8"))
+                writer.write(_rpc_result(req_id, [s.model_dump(mode="json") for s in res]).encode("utf-8"))
             elif method == "scan_notes":
                 res = await scan_notes(self.db_manager, params)
-                writer.write(_rpc_result(req_id, res).encode("utf-8"))
+                writer.write(_rpc_result(req_id, [n.model_dump(mode="json") for n in res]).encode("utf-8"))
             elif method in ("query_knowledge", "search_notes"):
                 res = await search_notes(self.db_manager, params, embedder=self.embedder)
-                writer.write(_rpc_result(req_id, res).encode("utf-8"))
+                writer.write(_rpc_result(req_id, [r.model_dump(mode="json") for r in res]).encode("utf-8"))
             elif method == "get_pending_signals":
                 res = await get_pending_signals(self.db_manager, params)
-                writer.write(_rpc_result(req_id, res).encode("utf-8"))
+                writer.write(_rpc_result(req_id, res.model_dump(mode="json")).encode("utf-8"))
             elif method == "resolve_signal":
-                res, to_distill = await resolve_signal(self.db_manager, params)
-                writer.write(_rpc_result(req_id, res).encode("utf-8"))
-                if to_distill:
+                outcome = await resolve_signal(self.db_manager, params)
+                writer.write(_rpc_result(req_id, outcome.reply.model_dump(mode="json")).encode("utf-8"))
+                if outcome.to_distill:
                     self._spawn_background_task(
-                        self._distill_signal_task(to_distill),
-                        name=f"distill_signal_{to_distill.get('id')}",
+                        self._distill_signal_task(outcome.to_distill),
+                        name=f"distill_signal_{outcome.to_distill.id}",
                     )
             elif method == "resolve_all_pending_signals":
                 res = await resolve_all_pending_signals(self.db_manager, params)
-                writer.write(_rpc_result(req_id, res).encode("utf-8"))
+                writer.write(_rpc_result(req_id, res.model_dump(mode="json")).encode("utf-8"))
             elif method == "ingest_file":
-                reply, target_path = await prepare_file_ingest(self.db_manager, str(params.get("file_path") or params.get("path") or ""))
-                writer.write(_rpc_result(req_id, reply).encode("utf-8"))
-                if target_path:
+                prepared = await prepare_file_ingest(self.db_manager, str(params.get("file_path") or params.get("path") or ""))
+                writer.write(_rpc_result(req_id, prepared.reply.model_dump(mode="json")).encode("utf-8"))
+                if prepared.target_path:
                     self._spawn_background_task(
-                        self._distill_file_task(target_path),
-                        name=f"ingest_file_{target_path.name}",
+                        self._distill_file_task(prepared.target_path),
+                        name=f"ingest_file_{prepared.target_path.name}",
                     )
             elif method == "ingest_url":
-                reply, url = await prepare_url_ingest(self.db_manager, str(params.get("url") or params.get("uri") or ""))
-                writer.write(_rpc_result(req_id, reply).encode("utf-8"))
-                if url:
+                prepared = await prepare_url_ingest(self.db_manager, str(params.get("url") or params.get("uri") or ""))
+                writer.write(_rpc_result(req_id, prepared.reply.model_dump(mode="json")).encode("utf-8"))
+                if prepared.url:
                     self._spawn_background_task(
-                        self._distill_url_task(url),
-                        name=f"ingest_url_{url[:30]}",
+                        self._distill_url_task(prepared.url),
+                        name=f"ingest_url_{prepared.url[:30]}",
                     )
             elif method == "get_system_settings":
                 res = get_system_settings(self.settings, self.socket_path)
-                writer.write(_rpc_result(req_id, res).encode("utf-8"))
+                writer.write(_rpc_result(req_id, res.model_dump(mode="json")).encode("utf-8"))
             elif method == "update_user_context":
                 res = update_user_context(self.settings, params)
                 writer.write(_rpc_result(req_id, res).encode("utf-8"))
@@ -286,19 +287,25 @@ class IPCServer:
         except Exception as exc:
             logger.error("Background URL distillation failed for %s: %s", url, exc)
 
-    async def _distill_signal_task(self, signal_data: dict[str, Any]) -> None:
+    async def _distill_signal_task(self, signal_data: RawSignal | dict[str, Any]) -> None:
         """Run background signal distillation and broadcast note created."""
         try:
             if not self.distiller:
-                logger.error("Distiller not available for signal %s", signal_data.get("id"))
+                sig_id = signal_data.id if isinstance(signal_data, RawSignal) else signal_data.get("id")
+                logger.error("Distiller not available for signal %s", sig_id)
                 return
             note = await distill_signal_background(self.distiller, signal_data, self._distillation_semaphore)
+            sig_source = (
+                (signal_data.url or signal_data.title or "signal")
+                if isinstance(signal_data, RawSignal)
+                else (signal_data.get("url") or signal_data.get("title") or "signal")
+            )
             await self.broadcast_notification("daemon:note_created", {
                 "note_id": note.id,
                 "title": note.title,
                 "slug": note.slug,
                 "summary": note.summary,
-                "source": signal_data.get("url") or signal_data.get("title") or "signal",
+                "source": sig_source,
             })
         except Exception as exc:
             logger.error("Background signal distillation failed: %s", exc)

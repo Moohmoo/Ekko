@@ -1,8 +1,8 @@
 """Radar domain CRUD operations on raw signals."""
 
 from typing import Any
-from ekko.core.models import RawSignal, SignalStatus
 from ekko.db.manager import DatabaseManager
+from ekko.domains.radar.entities import RawSignal, SignalStatus
 
 
 async def get_inbox_signals(

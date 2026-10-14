@@ -2,39 +2,45 @@
 
 from pathlib import Path
 from typing import Any
-from pydantic import ValidationError
 
+from ekko.core.logger import get_logger
+from ekko.core.settings import Settings
+from ekko.domains.system.contracts import (
+    SourcesCatalogConfig,
+    SystemSettingsResponse,
+    SystemStatusInfo,
+    UserContextConfig,
+)
 from ekko.domains.system.loader import (
     load_sources_config,
     load_user_context,
     save_sources_config,
     save_user_context,
 )
-from ekko.domains.system.schemas import SourcesCatalogConfig, UserContextConfig
-from ekko.logger import get_logger
-from ekko.settings import Settings
 
 logger = get_logger("domains.system")
 
 
-def get_system_settings(settings: Settings, socket_path: Path | str) -> dict[str, Any]:
+def get_system_settings(settings: Settings, socket_path: Path | str) -> SystemSettingsResponse:
     """Return unified system settings, active sources, and user profile."""
     config_dir = settings.config_dir
     user_ctx = load_user_context(config_dir)
     sources_cfg = load_sources_config(config_dir)
 
-    return {
-        "status": "ok",
-        "user_context": user_ctx.model_dump(mode="json"),
-        "sources": sources_cfg.model_dump(mode="json"),
-        "system": {
-            "llm_provider": settings.llm_provider,
-            "active_model": settings.active_model,
-            "sqlite_db_path": str(settings.sqlite_db_path),
-            "ipc_socket_path": str(socket_path),
-            "status": "online",
-        },
-    }
+    system_info = SystemStatusInfo(
+        llm_provider=settings.llm_provider,
+        active_model=settings.active_model,
+        sqlite_db_path=str(settings.sqlite_db_path),
+        ipc_socket_path=str(socket_path),
+        status="online",
+    )
+
+    return SystemSettingsResponse(
+        status="ok",
+        user_context=user_ctx,
+        sources=sources_cfg,
+        system=system_info,
+    )
 
 
 def update_user_context(settings: Settings, params: dict[str, Any]) -> dict[str, Any]:

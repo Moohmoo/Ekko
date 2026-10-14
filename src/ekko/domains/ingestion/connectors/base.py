@@ -5,8 +5,8 @@ import hashlib
 import re
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from ekko.domains.system.schemas import SourceConfig
-from ekko.core.models import RawSignal, SourceState
+from ekko.domains.radar.entities import RawSignal, SourceState
+from ekko.domains.system.contracts import SourceConfig
 
 _TRACKING_PARAM_PREFIXES = ("utm_",)
 _TRACKING_PARAM_EXACT = {

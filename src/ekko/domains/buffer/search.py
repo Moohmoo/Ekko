@@ -1,8 +1,8 @@
 """Buffer domain hybrid search operations (FTS5 + sqlite-vec with RRF)."""
 
 from typing import Any
-from ekko.core.models import KnowledgeNote
 from ekko.db.manager import DatabaseManager
+from ekko.domains.buffer.entities import KnowledgeNote
 
 
 async def execute_hybrid_search(

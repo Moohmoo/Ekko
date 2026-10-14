@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 import pytest
 
-from ekko.core.models import ModelResponse
+from ekko.providers.base import ModelResponse
 from ekko.daemon.ipc_client import IPCClient
 from ekko.daemon.server import IPCServer
 from ekko.db.manager import DatabaseManager

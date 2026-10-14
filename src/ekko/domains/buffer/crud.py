@@ -1,6 +1,6 @@
 """Buffer domain CRUD operations for knowledge notes."""
 
-from ekko.core.models import KnowledgeNote
+from ekko.domains.buffer.entities import KnowledgeNote
 from ekko.db.manager import DatabaseManager
 
 

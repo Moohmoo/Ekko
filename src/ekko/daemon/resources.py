@@ -1,10 +1,23 @@
 """Resource management for process priority confinement and VRAM unloading."""
 
 import os
-from typing import Any
-from ekko.logger import get_logger
+from typing import Any, Protocol, runtime_checkable
+from ekko.core.logger import get_logger
 
 logger = get_logger("daemon.resources")
+
+
+@runtime_checkable
+class ResourceManagerPort(Protocol):
+    """Port defining hardware resource management and VRAM lifecycle coordination."""
+
+    def inject_unload_vram(
+        self,
+        params: dict[str, Any] | None = None,
+        keep_alive: str | int = "5m",
+    ) -> dict[str, Any]:
+        """Inject parameters directing local LLM providers to unload models after inference."""
+        ...
 
 
 class ResourceManager:

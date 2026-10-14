@@ -6,7 +6,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
-from ekko.core.models import KnowledgeNote, RawSignal, SignalStatus
+from ekko.domains.buffer.entities import KnowledgeNote
+from ekko.domains.radar.entities import RawSignal, SignalStatus
 from ekko.daemon.ipc_client import IPCClient
 from ekko.daemon.server import IPCServer
 
@@ -334,7 +335,7 @@ async def test_ipc_server_ingest_url(socket_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_ipc_server_get_system_settings(socket_path: Path, tmp_path: Path) -> None:
     """Ensure get_system_settings returns user_context, sources and system info."""
-    from ekko.settings import Settings
+    from ekko.core.settings import Settings
 
     settings = Settings(config_dir=str(tmp_path), sqlite_db_path="data/test.db")
     server = IPCServer(socket_path=socket_path, settings=settings)
@@ -355,7 +356,7 @@ async def test_ipc_server_get_system_settings(socket_path: Path, tmp_path: Path)
 @pytest.mark.asyncio
 async def test_ipc_server_update_user_context(socket_path: Path, tmp_path: Path) -> None:
     """Ensure update_user_context persists YAML, updates engine prompt, and handles validation errors."""
-    from ekko.settings import Settings
+    from ekko.core.settings import Settings
 
     settings = Settings(config_dir=str(tmp_path))
     server = IPCServer(socket_path=socket_path, settings=settings)
@@ -387,7 +388,7 @@ async def test_ipc_server_update_user_context(socket_path: Path, tmp_path: Path)
 @pytest.mark.asyncio
 async def test_ipc_server_update_sources(socket_path: Path, tmp_path: Path) -> None:
     """Ensure update_sources persists YAML, notifies coordinator, and handles validation errors."""
-    from ekko.settings import Settings
+    from ekko.core.settings import Settings
 
     mock_coordinator = MagicMock()
     settings = Settings(config_dir=str(tmp_path))

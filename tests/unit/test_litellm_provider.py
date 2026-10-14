@@ -5,15 +5,14 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from ekko.core.errors import ProviderError
-from ekko.core.models import Message, ModelResponse
-from ekko.core.ports import LLMProviderPort
+from ekko.providers.base import LLMProvider, Message, ModelResponse
 from ekko.providers.litellm_provider import LiteLLMProvider
 
 
 def test_litellm_provider_implements_port() -> None:
-    """Ensure LiteLLMProvider conforms to the domain LLMProviderPort protocol."""
+    """Ensure LiteLLMProvider conforms to the domain LLMProvider protocol."""
     provider = LiteLLMProvider(model="gemini/gemini-flash")
-    assert isinstance(provider, LLMProviderPort)
+    assert isinstance(provider, LLMProvider)
 
 
 @pytest.mark.asyncio

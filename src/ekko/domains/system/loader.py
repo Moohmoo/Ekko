@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Any
 import yaml
 
-from ekko.domains.system.schemas import (
+from ekko.core.logger import get_logger
+from ekko.domains.system.contracts import (
     SourcesCatalogConfig,
     UserContextConfig,
 )
-from ekko.logger import get_logger
 
 logger = get_logger("domains.system.loader")
 

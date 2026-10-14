@@ -4,8 +4,8 @@ from typing import Any
 import litellm
 
 from ekko.core.errors import ProviderError
-from ekko.core.models import Message, ModelResponse
-from ekko.logger import get_logger
+from ekko.core.logger import get_logger
+from ekko.providers.base import Message, ModelResponse
 
 logger = get_logger("providers.litellm")
 

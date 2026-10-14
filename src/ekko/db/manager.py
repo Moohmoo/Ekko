@@ -12,17 +12,16 @@ import sqlite3
 
 import sqlite_vec
 
-from ekko.core.models import (
-    KnowledgeNote,
+from ekko.core.logger import get_logger
+from ekko.db.chunking import chunk_markdown
+from ekko.db.embedder import EMBEDDING_DIM, EmbedderPort
+from ekko.db.schema import INIT_UNIFIED_SCHEMA_SQL
+from ekko.domains.buffer.entities import KnowledgeNote
+from ekko.domains.radar.entities import (
     RawSignal,
     SignalStatus,
     SourceState,
 )
-from ekko.core.ports import EmbedderPort
-from ekko.db.chunking import chunk_markdown
-from ekko.db.embedder import EMBEDDING_DIM
-from ekko.db.schema import INIT_UNIFIED_SCHEMA_SQL
-from ekko.logger import get_logger
 
 logger = get_logger("db.manager")
 

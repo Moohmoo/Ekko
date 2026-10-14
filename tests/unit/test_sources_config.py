@@ -5,7 +5,7 @@ import pytest
 import yaml
 
 from ekko.domains.system.loader import load_sources_config
-from ekko.domains.system.schemas import SourceConfig, SourcesCatalogConfig
+from ekko.domains.system.contracts import SourceConfig, SourcesCatalogConfig
 
 
 def test_source_config_validation() -> None:

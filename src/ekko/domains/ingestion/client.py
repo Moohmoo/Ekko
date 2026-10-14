@@ -9,9 +9,9 @@ from urllib.parse import urlparse
 import httpx
 
 from ekko.core.errors import EkkoError
+from ekko.core.logger import get_logger
 from ekko.domains.ingestion.rate_limiter import DomainRateLimiter
 from ekko.domains.ingestion.ssrf import SSRFValidator
-from ekko.logger import get_logger
 
 logger = get_logger("domains.ingestion.client")
 

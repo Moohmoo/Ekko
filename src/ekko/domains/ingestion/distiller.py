@@ -8,12 +8,15 @@ from pathlib import Path
 import re
 
 from ekko.core.errors import DistillationError
-from ekko.core.models import KnowledgeNote, Message, RawSignal
-from ekko.core.ports import EmbedderPort, HybridMemoryPort, LLMProviderPort, ResourceManagerPort
+from ekko.core.logger import get_logger
+from ekko.daemon.resources import ResourceManagerPort
+from ekko.db.embedder import EmbedderPort
+from ekko.db.formatters import determine_unique_path, format_markdown_note, normalize_tag, slugify
+from ekko.domains.buffer.entities import KnowledgeNote
 from ekko.domains.ingestion.compressor import ContentCompressor, ModelProfile
 from ekko.domains.ingestion.extractors import extract_text_from_file
-from ekko.logger import get_logger
-from ekko.db.formatters import determine_unique_path, format_markdown_note, normalize_tag, slugify
+from ekko.domains.radar.entities import RawSignal
+from ekko.providers.base import LLMProvider, Message
 
 logger = get_logger("ingestion.distiller")
 _compressor = ContentCompressor()
@@ -92,8 +95,8 @@ class SignalDistiller:
 
     def __init__(
         self,
-        store: HybridMemoryPort,
-        llm_provider: LLMProviderPort,
+        store: Any,
+        llm_provider: LLMProvider,
         notes_dir: Path | str = "data/notes",
         embedder: EmbedderPort | None = None,
         resource_manager: ResourceManagerPort | None = None,
