@@ -341,25 +341,6 @@ ipcMain.handle('daemon:submit_prompt', function (event, prompt, sessionId) { ret
         }
     });
 }); });
-ipcMain.handle('chat:send_message', function (event_1, _a) { return __awaiter(void 0, [event_1, _a], void 0, function (event, _b) {
-    var prompt = _b.prompt;
-    return __generator(this, function (_c) {
-        switch (_c.label) {
-            case 0: return [4 /*yield*/, new Promise(function (resolve, reject) {
-                    streamPrompt(prompt, function (chunk) {
-                        event.sender.send('chat:token', chunk);
-                    }, function (full) {
-                        event.sender.send('chat:done');
-                        resolve(full);
-                    }, function (err) {
-                        event.sender.send('chat:error', err);
-                        reject(new Error(err));
-                    }, undefined, 'desktop_chat');
-                })];
-            case 1: return [2 /*return*/, _c.sent()];
-        }
-    });
-}); });
 ipcMain.handle('daemon:get_system_settings', function () { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         switch (_a.label) {

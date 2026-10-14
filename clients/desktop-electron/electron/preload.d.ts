@@ -61,10 +61,6 @@ export interface EkkoAPI {
     onPromptChunk: (callback: (chunk: string) => void) => () => void;
     onToolEvent: (callback: (event: any) => void) => () => void;
     onNoteCreated: (callback: (note: any) => void) => () => void;
-    sendChatMessage: (prompt: string, history?: unknown[]) => Promise<string>;
-    onChatToken: (callback: (token: string) => void) => () => void;
-    onChatDone: (callback: () => void) => () => void;
-    onChatError: (callback: (error: string) => void) => () => void;
     testMascotEmotion: (emotion: string | null) => void;
     cycleAllEmotions: () => Promise<void>;
     onTestMascotEmotion: (callback: (emotion: string | null) => void) => () => void;

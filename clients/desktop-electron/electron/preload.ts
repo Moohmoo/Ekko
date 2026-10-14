@@ -46,10 +46,6 @@ export interface EkkoAPI {
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
   onNoteCreated: (callback: (note: any) => void) => () => void;
-  sendChatMessage: (prompt: string, history?: unknown[]) => Promise<string>;
-  onChatToken: (callback: (token: string) => void) => () => void;
-  onChatDone: (callback: () => void) => () => void;
-  onChatError: (callback: (error: string) => void) => () => void;
   testMascotEmotion: (emotion: string | null) => void;
   cycleAllEmotions: () => Promise<void>;
   onTestMascotEmotion: (callback: (emotion: string | null) => void) => () => void;
@@ -116,28 +112,7 @@ const api: EkkoAPI = {
       ipcRenderer.removeListener('daemon:note_created', handler);
     };
   },
-  sendChatMessage: (prompt: string, history?: unknown[]) => ipcRenderer.invoke('chat:send_message', { prompt, history }),
-  onChatToken: (callback: (token: string) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, token: string) => callback(token);
-    ipcRenderer.on('chat:token', handler);
-    return () => {
-      ipcRenderer.removeListener('chat:token', handler);
-    };
-  },
-  onChatDone: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('chat:done', handler);
-    return () => {
-      ipcRenderer.removeListener('chat:done', handler);
-    };
-  },
-  onChatError: (callback: (error: string) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, err: string) => callback(err);
-    ipcRenderer.on('chat:error', handler);
-    return () => {
-      ipcRenderer.removeListener('chat:error', handler);
-    };
-  },
+
   testMascotEmotion: (emotion: string | null) => {
     ipcRenderer.send('dev:test_mascot_emotion', emotion);
   },

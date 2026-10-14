@@ -41,9 +41,9 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
     expect(initialBounds!.height).toBe(230);
     expect(initialBounds!.width).toBe(660);
 
-    // Cliquer sur le bouton d'onglet Chat (icône bulle MessageSquare)
-    const chatTabButton = page.locator('button[title="Assistant & Chat"]');
-    await chatTabButton.click();
+    // Cliquer sur le bouton d'onglet Écho (icône éclair Zap)
+    const echoTabButton = page.locator('button[title="Écho (Fiches PKM)"]');
+    await echoTabButton.click();
 
     // Attendre que la hauteur s'étende à 460px
     await expect.poll(async () => {
@@ -234,12 +234,12 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
 
   test('6. Stress Test de Clics Rapides (Anti-Race Condition Géométrique)', async () => {
     const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
-    const chatTabButton = page.locator('button[title="Assistant & Chat"]');
+    const echoTabButton = page.locator('button[title="Écho (Fiches PKM)"]');
 
     // Alterner 15 clics rapides consécutifs avec un intervalle de 60ms
     for (let i = 0; i < 15; i++) {
       if (i % 2 === 0) {
-        await chatTabButton.click();
+        await echoTabButton.click();
       } else {
         await homeTabButton.click();
       }
@@ -264,7 +264,7 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
 
   test('7. Soak Test & Détection de Fuites Mémoire (Stabilité du Heap JS)', async () => {
     const homeTabButton = page.locator('button[title="Accueil (Bento)"]');
-    const chatTabButton = page.locator('button[title="Assistant & Chat"]');
+    const echoTabButton = page.locator('button[title="Écho (Fiches PKM)"]');
 
     await homeTabButton.click();
     await page.waitForTimeout(300);
@@ -281,8 +281,8 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
       await page.waitForTimeout(20);
       await page.evaluate(() => window.ekkoAPI?.testMascotEmotion(null));
 
-      // 2. Bascule vers Chat (460px) puis retour à Home (230px)
-      await chatTabButton.click();
+      // 2. Bascule vers Écho (460px) puis retour à Home (230px)
+      await echoTabButton.click();
       await page.waitForTimeout(30);
       await homeTabButton.click();
       await page.waitForTimeout(30);

@@ -10,26 +10,8 @@ export interface NoteItem {
   score?: number;
 }
 
-export interface ToolCallStep {
-  id: string;
-  tool: string;
-  input?: Record<string, unknown>;
-  output?: string;
-  status: 'running' | 'completed' | 'error';
-  duration_ms?: number;
-}
-
-export interface ChatMessage {
-  id: string;
-  sender: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-  status: 'pending' | 'streaming' | 'complete' | 'error';
-  toolCalls?: ToolCallStep[];
-}
-
-export type PodTab = 'home' | 'chat' | 'echo';
-export type ViewMode = 'welcome' | 'home' | 'chat' | 'echo' | 'settings';
+export type PodTab = 'home' | 'echo';
+export type ViewMode = 'welcome' | 'home' | 'echo' | 'settings';
 
 export interface PingResult {
   status: string;
@@ -132,10 +114,6 @@ export interface EkkoAPI {
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
   onNoteCreated: (callback: (note: NoteCreatedEvent) => void) => () => void;
-  sendChatMessage: (prompt: string, history?: unknown[]) => Promise<string>;
-  onChatToken: (callback: (token: string) => void) => () => void;
-  onChatDone: (callback: () => void) => () => void;
-  onChatError: (callback: (error: string) => void) => () => void;
   testMascotEmotion: (emotion: string | null) => void;
   cycleAllEmotions: () => Promise<void>;
   onTestMascotEmotion: (callback: (emotion: string | null) => void) => () => void;

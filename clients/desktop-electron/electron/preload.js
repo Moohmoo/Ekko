@@ -116,28 +116,6 @@ var api = {
             ipcRenderer.removeListener('daemon:note_created', handler);
         };
     },
-    sendChatMessage: function (prompt, history) { return ipcRenderer.invoke('chat:send_message', { prompt: prompt, history: history }); },
-    onChatToken: function (callback) {
-        var handler = function (_event, token) { return callback(token); };
-        ipcRenderer.on('chat:token', handler);
-        return function () {
-            ipcRenderer.removeListener('chat:token', handler);
-        };
-    },
-    onChatDone: function (callback) {
-        var handler = function () { return callback(); };
-        ipcRenderer.on('chat:done', handler);
-        return function () {
-            ipcRenderer.removeListener('chat:done', handler);
-        };
-    },
-    onChatError: function (callback) {
-        var handler = function (_event, err) { return callback(err); };
-        ipcRenderer.on('chat:error', handler);
-        return function () {
-            ipcRenderer.removeListener('chat:error', handler);
-        };
-    },
     testMascotEmotion: function (emotion) {
         ipcRenderer.send('dev:test_mascot_emotion', emotion);
     },

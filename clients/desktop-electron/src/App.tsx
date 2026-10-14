@@ -7,7 +7,6 @@ import { useViewStore } from './core/stores/useViewStore';
 import { PodHeader } from './components/PodHeader';
 import { WelcomeView } from './features/welcome/WelcomeView';
 import { HomeView } from './features/home/HomeView';
-import { ChatView } from './features/assistant/ChatView';
 import { EchoView } from './features/echo/EchoView';
 import { SettingsView } from './features/settings/SettingsView';
 import { SPRING_SNAPPY, SPRING_BOUNCY, LAYOUT, COLORS, SURFACES } from './design-system/tokens';
@@ -123,18 +122,6 @@ export const App: React.FC = () => {
               </motion.div>
             )}
 
-            {viewMode === 'chat' && (
-              <motion.div
-                key="chat"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="absolute inset-0 w-full h-full flex flex-col overflow-hidden"
-              >
-                <ChatView />
-              </motion.div>
-            )}
 
             {viewMode === 'echo' && (
               <motion.div

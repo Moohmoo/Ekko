@@ -2,7 +2,7 @@ import React, { startTransition } from 'react';
 import type { ViewMode } from '../core/types';
 import { useDaemonStore } from '../core/stores/useDaemonStore';
 import { useSoundStore } from '../core/audio/useSoundStore';
-import { Droplet, MessageSquare, Zap, Settings, Volume2, VolumeX, X } from 'lucide-react';
+import { Droplet, Zap, Settings, Volume2, VolumeX, X } from 'lucide-react';
 import { SURFACES } from '../design-system/tokens';
 
 interface PodHeaderProps {
@@ -56,17 +56,6 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           <Droplet size={15} />
         </button>
 
-        <button
-          onClick={() => handleTabClick('chat')}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-            activeTab === 'chat'
-              ? SURFACES.headerTabActive
-              : SURFACES.headerTabInactive
-          }`}
-          title="Assistant & Chat"
-        >
-          <MessageSquare size={15} />
-        </button>
 
         <button
           onClick={() => handleTabClick('echo')}
