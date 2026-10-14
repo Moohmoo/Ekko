@@ -324,4 +324,23 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
 
     expect(deltaMB).toBeLessThan(15);
   });
+
+  test('8. Test Ancrage Chromatique OS & Fusion Dégradé', async () => {
+    // 1. Vérifier que l'API IPC renvoie la couleur d'ancrage de la barre système
+    const anchorColor = await page.evaluate(async () => {
+      return await window.ekkoAPI?.getSystemAnchorColor?.();
+    });
+    expect(anchorColor).toBeDefined();
+    expect(anchorColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+
+    // 2. Vérifier que la variable CSS --notch-anchor est active sur la racine
+    const cssAnchorVar = await page.evaluate(() => {
+      return getComputedStyle(document.documentElement).getPropertyValue('--notch-anchor').trim();
+    });
+    expect(cssAnchorVar).toBe(anchorColor);
+
+    // 3. Vérifier que les deux congés concaves utilisent l'ancrage chromatique
+    const filletPaths = page.locator('svg path[fill*="--notch-anchor"]');
+    await expect(filletPaths).toHaveCount(2);
+  });
 });

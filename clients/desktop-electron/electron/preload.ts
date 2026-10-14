@@ -43,6 +43,7 @@ export interface EkkoAPI {
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;
   setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => Promise<void>;
+  getSystemAnchorColor: () => Promise<string>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
   onNoteCreated: (callback: (note: any) => void) => () => void;
@@ -91,6 +92,7 @@ const api: EkkoAPI = {
   closeWindow: () => ipcRenderer.invoke('window:close'),
   resizeWindow: (width: number, height: number) => ipcRenderer.invoke('window:resize', { width, height }),
   setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => ipcRenderer.invoke('tray:set_state', state),
+  getSystemAnchorColor: () => ipcRenderer.invoke('system:get_anchor_color'),
   onPromptChunk: (callback: (chunk: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, chunk: string) => callback(chunk);
     ipcRenderer.on('daemon:prompt_chunk', handler);

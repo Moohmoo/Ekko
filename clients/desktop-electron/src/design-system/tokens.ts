@@ -4,6 +4,7 @@
  */
 
 export const COLORS = {
+  anchorDefault: '#131313',
   bgOled: '#000000',
   surfaceCard: '#141824',
   surfaceSubtle: '#161a24',
@@ -68,8 +69,12 @@ export const SURFACE_CARD_HOVER = 'hover:bg-white/[0.06] hover:border-sky-400/30
 export const BORDER_SUBTLE = 'border-white/[0.08]';
 export const ACCENT_CYAN = 'text-sky-400';
 
+export const GRADIENTS = {
+  notchBlend: 'linear-gradient(180deg, var(--notch-anchor, #131313) 0px, var(--notch-anchor, #131313) 14px, #080B11 52px, #05070A 100%)',
+} as const;
+
 export const SURFACES = {
-  shell: 'bg-gradient-to-b from-[#000000] via-[#000000] to-[#090d16] border-x border-b border-t-0 border-white/[0.08] shadow-2xl',
+  shell: 'border-x border-b border-t-0 border-white/[0.08] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)]',
   stage: 'bg-surface border border-white/[0.08] shadow-inner',
   card: SURFACE_CARD,
   cardHover: SURFACE_CARD_HOVER,

@@ -33,6 +33,16 @@ export const App: React.FC = () => {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
+
+    // Sync host OS system top bar anchor color into root CSS variable
+    if (window.ekkoAPI?.getSystemAnchorColor) {
+      window.ekkoAPI.getSystemAnchorColor().then((color) => {
+        if (color) {
+          document.documentElement.style.setProperty('--notch-anchor', color);
+        }
+      });
+    }
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };

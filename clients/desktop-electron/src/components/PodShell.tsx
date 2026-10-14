@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { SPRING_SNAPPY, SPRING_BOUNCY, COLORS, SURFACES } from '../design-system/tokens';
+import { SPRING_SNAPPY, SPRING_BOUNCY, COLORS, SURFACES, GRADIENTS } from '../design-system/tokens';
 
 interface PodShellProps {
   targetHeight: number;
@@ -26,7 +26,7 @@ export const PodShell: React.FC<PodShellProps> = ({
         fill="none"
         aria-hidden="true"
       >
-        <path d="M 0 0 A 20 20 0 0 1 20 20 H 21 V 0 H 0 Z" fill={COLORS.bgOled} />
+        <path d="M 0 0 A 20 20 0 0 1 20 20 H 21 V 0 H 0 Z" fill="var(--notch-anchor, #131313)" />
         <path
           d="M 0 0 A 20 20 0 0 1 20 20"
           stroke={COLORS.borderDefault}
@@ -42,7 +42,7 @@ export const PodShell: React.FC<PodShellProps> = ({
         fill="none"
         aria-hidden="true"
       >
-        <path d="M 1 20 A 20 20 0 0 1 21 0 H 0 V 20 H 1 Z" fill={COLORS.bgOled} />
+        <path d="M 1 20 A 20 20 0 0 1 21 0 H 0 V 20 H 1 Z" fill="var(--notch-anchor, #131313)" />
         <path
           d="M 1 20 A 20 20 0 0 1 21 0"
           stroke={COLORS.borderDefault}
@@ -60,7 +60,10 @@ export const PodShell: React.FC<PodShellProps> = ({
           height: SPRING_SNAPPY,
         }}
         className={`w-full ${SURFACES.shell} rounded-b-[22px] rounded-t-none border-t-0 flex flex-col p-2.5 text-slate-100 overflow-hidden`}
-        style={{ borderTop: 'none' }}
+        style={{
+          borderTop: 'none',
+          background: GRADIENTS.notchBlend,
+        }}
       >
         {header}
 

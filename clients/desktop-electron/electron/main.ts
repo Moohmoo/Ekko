@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendJsonRpc, streamPrompt, subscribeDaemonEvents } from './transport/socket-client';
 import { ensureDaemonRunning, stopDaemonIfManaged } from './daemon-manager';
+import { getSystemAnchorColor } from './theme-detector';
 
 import fs from 'node:fs';
 
@@ -174,6 +175,12 @@ function createWindow() {
     win.webContents.openDevTools({ mode: 'detach' });
   }
 
+  // Automatically inject OS-aware top bar anchor color into DOM
+  const anchorColor = getSystemAnchorColor();
+  win.webContents.on('dom-ready', () => {
+    win?.webContents.insertCSS(`:root { --notch-anchor: ${anchorColor}; }`).catch(() => {});
+  });
+
   if (VITE_DEV_SERVER_URL) {
     console.log('[Main] Loading dev server URL:', VITE_DEV_SERVER_URL);
     win.loadURL(VITE_DEV_SERVER_URL);
@@ -187,6 +194,8 @@ function createWindow() {
 let isDaemonConnected: boolean | null = null;
 
 // IPC Handlers
+ipcMain.handle('system:get_anchor_color', () => getSystemAnchorColor());
+
 ipcMain.handle('daemon:ping', async () => {
   try {
     const res = await sendJsonRpc<{ status: string; timestamp: string }>('ping');

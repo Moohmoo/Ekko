@@ -113,6 +113,7 @@ export interface EkkoAPI {
   closeWindow: () => Promise<void>;
   resizeWindow: (width: number, height: number) => Promise<void>;
   setTrayState: (state: 'idle' | 'ingesting' | 'alert' | 'error') => Promise<void>;
+  getSystemAnchorColor?: () => Promise<string>;
   onPromptChunk: (callback: (chunk: string) => void) => () => void;
   onToolEvent: (callback: (event: any) => void) => () => void;
   onNoteCreated: (callback: (note: NoteCreatedEvent) => void) => () => void;
