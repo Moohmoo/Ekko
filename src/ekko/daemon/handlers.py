@@ -101,37 +101,24 @@ async def handle_ping(server: "IPCServer", params: dict[str, Any]) -> dict[str, 
     return {"status": "ok", "timestamp": now_iso}
 
 
-def _resolve_repo(db: Any, attr: str) -> Any:
-    """Return specialized domain repository if available, or database manager façade."""
-    sub = getattr(db, attr, None)
-    if sub is not None and not hasattr(db, "_mock_return_value"):
-        return sub
-    return db
-
-
 async def handle_scan_inbox(server: "IPCServer", params: dict[str, Any]) -> Any:
-    repo = _resolve_repo(server.db_manager, "signals")
-    return await scan_inbox(repo, params)
+    return await scan_inbox(server.signals, params)
 
 
 async def handle_scan_notes(server: "IPCServer", params: dict[str, Any]) -> Any:
-    repo = _resolve_repo(server.db_manager, "notes")
-    return await scan_notes(repo, params)
+    return await scan_notes(server.notes, params)
 
 
 async def handle_search_notes(server: "IPCServer", params: dict[str, Any]) -> Any:
-    engine = _resolve_repo(server.db_manager, "search")
-    return await search_notes(engine, params, embedder=server.embedder)
+    return await search_notes(server.search, params, embedder=server.embedder)
 
 
 async def handle_get_pending_signals(server: "IPCServer", params: dict[str, Any]) -> Any:
-    repo = _resolve_repo(server.db_manager, "signals")
-    return await get_pending_signals(repo, params)
+    return await get_pending_signals(server.signals, params)
 
 
 async def handle_resolve_signal(server: "IPCServer", params: dict[str, Any]) -> Any:
-    repo = _resolve_repo(server.db_manager, "signals")
-    outcome = await resolve_signal(repo, params)
+    outcome = await resolve_signal(server.signals, params)
     if outcome.to_distill:
         server._spawn_background_task(
             _distill_signal_task(server, outcome.to_distill),
@@ -141,22 +128,12 @@ async def handle_resolve_signal(server: "IPCServer", params: dict[str, Any]) -> 
 
 
 async def handle_resolve_all_pending_signals(server: "IPCServer", params: dict[str, Any]) -> Any:
-    repo = _resolve_repo(server.db_manager, "signals")
-    return await resolve_all_pending_signals(repo, params)
-
-
-def _resolve_dedup(db: Any) -> Any:
-    """Return SqliteDeduplicationStore delegating to domain repositories or mock store."""
-    signals = getattr(db, "signals", None)
-    notes = getattr(db, "notes", None)
-    if signals is not None and notes is not None and not hasattr(db, "_mock_return_value"):
-        return SqliteDeduplicationStore(signals, notes)
-    return db
+    return await resolve_all_pending_signals(server.signals, params)
 
 
 async def handle_ingest_file(server: "IPCServer", params: dict[str, Any]) -> Any:
     file_path = str(params.get("file_path") or params.get("path") or "")
-    dedup_store = _resolve_dedup(server.db_manager)
+    dedup_store = SqliteDeduplicationStore(server.signals, server.notes)
     prepared = await prepare_file_ingest(dedup_store, file_path)
     if prepared.target_path:
         server._spawn_background_task(
@@ -168,7 +145,7 @@ async def handle_ingest_file(server: "IPCServer", params: dict[str, Any]) -> Any
 
 async def handle_ingest_url(server: "IPCServer", params: dict[str, Any]) -> Any:
     url = str(params.get("url") or params.get("uri") or "")
-    dedup_store = _resolve_dedup(server.db_manager)
+    dedup_store = SqliteDeduplicationStore(server.signals, server.notes)
     prepared = await prepare_url_ingest(dedup_store, url)
     if prepared.url:
         server._spawn_background_task(

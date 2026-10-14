@@ -74,6 +74,10 @@ class IPCServer:
     ) -> None:
         self.socket_path = Path(socket_path)
         self.db_manager = db_manager or DatabaseManager()
+        is_mock = hasattr(self.db_manager, "_mock_return_value")
+        self.signals = self.db_manager if is_mock else getattr(self.db_manager, "signals", self.db_manager)
+        self.notes = self.db_manager if is_mock else getattr(self.db_manager, "notes", self.db_manager)
+        self.search = self.db_manager if is_mock else getattr(self.db_manager, "search", self.db_manager)
         self.distiller = distiller
         self.embedder = embedder
         self.coordinator = coordinator

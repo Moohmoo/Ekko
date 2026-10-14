@@ -2,7 +2,7 @@
 
 from typing import Any
 from ekko.core.logger import get_logger
-from ekko.domains.buffer import crud, search
+from ekko.domains.buffer import search
 from ekko.domains.buffer.contracts import NoteRepositoryPort, NoteSearchResult, SearchEnginePort
 from ekko.domains.buffer.entities import KnowledgeNote
 
@@ -12,7 +12,9 @@ logger = get_logger("domains.buffer")
 async def scan_notes(repo: NoteRepositoryPort, params: dict[str, Any]) -> list[KnowledgeNote]:
     """Scan recent knowledge notes ordered by creation time DESC."""
     limit = int(params.get("limit", 20))
-    return await crud.fetch_recent_notes(repo, limit=limit)
+    if hasattr(repo, "list_knowledge_notes"):
+        return await repo.list_knowledge_notes(limit=limit)
+    return await repo.get_recent_notes(limit=limit)
 
 
 async def search_notes(

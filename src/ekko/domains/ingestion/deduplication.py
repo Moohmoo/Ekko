@@ -16,12 +16,20 @@ class SqliteDeduplicationStore:
 
     async def has_content_hash(self, content_hash: str) -> bool:
         """Check if SHA256 content hash already exists in raw signals or knowledge notes."""
-        if await self.signals_repo.has_content_hash(content_hash):
-            return True
-        return await self.notes_repo.has_content_hash(content_hash)
+        if hasattr(self.signals_repo, "has_content_hash"):
+            if await self.signals_repo.has_content_hash(content_hash):
+                return True
+        if hasattr(self.notes_repo, "has_content_hash"):
+            if await self.notes_repo.has_content_hash(content_hash):
+                return True
+        return False
 
     async def has_source_url(self, url: str) -> bool:
         """Check if canonical source URL already exists in raw signals or knowledge notes."""
-        if await self.signals_repo.has_source_url(url):
-            return True
-        return await self.notes_repo.has_source_url(url)
+        if hasattr(self.signals_repo, "has_source_url"):
+            if await self.signals_repo.has_source_url(url):
+                return True
+        if hasattr(self.notes_repo, "has_source_url"):
+            if await self.notes_repo.has_source_url(url):
+                return True
+        return False

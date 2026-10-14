@@ -1,7 +1,6 @@
 """Radar domain façade exposing signal monitoring and inbox triage."""
 
 from typing import Any
-from ekko.domains.radar import crud
 from ekko.domains.radar.contracts import (
     BulkResolutionResult,
     PendingSignalItem,
@@ -20,13 +19,18 @@ async def scan_inbox(repo: SignalRepositoryPort, params: dict[str, Any]) -> list
     source_id = str(params["source_id"]) if "source_id" in params and params["source_id"] is not None else None
     limit = int(params.get("limit", 20))
 
-    return await crud.get_inbox_signals(repo, source_id=source_id, status=status, limit=limit)
+    return await repo.get_raw_signals(source_id=source_id, status=status, limit=limit)
 
 
 async def get_pending_signals(repo: SignalRepositoryPort, params: dict[str, Any]) -> PendingSignalsResponse:
     """Query retained raw signals and total count for radar alert display."""
     limit = int(params.get("limit", 20))
-    raw_data = await crud.get_retained_signals(repo, limit=limit)
+    if hasattr(repo, "get_retained_signals_with_count"):
+        raw_data = await repo.get_retained_signals_with_count(limit=limit)
+    else:
+        signals_list = await repo.get_retained_signals(limit=limit)
+        raw_data = {"signals": signals_list, "total_count": len(signals_list)}
+
     signals = [
         s if isinstance(s, PendingSignalItem) else PendingSignalItem.model_validate(s)
         for s in raw_data.get("signals", [])
@@ -48,11 +52,11 @@ async def resolve_signal(
     if action not in ("archive", "discard"):
         raise ValueError(f"Invalid action '{action}'. Must be 'archive' or 'discard'.")
 
-    signal_data = await crud.get_signal_by_id(repo, signal_id)
+    signal_data = await repo.get_raw_signal_by_id(signal_id)
     if not signal_data:
         raise LookupError(f"Signal introuvable : '{signal_id}'")
 
-    await crud.resolve_signal_in_db(repo, signal_id, action)
+    await repo.resolve_signal(signal_id, action)
 
     if action == "archive":
         reply = SignalResolutionResult(
@@ -80,7 +84,7 @@ async def resolve_all_pending_signals(repo: SignalRepositoryPort, params: dict[s
     if action not in ("archive", "discard"):
         raise ValueError(f"Invalid action '{action}'. Must be 'archive' or 'discard'.")
 
-    count = await crud.resolve_all_signals_in_db(repo, action)
+    count = await repo.resolve_all_retained_signals(action)
     action_name = "archived" if action == "archive" else "discarded"
     return BulkResolutionResult(
         status="ok",
