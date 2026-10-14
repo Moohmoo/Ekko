@@ -40,6 +40,8 @@ export const LAYOUT = {
   filletRadius: 20, // Radius of outer concave fillets
   podHeightCompact: 230,
   podHeightExtended: 460,
+  capsuleWidth: 130,
+  capsuleHeight: 32,
   headerHeight: 32,
   borderRadius: 22,
 } as const;

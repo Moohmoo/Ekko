@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Mascot } from '../../components/Mascot';
 import { useMascotGaze } from './hooks/useMascotGaze';
 import { DropZone } from './components/DropZone';
@@ -44,10 +45,15 @@ export const HomeView: React.FC = () => {
         className="w-[36%] h-full flex items-center justify-center relative shrink-0 cursor-default pointer-events-none"
       >
         <div className="absolute inset-0 bg-radial from-sky-400/[0.04] via-transparent to-transparent pointer-events-none" />
-        <Mascot
-          emotion={displayEmotion}
-          isWokenByHover={isHoverWoken}
-        />
+        <motion.div
+          layoutId="app-mascot"
+          className="w-24 h-24 flex items-center justify-center"
+        >
+          <Mascot
+            emotion={displayEmotion}
+            isWokenByHover={isHoverWoken}
+          />
+        </motion.div>
       </div>
 
       {/* Right Pane — Drop & Forget absorption zone */}

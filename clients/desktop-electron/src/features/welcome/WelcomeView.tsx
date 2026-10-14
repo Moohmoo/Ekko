@@ -88,8 +88,8 @@ export const WelcomeView: React.FC = () => {
             className={`w-[74px] h-[88px] flex items-center justify-center ${isAwakened ? 'pointer-events-none absolute' : 'relative'}`}
           >
             <svg
-              viewBox="0 0 100 120"
-              className="w-full h-full drop-shadow-[0_6px_14px_rgba(0,242,254,0.18)]"
+              viewBox="0 0 100 100"
+              className="w-full h-full drop-shadow-[0_4px_12px_rgba(0,242,254,0.18)]"
             >
               <defs>
                 <linearGradient id="welcomeDropletGrad" x1="50%" y1="0%" x2="50%" y2="100%">
@@ -100,7 +100,7 @@ export const WelcomeView: React.FC = () => {
                 </linearGradient>
               </defs>
               <path
-                d="M 50 10 C 70 32, 92 64, 92 86 C 92 108, 72 116, 50 116 C 28 116, 8 108, 8 86 C 8 64, 30 32, 50 10 Z"
+                d="M 50 8 C 68 26, 86 52, 86 70 C 86 88, 70 94, 50 94 C 30 94, 14 88, 14 70 C 14 52, 32 26, 50 8 Z"
                 fill="url(#welcomeDropletGrad)"
                 stroke={COLORS.cyanAccent}
                 strokeWidth="1.2"
@@ -114,7 +114,7 @@ export const WelcomeView: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="relative"
+              className="relative w-[74px] h-[88px] flex items-center justify-center"
             >
               <Mascot emotion="welcome" />
             </motion.div>

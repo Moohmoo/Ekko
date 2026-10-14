@@ -343,4 +343,60 @@ test.describe('Notch Lifecycle, Geometry & Mascot E2E Suite', () => {
     const filletPaths = page.locator('svg path[fill*="--notch-anchor"]');
     await expect(filletPaths).toHaveCount(2);
   });
+
+  test('9. Test Mode Capsule Rétractée (32px), Double Contrôle (- / X) & Anti-Spam', async () => {
+    // 1. S'assurer d'être sur l'onglet Accueil (230px)
+    const homeTabButton = page.locator('button[title="Home"]');
+    await homeTabButton.click();
+
+    // 2. Vérifier la présence conjointe des doubles contrôles (Repli [-] et Fermeture [X])
+    const collapseButton = page.locator('button[title="Collapse"]');
+    const closeButton = page.locator('button[title="Close"]');
+    await expect(collapseButton).toBeVisible();
+    await expect(closeButton).toBeVisible();
+
+    // 3. Test Anti-Spam : le bouton de repli se désactive immédiatement pour verrouiller les clics concurrents
+    await collapseButton.click();
+    await expect(collapseButton).toBeDisabled();
+
+    // 4. Vérifier que la fenêtre Electron rétrécit physiquement et proprement à 130x32px
+    await expect.poll(async () => {
+      const bounds = await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        return win ? win.getBounds() : null;
+      });
+      return bounds ? { width: bounds.width, height: bounds.height } : null;
+    }, { timeout: 5000 }).toEqual({ width: 130, height: 32 });
+
+    // 5. Vérifier que la mascotte miniature est visible dans la capsule
+    const mascotBody = page.locator('#mascot-body');
+    await expect(mascotBody).toBeVisible();
+
+    // 6. Cliquer sur la mini-capsule pour déclencher l'expansion
+    const miniCapsule = page.locator('div[title*="expand Ekko"]');
+    await expect(miniCapsule).toBeVisible();
+    await miniCapsule.click();
+
+    // 7. Vérifier que la fenêtre retrouve immédiatement ses dimensions nominales 660x230px
+    await expect.poll(async () => {
+      const bounds = await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        return win ? win.getBounds() : null;
+      });
+      return bounds ? { width: bounds.width, height: bounds.height } : null;
+    }, { timeout: 5000 }).toEqual({ width: 660, height: 230 });
+
+    // 8. Vérifier la réapparition des deux boutons de contrôle
+    await expect(page.locator('button[title="Collapse"]')).toBeVisible();
+    await expect(page.locator('button[title="Close"]')).toBeVisible();
+
+    // 9. Tester le bouton de fermeture complète [X]
+    await closeButton.click();
+    await expect.poll(async () => {
+      return await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        return win ? win.isVisible() : true;
+      });
+    }, { timeout: 5000 }).toBe(false);
+  });
 });

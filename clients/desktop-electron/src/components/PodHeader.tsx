@@ -3,19 +3,23 @@ import type { ViewMode } from '../core/types';
 import { useDaemonStore } from '../core/stores/useDaemonStore';
 import { useSoundStore } from '../core/audio/useSoundStore';
 import { useSignalStore } from '../core/stores/useSignalStore';
-import { Droplet, Radio, Layers, Settings, Volume2, VolumeX, X } from 'lucide-react';
+import { Droplet, Radio, Layers, Settings, Volume2, VolumeX, Minus, X } from 'lucide-react';
 import { SURFACES } from '../design-system/tokens';
 
 interface PodHeaderProps {
   activeTab: ViewMode;
   onSelectTab: (tab: ViewMode) => void;
-  onClose: () => void;
+  onCollapse: () => void;
+  onClose?: () => void;
+  isTransitioning?: boolean;
 }
 
 export const PodHeader: React.FC<PodHeaderProps> = ({
   activeTab,
   onSelectTab,
+  onCollapse,
   onClose,
+  isTransitioning = false,
 }) => {
   const isOnline = useDaemonStore((state) => state.isOnline);
   const isMuted = useSoundStore((state) => state.isMuted);
@@ -31,8 +35,6 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
   const handleClose = () => {
     if (window.ekkoAPI?.closeWindow) {
       window.ekkoAPI.closeWindow();
-    } else {
-      console.warn('[PodHeader] window.ekkoAPI non disponible pour fermer.');
     }
     if (onClose) {
       onClose();
@@ -89,7 +91,7 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
         </button>
       </div>
 
-      {/* Controls & Status (Right: Dot -> Settings -> Sound -> Close) */}
+      {/* Controls & Status (Right: Dot -> Settings -> Sound -> Collapse -> Close) */}
       <div className="flex items-center gap-1">
         {/* 1. Daemon Status Dot */}
         <span
@@ -123,7 +125,17 @@ export const PodHeader: React.FC<PodHeaderProps> = ({
           {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
         </button>
 
-        {/* 4. Close Button */}
+        {/* 4. Collapse Button [ — ] */}
+        <button
+          onClick={onCollapse}
+          disabled={isTransitioning}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Collapse"
+        >
+          <Minus size={15} />
+        </button>
+
+        {/* 5. Close Button [ ✕ ] */}
         <button
           onClick={handleClose}
           className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors"

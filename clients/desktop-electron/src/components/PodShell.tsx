@@ -1,11 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { SPRING_SNAPPY, SPRING_BOUNCY, COLORS, SURFACES, GRADIENTS } from '../design-system/tokens';
+import { COLORS, SURFACES, GRADIENTS } from '../design-system/tokens';
 
 interface PodShellProps {
   targetHeight: number;
   header: React.ReactNode;
   children: React.ReactNode;
+  isCollapsing?: boolean;
+  isExpanding?: boolean;
+  onCollapseComplete?: () => void;
+  onExpandComplete?: () => void;
 }
 
 /**
@@ -16,12 +20,25 @@ export const PodShell: React.FC<PodShellProps> = ({
   targetHeight,
   header,
   children,
+  isCollapsing = false,
+  isExpanding = false,
+  onCollapseComplete,
+  onExpandComplete,
 }) => {
+  const handleAnimationComplete = () => {
+    if (isCollapsing && onCollapseComplete) {
+      onCollapseComplete();
+    } else if (isExpanding && onExpandComplete) {
+      onExpandComplete();
+    }
+  };
   return (
     <div className="relative w-[620px] mx-auto select-none pt-0">
       {/* Left concave fillet: seamless organic transition from horizontal GNOME bar to notch vertical flank */}
       <svg
-        className="absolute top-0 -left-5 w-[21px] h-5 pointer-events-none select-none z-10"
+        className={`absolute top-0 -left-5 w-[21px] h-5 pointer-events-none select-none z-10 transition-opacity duration-200 ${
+          isCollapsing ? 'opacity-0' : 'opacity-100'
+        }`}
         viewBox="0 0 21 20"
         fill="none"
         aria-hidden="true"
@@ -37,7 +54,9 @@ export const PodShell: React.FC<PodShellProps> = ({
 
       {/* Right concave fillet: symmetric seamless organic transition to top panel */}
       <svg
-        className="absolute top-0 -right-5 w-[21px] h-5 pointer-events-none select-none z-10"
+        className={`absolute top-0 -right-5 w-[21px] h-5 pointer-events-none select-none z-10 transition-opacity duration-200 ${
+          isCollapsing ? 'opacity-0' : 'opacity-100'
+        }`}
         viewBox="0 0 21 20"
         fill="none"
         aria-hidden="true"
@@ -51,14 +70,15 @@ export const PodShell: React.FC<PodShellProps> = ({
         />
       </svg>
 
-      {/* Notch core container: seamless top edge, rounded bottom, spring height morphing */}
+      {/* Notch core container: seamless top edge, rounded bottom, curtain height morphing */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1, height: targetHeight }}
+        initial={isExpanding ? { opacity: 0.9, height: 32 } : { opacity: 0 }}
+        animate={{ opacity: 1, height: isCollapsing ? 32 : targetHeight }}
         transition={{
-          opacity: SPRING_BOUNCY,
-          height: SPRING_SNAPPY,
+          height: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
+          opacity: { duration: 0.2 },
         }}
+        onAnimationComplete={handleAnimationComplete}
         className={`w-full ${SURFACES.shell} rounded-b-[22px] rounded-t-none border-t-0 flex flex-col p-2.5 text-slate-100 overflow-hidden`}
         style={{
           borderTop: 'none',
@@ -68,7 +88,11 @@ export const PodShell: React.FC<PodShellProps> = ({
         {header}
 
         {/* Unified Stage: Single inner surface with direct, natural transitions */}
-        <div className="flex-1 flex flex-col mt-1.5 rounded-2xl bg-surface border border-white/[0.08] shadow-inner relative overflow-hidden">
+        <div
+          className={`flex-1 flex flex-col mt-1.5 rounded-2xl bg-surface border border-white/[0.08] shadow-inner relative overflow-hidden transition-opacity duration-200 ${
+            isCollapsing ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
           {children}
         </div>
       </motion.div>

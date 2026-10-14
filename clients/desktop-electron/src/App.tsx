@@ -6,6 +6,7 @@ import { useBufferStore } from './core/stores/useBufferStore';
 import { useViewStore } from './core/stores/useViewStore';
 import { PodShell } from './components/PodShell';
 import { PodHeader } from './components/PodHeader';
+import { MiniCapsule } from './components/MiniCapsule';
 import { WelcomeView } from './features/welcome/WelcomeView';
 import { HomeView } from './features/home/HomeView';
 import { RadarView } from './features/radar/RadarView';
@@ -19,16 +20,27 @@ export const App: React.FC = () => {
   // Synchronize OS System Tray icon with reactive states
   useTraySync();
 
-  const { viewMode, setViewMode } = useViewStore();
+  const {
+    viewMode,
+    setViewMode,
+    isCollapsed,
+    isTransitioning,
+    collapse,
+    finishCollapse,
+    finishExpand,
+    resetTransition,
+  } = useViewStore();
   const fetchNotes = useBufferStore((state) => state.fetchNotes);
 
   const handleClose = () => {
+    resetTransition();
     window.ekkoAPI?.closeWindow();
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        resetTransition();
         window.ekkoAPI?.closeWindow();
       }
     };
@@ -46,22 +58,37 @@ export const App: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [resetTransition]);
 
   const isCompact = viewMode === 'welcome' || viewMode === 'home' || viewMode === 'radar';
   const targetHeight = isCompact ? LAYOUT.podHeightCompact : LAYOUT.podHeightExtended;
 
+  const isCollapsing = isCollapsed && isTransitioning;
+  const isExpanding = !isCollapsed && isTransitioning;
+
+  // Render MiniCapsule strictly when stable in collapsed state
+  if (isCollapsed && !isTransitioning) {
+    return <MiniCapsule />;
+  }
+
   return (
     <PodShell
       targetHeight={targetHeight}
+      isCollapsing={isCollapsing}
+      isExpanding={isExpanding}
+      onCollapseComplete={finishCollapse}
+      onExpandComplete={finishExpand}
       header={
         <PodHeader
           activeTab={viewMode}
           onSelectTab={(tab) => {
+            if (isTransitioning) return;
             setViewMode(tab);
             if (tab === 'buffer' || (tab as string) === 'echo') fetchNotes();
           }}
+          onCollapse={collapse}
           onClose={handleClose}
+          isTransitioning={isTransitioning}
         />
       }
     >
